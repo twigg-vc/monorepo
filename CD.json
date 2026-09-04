@@ -1,0 +1,38 @@
+[
+    {
+        "Name": "go-test",
+        "On": ["manual"],
+        "Stages": [
+            {
+                "CanAutoStart": false,
+                "Name": "get code and test",
+                "ImageName": "go",
+                "Steps": [
+                    {
+                        "TemplateName": "get-code"
+                    },
+                    {
+                        "Run": "go test ./..."
+                    }
+                ],
+                "TimeoutMinutes": 30
+            }
+        ]
+    },
+    {
+        "Name": "vm go-test",
+        "On": ["manual"],
+        "Stages": [
+            {
+                "CanAutoStart": true,
+                "Name": "get code and test",
+                "ImageName": "vm",
+                "Steps": [
+                    {"TemplateName": "get-code"},
+                    {"Run": "go test ./..."}
+                ],
+                "TimeoutMinutes": 30
+            }
+        ]
+    }
+]

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Job Test Page</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+        }
+
+        label {
+            display: block;
+            margin-top: 12px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            font-family: monospace;
+            padding: 6px;
+        }
+
+        textarea {
+            height: 200px;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 8px 16px;
+        }
+
+        pre {
+            background: #eee;
+            padding: 12px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Job Test</h1>
+
+    <label>Job ID</label>
+    <input id="jobId" placeholder="type the job id here...">
+
+    <label>JSON Payload</label>
+    <textarea id="payload">
+{
+    "Name": "say-hi",
+    "On": ["push"],
+    "Steps": [
+        {
+            "Run": "echo hi"
+        }
+    ],
+    "TimeoutMilliSeconds": 2000
+}
+    </textarea>
+
+    <button onclick="sendPut()">PUT /job/{id}</button>
+    <button onclick="getOut()">GET /job/{id}/out</button>
+
+    <h2>Output</h2>
+    <pre id="output">(none)</pre>
+
+    <script>
+        function getTrackKey() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get("TrackKey");
+        }
+
+        async function sendPut() {
+            const id = document.getElementById("jobId").value;
+            const payload = document.getElementById("payload").value;
+
+            if (!id) {
+                alert("id is required");
+                return;
+            }
+
+            try {
+                const resp = await fetch("/job/" + encodeURIComponent(id), {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "TrackKey": getTrackKey(),
+                        "SkipWebhooks": "true"
+                    },
+                    body: payload
+                });
+
+                const text = await resp.text();
+                document.getElementById("output").textContent =
+                    "PUT status: " + resp.status + "\n\n" + text;
+            } catch (err) {
+                document.getElementById("output").textContent =
+                    "PUT error: " + err;
+            }
+        }
+
+        async function getOut() {
+            const id = document.getElementById("jobId").value;
+
+            if (!id) {
+                alert("id is required");
+                return;
+            }
+
+            try {
+                const resp = await fetch("/job/" + encodeURIComponent(id) + "/out", {
+                    headers: {
+                        "TrackKey": getTrackKey()
+                    }
+                });
+                const text = await resp.text();
+
+                document.getElementById("output").textContent =
+                    "GET status: " + resp.status + "\n\n" + text;
+            } catch (err) {
+                document.getElementById("output").textContent =
+                    "GET error: " + err;
+            }
+        }
+    </script>
+
+</body>
+
+</html>

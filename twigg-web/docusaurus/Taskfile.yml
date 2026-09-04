@@ -1,0 +1,19 @@
+version: '3'
+
+tasks:
+  build-docusaurus:
+    desc: "Builds docusaurus client and server"
+    env:
+      DOCUSAURUS_SITE_URL: '{{.DOCUSAURUS_SITE_URL}}'
+    # 1. This checks if the variable exists before running anything
+    preconditions:
+      - sh: '[ -n "{{.DOCUSAURUS_SITE_URL}}" ]'
+        msg: "FATAL: DOCUSAURUS_SITE_URL is not set. Cannot build Docusaurus."
+    cmds:
+      - "npm run build"
+  run-docs-locally:
+    desc: "Runs docusaurus in localhost"
+    cmds:
+      - task: build-docusaurus
+        vars: { DOCUSAURUS_SITE_URL: "http://localhost:9001" }
+      - "npm run start"

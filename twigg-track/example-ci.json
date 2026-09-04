@@ -1,0 +1,18 @@
+{
+    "Name": "cowsay hi",
+    "On": [
+        "push"
+    ],
+    "Steps": [
+        {
+            "Run": "apk update"
+        },
+        {
+            "Run": "apk add cowsay --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/"
+        },
+        {
+            "Run": "cowsay hi!"
+        }
+    ],
+    "TimeoutMilliSeconds": 30000
+}

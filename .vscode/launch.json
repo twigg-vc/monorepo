@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug tw",
+            "type": "go",
+            "preLaunchTask": "build",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceRoot}/tw",
+        }
+    ]
+}

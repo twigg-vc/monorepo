@@ -1,0 +1,1 @@
+We're still figuring out a contribution model. If you'd like to contribute, get in touch on [Discord](https://discord.gg/ncPE6cDkC4) — we'd love to hear from you.

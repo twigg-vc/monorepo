@@ -1,0 +1,14 @@
+announcement:
+  label: Announcement
+  permalink: /announcement
+  description: News about Twigg itself.
+
+engineering:
+  label: Engineering
+  permalink: /engineering
+  description: How Twigg works.
+
+misc:
+  label: Misc
+  permalink: /misc
+  description: Miscellaneous stuff.

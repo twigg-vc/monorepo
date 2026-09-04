@@ -1,0 +1,10 @@
+{
+    "editor.rulers": [
+        80
+    ],
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4,
+    "editor.detectIndentation": false,
+    "editor.formatOnPaste": true,
+    "js/ts.implicitProjectConfig.checkJs": false,
+}

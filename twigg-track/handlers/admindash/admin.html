@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Admin Dash</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+        }
+        .log-container {
+            background: #000;
+            padding: 15px;
+            border-radius: 5px;
+            height: 600px;
+            overflow-y: scroll;
+            border: 1px solid #444;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+            font-size: 12px;
+        }
+        .timestamp {
+            color: #569cd6;
+            font-weight: bold;
+        }
+        .message {
+            color: #ce9178;
+            margin-left: 10px;
+        }
+
+        .queued-container,
+        .deadletter-container {
+            margin-top: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 10px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 6px;
+            overflow: hidden;
+            font-size: 13px;
+        }
+        thead {
+            background: #1b1b1b;
+        }
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            color: #9cdcfe;
+            font-weight: 600;
+            border-bottom: 1px solid #333;
+            white-space: nowrap;
+        }
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #222;
+            vertical-align: top;
+        }
+        tbody tr:hover {
+            background: #1a1a1a;
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        /* Payload column tweaks */
+        td:nth-child(3) {
+            font-family: monospace;
+            color: #ce9178;
+            max-width: 600px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        /* Numeric columns */
+        td:nth-child(1),
+        td:nth-child(6) {
+            color: #b5cea8;
+            white-space: nowrap;
+        }
+        /* Section titles */
+        .queued-container > :first-child,
+        .deadletter-container > :first-child {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+    .requeue-btn {
+        background: #0e639c;
+        color: #fff;
+        border: none;
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    .requeue-btn:hover {
+        background: #1177bb;
+    }
+    </style>
+</head>
+
+<body>
+    <h2>Admin Dashboard</h2>
+    <div class="queued-container">
+        <h3>Queued Jobs</h3>
+        <table id="queued">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Type</th>
+                    <th>Payload</th>
+                    <th>Created (Local Time)</th>
+                    <th>Available (Local Time)</th>
+                    <th>Retries</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="deadletter-container">
+        <h3>Jobs DeadLetter</h3>
+        <table id="deadletter">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Type</th>
+                    <th>Payload</th>
+                    <th>Original (Local Time)</th>
+                    <th>Failed (Local Time)</th>
+                    <th>Retries</th>
+                    <th>Requeue</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div>
+        <h3>Logs (Local Time)</h3>
+        <div class="log-container" id="logs">Loading logs...</div>
+    </div>
+
+    <script>
+        function getTrackKey(){
+            // Grab TrackKey from the current browser URL (?TrackKey=...)
+            const params = new URLSearchParams(window.location.search);
+            return params.get('TrackKey') || '';
+        }
+        function formatLocalTime(iso) {
+            if (!iso) return '';
+            return new Date(iso).toLocaleString();
+        }
+        function addTextCell(row, value) {
+            const cell = document.createElement('td');
+            let text = '';
+            if (value !== undefined && value !== null) {
+                text = String(value);
+            }
+            cell.textContent = text;
+            row.appendChild(cell);
+        }
+        function addQueuedItemRow(tbody, item) {
+            const row = document.createElement('tr');
+            addTextCell(row, item.Id);
+            addTextCell(row, item.PayloadType);
+            addTextCell(row, item.Payload);
+            addTextCell(row, formatLocalTime(item.CreatedAt));
+            addTextCell(row, formatLocalTime(item.AvailableAt));
+            addTextCell(row, item.RetryCount);
+            tbody.appendChild(row);
+        }
+        function addDeadLetterItemRow(tbody, item) {
+            const row = document.createElement('tr');
+            addTextCell(row, item.Id);
+            addTextCell(row, item.PayloadType);
+            addTextCell(row, item.Payload);
+            addTextCell(row, formatLocalTime(item.OriginalCreatedAt));
+            addTextCell(row, formatLocalTime(item.FailedAt));
+            addTextCell(row, item.RetryCount);
+
+            const actionCell = document.createElement('td');
+            const button = document.createElement('button');
+            button.className = 'requeue-btn';
+            button.textContent = 'Requeue';
+            button.addEventListener('click', () => requeueDeadLetter(item.Id));
+            actionCell.appendChild(button);
+            row.appendChild(actionCell);
+            tbody.appendChild(row);
+        }
+        async function fetchQueuedItems(){
+            try{
+                const trackKey = getTrackKey();
+                const response = await fetch(`/queued?TrackKey=${encodeURIComponent(trackKey)}`);
+                if (!response.ok) throw new Error('Server returned ' + response.status);
+                const queuedItems = await response.json();
+                const tbody = document.querySelector('#queued tbody');
+                tbody.replaceChildren();
+                for (const i of queuedItems) {
+                    addQueuedItemRow(tbody, i);
+                }
+            }catch(err){
+                document.querySelector('#queued tbody').textContent = 'Fetch Queue Error: ' + err.message;
+            }
+
+        }
+        async function fetchDeadLetterItems() {
+            try{
+                const trackKey = getTrackKey();
+                const response = await fetch(`/deadletter?TrackKey=${encodeURIComponent(trackKey)}`);
+                if (!response.ok) throw new Error('Server returned ' + response.status);
+                const deadletterItems = await response.json();
+                const tbody = document.querySelector('#deadletter tbody');
+                tbody.replaceChildren();
+                for (const i of deadletterItems) {
+                    addDeadLetterItemRow(tbody, i);
+                }
+            }
+            catch(err){
+                document.querySelector('#deadletter tbody').textContent = 'Fetch DeadLetter Error: ' + err.message;
+            }
+        }
+        async function fetchLogs() {
+            try {
+                const trackKey = getTrackKey();
+                const response = await fetch(`/logs?TrackKey=${encodeURIComponent(trackKey)}&numLines=100`);
+                if (!response.ok) throw new Error('Server returned ' + response.status);
+                const data = await response.json();
+                const container = document.getElementById('logs');
+                container.replaceChildren();
+
+                data.forEach(entry => {
+                    const div = document.createElement('div');
+                    div.className = 'log-entry';
+                    let ts = 'N/A';
+                    if (entry.__REALTIME_TIMESTAMP) {
+                        ts = new Date(entry.__REALTIME_TIMESTAMP / 1000).toLocaleString();
+                    }
+                    const timestamp = document.createElement('span');
+                    timestamp.className = 'timestamp';
+                    timestamp.textContent = `[${ts}]`;
+                    const message = document.createElement('span');
+                    message.className = 'message';
+                    message.textContent = entry.MESSAGE || '';
+                    div.appendChild(timestamp);
+                    div.appendChild(message);
+                    container.appendChild(div);
+                });
+            } catch (err) {
+                document.getElementById('logs').textContent = 'Fetch Logs Error: ' + err.message;
+            }
+        }
+        async function requeueDeadLetter(id) {
+            try {
+                const trackKey = getTrackKey();
+                const res = await fetch(`/deadletter/requeue?TrackKey=${encodeURIComponent(trackKey)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ Id: id })
+                });
+                if (!res.ok) throw new Error(res.status);
+                // Refresh tables
+                fetchDeadLetterItems();
+                fetchQueuedItems();
+            } catch (err) {
+                alert('Requeue failed: ' + err.message);
+            }
+        }
+
+        fetchQueuedItems();
+        setInterval(fetchQueuedItems, 15000); // Auto-refresh every 15s
+        fetchDeadLetterItems();
+        setInterval(fetchDeadLetterItems, 15000); // Auto-refresh every 15s
+        fetchLogs();
+        setInterval(fetchLogs, 15000); // Auto-refresh every 15s
+    </script>
+</body>
+
+</html>

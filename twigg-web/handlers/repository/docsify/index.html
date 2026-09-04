@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta charset="utf-8" />
+
+
+    <!-- load css -->
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/themes/vue.css" />
+    <style>
+        :root {
+          --color-primary: #7c5cff; /* main purple brand */
+          --color-primary-pop: #9a84ff; /* interactive states */
+        }
+        a {
+          color: var(--color-primary);
+        }
+        a:hover {
+          color: var(--color-primary-pop);
+        }
+        .markdown-section a {
+          color: var(--color-primary);
+        }
+        .markdown-section code {
+          color: var(--color-primary-pop);
+        }
+        .markdown-section blockquote {
+            border-color: var(--color-primary);
+        }
+        .sidebar ul li.active > a{
+            color: var(--color-primary);
+        }
+        .sidebar-toggle span {
+            background-color: var(--color-primary);
+        }
+      </style>
+</head>
+
+<body>
+    <!-- docsify will mount here and fetch README.md by default -->
+    <div id="app">Please wait...</div>
+
+
+    <!-- Docsify configuration: customize here -->
+    <script>
+        window.$docsify = {
+            name: '<a href="/home" <a href="/" style="font-weight:800;">Twigg</a>',
+            repo: '', // Repo URL
+            auto2top: true, // scroll to top on navigation
+            // For more options see docsify docs
+        };
+    </script>
+    <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+</body>
+
+</html>

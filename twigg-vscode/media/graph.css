@@ -1,0 +1,169 @@
+:root {
+    --space0: 0.125rem; /* 2px */
+    --space1: 0.25rem; /* 4px */
+    --space2: 0.5rem; /* 8px */
+    --space3: 0.75rem; /* 12px */
+    --space6: 2.5rem; /* 40px */
+}
+
+body {
+    padding: 0;
+    margin: 0;
+    color: var(--vscode-foreground);
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+}
+
+.message {
+    padding: var(--space2) var(--space3);
+    color: var(--vscode-descriptionForeground);
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    gap: var(--space1);
+    /* No padding above or below, so that the lanes of two rows meet. */
+    padding: 0 var(--space3);
+    white-space: nowrap;
+}
+
+.lanes {
+    flex: none;
+    margin-right: var(--space1);
+}
+
+.lanes line {
+    stroke: var(--vscode-descriptionForeground);
+    stroke-width: 1.5;
+}
+
+.lanes circle {
+    fill: var(--vscode-foreground);
+}
+
+.row.current {
+    background: var(--vscode-list-inactiveSelectionBackground);
+}
+
+.row.current .title {
+    font-weight: bold;
+}
+
+.lanes circle.current {
+    fill: var(--vscode-charts-yellow);
+}
+
+.id {
+    color: var(--vscode-textLink-foreground);
+}
+
+.server-id {
+    color: var(--vscode-descriptionForeground);
+}
+
+.title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.badge {
+    flex: none;
+}
+
+.badge-submitted,
+.badge-pushed {
+    color: var(--vscode-charts-green);
+}
+
+.badge-conflicts {
+    color: var(--vscode-errorForeground);
+}
+
+.badge-hidden,
+.badge-obsolete {
+    color: var(--vscode-descriptionForeground);
+}
+
+.error {
+    color: var(--vscode-errorForeground);
+    white-space: pre-wrap;
+}
+
+.file {
+    cursor: pointer;
+    display: flex;
+    gap: var(--space2);
+    padding: 0 var(--space3) 0 var(--space6);
+    white-space: nowrap;
+}
+
+.file-path {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-status {
+    flex: none;
+}
+
+.file-created {
+    color: var(--vscode-charts-green);
+}
+
+.file-deleted {
+    color: var(--vscode-charts-red);
+}
+
+.file-modified {
+    color: var(--vscode-charts-yellow);
+}
+
+.row:hover,
+.file:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.file.open {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.goto {
+    flex: none;
+    /* Not hidden, so that it takes no space until the row is hovered. */
+    display: none;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--vscode-textLink-foreground);
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.row:hover .goto {
+    display: block;
+}
+
+.goto.spinner {
+    display: block;
+    width: var(--space2);
+    height: var(--space2);
+    border: 1.5px solid var(--vscode-descriptionForeground);
+    border-top-color: transparent;
+    border-radius: 50%;
+    cursor: default;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

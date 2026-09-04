@@ -1,0 +1,81 @@
+version: '3'
+
+includes:
+  bundles:
+    taskfile: ./webcomponents/bundles
+    dir: ./webcomponents/bundles
+  tw:
+    taskfile: ../tw
+    dir: ../tw
+  docusaurus:
+    taskfile: ./docusaurus
+    dir: ./docusaurus
+
+tasks:
+  setup:
+    desc: "Install the necessary deps"
+    cmds:
+      - task: setup-webcomponents
+      - task: setup-docusaurus
+  setup-webcomponents:
+    dir: ./webcomponents
+    cmds:
+      - "npm install"
+  setup-docusaurus:
+    dir: ./docusaurus
+    cmds:
+      - "npm install"
+  build:
+    desc: "Build the server binary"
+    cmds:
+      - task: bundles:build-twigg
+      - task: docusaurus:build-docusaurus
+        vars: { DOCUSAURUS_SITE_URL: "{{.DOCUSAURUS_SITE_URL}}" }
+      - task: tw:build-all
+      - "go build -ldflags \"-X 'monorepo/buildmeta.Version={{.TWIGG_ID}}'\" ."
+  run:
+    desc: "Run the server locally for testing"
+    cmds:
+      - task: build
+        vars: { DOCUSAURUS_SITE_URL: "http://localhost:9001" }
+      - "go run -ldflags \"-X 'monorepo/buildmeta.Version={{.TWIGG_ID}}'\" . -p=9001 -track-url=http://localhost:2001 -config=local"
+  prod:
+    desc: "Run the server locally with the prod config"
+    cmds:
+      - task: build
+        vars: { DOCUSAURUS_SITE_URL: "https://twigg.vc" }
+      - "go run -ldflags \"-X 'monorepo/buildmeta.Version={{.TWIGG_ID}}'\" . -p=9001 -config=prod"
+  maintenance:
+    desc: "Run the server locally in maintenance mode"
+    cmds:
+      - task: build
+        vars: { DOCUSAURUS_SITE_URL: "http://localhost:9001" }
+      - "go run -ldflags \"-X 'monorepo/twiggbuildflags.IsMaintenanceMode=true'\" . -p=9001 -config=local"
+  kill:
+    desc: "Kills the server if it's still running"
+    cmds:
+      - "kill -9 $(lsof -t -i :9001)"
+  push:
+    desc: "Builds and deploys the service to the homelab"
+    cmds:
+      - task: build
+        vars: { DOCUSAURUS_SITE_URL: "http://localhost:9000" }
+      - "scp -P 41280 twigg-web andre@homelab.twigg.vc:/tmp/twigg-web"
+      - "ssh -p 41280 andre@homelab.twigg.vc 'sudo systemctl stop twigg-web && sudo mv /tmp/twigg-web /bin/twigg-web && sudo systemctl restart twigg-web'"
+  push-to-prod:
+    desc: "Builds and deploys the service to production"
+    cmds: 
+      - task: build
+        vars: { DOCUSAURUS_SITE_URL: "https://twigg.vc" }
+      - "scp twigg-web andre@twigg.vc:/tmp/twigg-web"
+      - "ssh andre@twigg.vc 'sudo systemctl stop twigg-web && sudo mv /tmp/twigg-web /bin/twigg-web && sudo systemctl restart twigg-web'"
+  fudeu:
+    desc: "Push a binary to prod that only serves a msg saying we're under maintenance"
+    cmds:
+      - "go build -ldflags \"-X 'monorepo/twiggbuildflags.IsMaintenanceMode=true'\" ."
+      - "scp twigg-web andre@twigg.vc:/tmp/twigg-web"
+      - "ssh andre@twigg.vc 'sudo systemctl stop twigg-web && sudo mv /tmp/twigg-web /bin/twigg-web && sudo systemctl restart twigg-web'"
+
+vars:
+  TWIGG_ID:
+    sh: tw id

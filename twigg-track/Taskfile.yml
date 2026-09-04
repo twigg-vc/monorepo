@@ -1,0 +1,71 @@
+version: '3'
+
+includes:
+  runner:
+    taskfile: ../twigg-runner
+    dir: ../twigg-runner
+
+tasks:
+  build-dependencies:
+    desc: "Builds the dependencies"
+    cmds:
+      - task: runner:build
+  test:
+    desc: "Builds the dependencies and runs test"
+    cmds:
+      - task: build-dependencies
+      - "go test ./..."
+  build-track:
+    desc: "Builds twigg-track binary"
+    cmds:
+      - "go build -ldflags \"-X 'monorepo/buildmeta.Version={{.TWIGG_ID}}'\" ."
+  build:
+    desc: "Builds the dependencies and binary"
+    cmds:
+      - task: build-dependencies
+      - task: runner:build-lxd-image
+      - "lxc image export twigg-vm-runner twigg-vm-runner"
+      - "docker save \
+          twigg-base-runner:latest \
+          twigg-go-runner:latest \
+          twigg-bun-runner:latest \
+          twigg-node-20-runner:latest \
+          -o twigg-runners.tar"
+      - task: build-track
+  run:
+    desc: "Run the server locally"
+    cmds:
+      - task: build
+      - "./twigg-track -twigg-server-url=http://localhost:9001 -config=\"local\""
+  mock:
+    desc: "Run the server locally with a mocked (non docker) runner"
+    cmds:
+      - task: build-track
+      - "./twigg-track -twigg-server-url=http://localhost:9001 -config=\"mock\""
+  push:
+    desc: "Builds and deploys the service to the homelab"
+    cmds:
+      - task: build
+      - "scp -P 41280 twigg-track twigg-runners.tar twigg-vm-runner.tar.gz andre@homelab.twigg.vc:/tmp/"
+      - "ssh -p 41280 andre@homelab.twigg.vc 'chmod 644 /tmp/twigg-runners.tar && sudo -u track docker load -i /tmp/twigg-runners.tar'"
+      - "ssh -p 41280 andre@homelab.twigg.vc 'sudo -u track /snap/bin/lxc image delete twigg-vm-runner 2>/dev/null || true && sudo -u track /snap/bin/lxc image import /tmp/twigg-vm-runner.tar.gz --alias twigg-vm-runner'"
+      - "ssh -p 41280 andre@homelab.twigg.vc 'sudo /bin/systemctl stop twigg-track && sudo /bin/mv /tmp/twigg-track /bin/twigg-track && sudo /bin/systemctl restart twigg-track'"
+  push-to-prod:
+    desc: "Builds and deploys the service to production"
+    cmds:
+      - task: build
+      # Transfer the main server binary
+      - "scp twigg-track andre@track.twigg.vc:/tmp/"
+      # Transfer the docker images
+      - "scp twigg-runners.tar andre@track.twigg.vc:/tmp/"
+      # Transfer the lxd image
+      - "scp twigg-vm-runner.tar.gz andre@track.twigg.vc:/tmp/"
+      # Import docker image
+      - "ssh andre@track.twigg.vc 'chmod 644 /tmp/twigg-runners.tar && sudo -u track docker load -i /tmp/twigg-runners.tar'"
+      # Import lxd image
+      - "ssh andre@track.twigg.vc 'sudo -u track /snap/bin/lxc image delete twigg-vm-runner 2>/dev/null || true && sudo -u track /snap/bin/lxc image import /tmp/twigg-vm-runner.tar.gz --alias twigg-vm-runner'"
+      # Restart the systemd service
+      - "ssh andre@track.twigg.vc 'sudo /bin/systemctl stop twigg-track && sudo /bin/mv /tmp/twigg-track /bin/twigg-track && sudo /bin/systemctl restart twigg-track'"
+vars:
+  TWIGG_ID:
+    sh: tw id

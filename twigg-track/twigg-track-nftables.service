@@ -1,0 +1,21 @@
+[Unit]
+Description=Firewall for twigg-track servers (host rules + job network ACLs)
+# We don't use the distro nftables.service because its "flush ruleset"
+# (on start and stop) would wipe the docker and LXD rules. The boot
+# ordering below mirrors it though: rules must be in place before the
+# network comes up, otherwise the host briefly runs with no firewall.
+DefaultDependencies=no
+Wants=network-pre.target
+Before=network-pre.target shutdown.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/twigg-track.nft
+ExecReload=/usr/sbin/nft -f /etc/twigg-track.nft
+# No ExecStop on purpose: the file replaces our table atomically on every
+# load, and stopping a firewall shouldn't silently open the host.
+
+[Install]
+WantedBy=sysinit.target

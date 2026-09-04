@@ -1,0 +1,10 @@
+{
+    "Name": "log-hi",
+    "On": ["submit"],
+    "Steps": [
+        {
+            "Run": "echo Hi! CI is working ok"
+        }
+    ],
+    "TimeoutMinutes": 5
+}

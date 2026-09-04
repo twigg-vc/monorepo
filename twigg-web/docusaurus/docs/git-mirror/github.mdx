@@ -1,0 +1,42 @@
+import GithubMirrorUrlGenerator from "@site/src/components/GithubMirrorUrlGenerator";
+
+
+# Github
+
+### First create your `fine-grained personal access token`.
+
+1. Go to [personal-access-tokens](https://github.com/settings/personal-access-tokens) <input type="checkbox"/>
+
+2. Click in `Create new token`  <input type="checkbox"/>
+
+3. Choose a name, for example: `twigg-mirror-<YOUR-REPO-NAME>` <input type="checkbox"/>
+
+4. Select an expiration date. You'll have to repeat this process when the token expires, so feel free to chose a large duration  <input type="checkbox"/>
+
+5. Under `Repository access` choose `Only select repositories` and select the target repository  <input type="checkbox"/>
+
+
+6. Under `Permissions`, click `Add permissions`, select:  <input type="checkbox"/>
+   - `Contents`, and set access to `Read and write`
+   - `Workflows`, and set access to `Read and write`
+
+7. Click `Generate token` <input type="checkbox"/>
+
+8. Copy the generated token <input type="checkbox"/>
+
+### Set Github mirror in Twigg.
+
+1. Go to [home](https://twigg.vc/home) and open your repository. <input type="checkbox"/>
+
+2. Click the repository settings icon.   <input type="checkbox"/>  
+   ![click_repo_setting_icon](../img/click_repo_setting_icon_img.png)
+
+3. Scroll to **Git Mirror** section and click on the switch button to enable it. <input type="checkbox"/>
+
+4. Construct your mirror URL <input type="checkbox"/>
+
+<GithubMirrorUrlGenerator />  
+
+5. Click `Save URL`. <input type="checkbox"/>
+
+**Your setup is complete**. From now on, any commits submitted in Twigg will be automatically pushed to the `twigg` branch of the mirrored repository GitHub.

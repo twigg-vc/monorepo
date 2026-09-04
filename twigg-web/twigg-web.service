@@ -1,0 +1,14 @@
+[Unit]
+Description=Twigg web service
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=twigg
+EnvironmentFile=/etc/twigg-web.env
+ExecStart=/bin/twigg-web -p=9000 -s=/home/twigg/twiggDb -track-url=http://localhost:2000 -config=lab
+
+[Install]
+WantedBy=multi-user.target

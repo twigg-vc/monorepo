@@ -1,0 +1,5 @@
+twiggData/*
+twiggDataBackup/*
+twigg-web
+node_modules/
+track-main-test/

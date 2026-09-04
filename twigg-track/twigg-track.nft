@@ -1,0 +1,113 @@
+#!/usr/sbin/nft -f
+
+# Firewall for twigg-track servers: host input rules + ACLs for the job
+# networks. This file is the server's entire firewall config — no other
+# firewall (e.g. ufw) should be enabled to avoid conflicts.
+# It's written in a way to deny by default to minimize attack surfaces.
+#
+# Docker jobs each run in their own "tw-<hash>" bridge and have no other
+# egress protection (docker doesn't support it).
+# LXD jobs share "twigg-runner-br", which already has a
+# native LXD ACL with this policy — here it's defense in depth, plus
+# blocking VM access to the host.
+#
+# Idempotent: the declare + delete below replaces the table atomically.
+#
+# This table is independent from the docker/LXD-managed rules: every table
+# filters the packet and a drop in any of them is final. So our drops apply
+# on top of docker's/LXD's rules, and our accepts can't override their
+# drops (traffic we accept still needs their accept to be forwarded).
+
+table inet twigg-track
+delete table inet twigg-track
+
+table inet twigg-track {
+    # Traffic routed through the host. Default-deny: forwarding we didn't
+    # explicitly allow below (docker0, lxdbr0, a bridge added later and
+    # forgotten here) is denied by default.
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+
+        ct state established,related accept
+        ct state invalid drop
+
+        # Nothing may open a connection into a job. This also isolates
+        # jobs from each other: any job->job packet has a job bridge as
+        # its output interface. (For VM<->VM traffic on the shared LXD
+        # bridge this only applies when br_netfilter is active — docker
+        # enables it — so the primary VM<->VM isolation remains LXD's
+        # ACL + ipv4_filtering.)
+        oifname "tw-*" drop
+        oifname "twigg-runner-br" drop
+
+        # Job egress. Only the first packet of a connection gets here:
+        # replies are accepted as established above.
+        iifname "tw-*" jump job-egress
+        iifname "twigg-runner-br" jump job-egress
+
+        # Everything else falls through to the drop policy. In particular
+        # lxdbr0 (admin experiments) gets DNS/DHCP from the host (see
+        # input) but no forwarding.
+    }
+
+    # What a job may open a connection to beyond its own bridge:
+    # public IPv4 and nothing else.
+    chain job-egress {
+        # Job networks are IPv4-only
+        meta nfproto ipv6 reject
+
+        # Non-public IPv4
+        ip daddr {
+            0.0.0.0/8,       # "this network"
+            10.0.0.0/8,      # private (RFC1918)
+            100.64.0.0/10,   # carrier-grade NAT (RFC6598)
+            127.0.0.0/8,     # loopback
+            169.254.0.0/16,  # link-local incl. cloud metadata (critical: exposes credentials)
+            172.16.0.0/12,   # private (RFC1918)
+            192.168.0.0/16,  # private (RFC1918)
+            224.0.0.0/4,     # multicast
+            240.0.0.0/4      # reserved + broadcast
+        } reject
+
+        # All that remains is public IPv4
+        accept
+    }
+
+    # Host firewall: default-deny incoming. Job-network rules come FIRST
+    # so jobs can never use the host accepts below.
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        # Docker jobs never need the host (public DNS, no DHCP)
+        iifname "tw-*" drop
+
+        # LXD VMs only need DHCP/DNS from the host's dnsmasq
+        iifname "twigg-runner-br" udp dport { 53, 67 } accept
+        iifname "twigg-runner-br" tcp dport 53 accept
+        iifname "twigg-runner-br" drop
+
+        # lxdbr0 (LXD's default bridge) never runs jobs; it just needs
+        # DHCP/DNS for whatever an admin launches there
+        iifname "lxdbr0" udp dport { 53, 67 } accept
+        iifname "lxdbr0" tcp dport 53 accept
+
+        iif "lo" accept
+        ct state established,related accept
+        ct state invalid drop
+
+        # Ping + IPv6 neighbor discovery (required for IPv6 to work)
+        icmp type echo-request accept
+        icmpv6 type { nd-neighbor-solicit, nd-neighbor-advert, nd-router-advert, echo-request } accept
+
+        # Host as DHCP/DHCPv6 client used to get an IP
+        udp dport 68 accept
+        udp dport 546 accept
+
+        # SSH
+        tcp dport 22 accept
+
+        # HTTPS
+        tcp dport 443 accept
+        udp dport 443 accept
+    }
+}

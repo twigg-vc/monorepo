@@ -1,0 +1,7 @@
+twigg.vc, www.twigg.vc {
+        reverse_proxy localhost:9000
+}
+
+twigg.sh, www.twigg.sh {
+        redir https://twigg.vc{uri} permanent
+}

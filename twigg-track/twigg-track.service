@@ -1,0 +1,15 @@
+[Unit]
+Description=Twigg track service
+After=network.target twigg-track-nftables.service twigg-track-docker-user.service
+Requires=twigg-track-nftables.service twigg-track-docker-user.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=track
+EnvironmentFile=/etc/twigg-track.env
+ExecStart=/bin/twigg-track -p=2000 -s=/home/track/trackDb -config=lab -twigg-server-url=http://localhost:9000
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "target": "es2020",
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "lib": ["dom", "dom.iterable", "es2020"],
+        "types": ["mocha", "node"],
+        "strict": false,
+        "skipLibCheck": true,
+        "noEmit": true
+    }
+}

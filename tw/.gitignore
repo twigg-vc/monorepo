@@ -1,0 +1,9 @@
+__debug*
+bin/tw_linux_latest
+bin/tw_linux_latest_dev
+bin/tw_mac_intel_latest
+bin/tw_mac_intel_latest_dev
+bin/tw_mac_silicon_latest
+bin/tw_mac_silicon_latest_dev
+bin/tw_win_latest
+bin/tw_win_latest_dev

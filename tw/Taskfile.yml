@@ -1,0 +1,28 @@
+version: '3'
+
+tasks:
+  build-linux:
+    cmds:
+      - "{{.LINUX_BUILD_FLAGS}} go build -ldflags \" {{.OBFUSCATE_LD_FLAG}} {{.VERSION_LD_FLAG}}\" -o bin/tw_linux_latest ."
+  build-win:
+    cmds:
+      - "{{.WINDOWS_BUILD_FLAGS}} go build -ldflags \" {{.OBFUSCATE_LD_FLAG}} {{.VERSION_LD_FLAG}}\" -o bin/tw_win_latest ."
+  build-mac-intel:
+    cmds:
+      - "{{.MAC_INTEL_BUILD_FLAGS}} go build -ldflags \" {{.OBFUSCATE_LD_FLAG}} {{.VERSION_LD_FLAG}}\" -o bin/tw_mac_intel_latest ."
+  build-mac-silicon:
+    cmds:
+      - "{{.MAC_SILICON_BUILD_FLAGS}} go build -ldflags \" {{.OBFUSCATE_LD_FLAG}} {{.VERSION_LD_FLAG}}\" -o bin/tw_mac_silicon_latest ."
+  build-all:
+    deps: [build-linux, build-win, build-mac-intel, build-mac-silicon]
+      
+
+vars:
+  TWIGG_ID:
+    sh: tw id
+  OBFUSCATE_LD_FLAG: -s -w
+  VERSION_LD_FLAG: -X 'monorepo/buildmeta.Version={{.TWIGG_ID}}'
+  LINUX_BUILD_FLAGS: GOOS=linux GOARCH=amd64
+  WINDOWS_BUILD_FLAGS: GOOS=windows GOARCH=amd64
+  MAC_INTEL_BUILD_FLAGS: GOOS=darwin GOARCH=amd64
+  MAC_SILICON_BUILD_FLAGS: GOOS=darwin GOARCH=arm64

@@ -1,0 +1,146 @@
+:root {
+    --weight-very-bold: 800;
+    --weight-bold: 700;
+    --weight-semi-bold: 600;
+
+    /* Sizes for pading/margin that scale with font size */
+    --space0: 0.125rem; /* 2px */
+    --space1: 0.25rem; /* 4px */
+    --space2: 0.5rem; /* 8px */
+    --space3: 0.75rem; /* 12px */
+    --space4m: 0.9375rem; /* 15px */
+    --space4: 1rem; /* 16px */
+    --space5: 1.125rem; /* 18px */
+    --space5p: 1.5rem; /* 24px */
+    --space6m: 2rem; /* 32px */
+    --space6: 2.5rem; /* 40px */
+    --space7: 3.5rem; /* 56px */
+    /* Sizes that don't change with font size */
+    --fixedSpace0: 2px;
+    --fixedSpace1: 4px;
+    --fixedSpace2: 8px;
+    --fixedSpace3: 12px;
+    --fixedSpace4: 16px;
+    --fixedSpace5: 24px;
+    --fixedSpace6: 40px;
+    --fixedSpace7: 60px;
+    --fixedSpace8: 80px;
+    --radius0: 4px;
+    --radius1: 8px;
+    --radius2: 16px;
+    --radius3: 32px;
+
+    /* Large sizes to limit sizes of some components */
+    --size0: 300px;
+    --size1: 400px;
+    --size2: 560px;
+    --size3: 760px;
+    --size4: 960px;
+
+    --font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    --line-height: 1.6;
+
+    /* Colors in the theme selector*/
+    --color-theme-selector-night-bg: #28096b;
+    --color-theme-selector-day-bg: #522ba7;
+    --color-theme-selector-circle: #fff000;
+
+    /*opacity*/
+    --disable-opacity-value: 0.5; 
+}
+
+:root {
+    /* Brand / Accent */
+    --color-primary: #7c5cff; /* main purple brand */
+    --color-primary-pop: #9a84ff; /* interactive states */
+}
+
+:root.dark {
+    /* Backgrounds */
+    --color-bg: #0f0b1a; /* page background */
+    --color-surface: #161226; /* cards, panels */
+    --color-surface-alt: #26213a; /* alt surface (e.g. code blocks) */
+    --color-border: #2a2440;/* dividers, outlines */
+
+    /* Text */
+    --color-text: #e9e6f2; /* primary text */
+    --color-text-muted: #d3dcf7; /* secondary text */
+    --color-text-on-primary: var(--color-text);  /* color used inside elements with primary color */
+
+    /* Status / Feedback */
+    --color-danger: #ff6b6b;
+    --color-danger-soft: #ff00000f;
+    --color-success: #4bc660;
+    --color-soft-success: #0b1f13;
+    --color-warning: #f0c94c;
+    --color-soft-warning: #fce59a;
+    --color-info: #53d3b1;
+    --color-status-text: #1a1a1a; /* readable on all above */
+
+    /* Shadows */
+    /* Subtle elevation: cards, panels */
+    --shadow-surface: 0 2px 6px rgba(140, 180, 255, 0.12);
+    /* Raised / hoverable elements: buttons, lifted cards */
+    --shadow-surface-alt: 0 8px 24px rgba(140, 180, 255, 0.18);
+    /* "Shadow" that draws attention */
+    --shadow-pop: 0 0 6px rgba(124, 92, 255, 0.6), 0 2px 6px rgba(124, 92, 255, 0.3);
+    --shadow-pop-yellow: 0 0 2px rgba(255, 251, 0, .35), 0 1px 3px rgba(255, 251, 0, .25);
+    --shadow-pop-green: 0 0 6px rgba(75, 198, 96, 0.6), 0 2px 6px rgba(75, 198, 96, 0.3);
+
+    /* Diff display specific colors */
+    --diff-line-text-color: var(--color-text);
+    --diff-line-number-color: #6d6a7f;
+    --diff-line-removed-color-bg: #2e1820;
+    --diff-line-added-color-bg: #0c1a14;
+    --diff-char-removed-color-bg: #5c2433;
+    --diff-char-added-color-bg: #1a4a2c;
+    --diff-plus-count: #6fbf8b;
+    --diff-minus-count: #e58f9b;
+}
+:root.light {
+    /* Backgrounds */
+    --color-bg: #f9f9fc;
+    /* page background */
+    --color-surface: #ffffff;
+    /* cards, panels */
+    --color-surface-alt: #f0f0f5;
+    /* alt surface (e.g. code blocks) */
+    --color-border: #d1d1e0;
+    /* dividers, outlines */
+
+    /* Text */
+    --color-text: #1a1a1a; /* primary text */
+    --color-text-muted: #555770; /* secondary text */
+    --color-text-on-primary: #ffffff; /* color used inside elements with primary color */
+
+    /* Status / Feedback */
+    --color-danger: #ff4d4d;
+    --color-danger-soft: #ff00000f;
+    --color-success: #30dc6c;
+    --color-soft-success: #e7fdef;
+    --color-warning: #f6d966;
+    --color-soft-warning: #fff3c3;
+    --color-info: #62deb9;
+    --color-status-text: #1a1a1a;
+    /* readable on colored status backgrounds */
+
+    /* Shadows */
+    /* Subtle elevation: cards, panels */
+    --shadow-surface: 0 2px 6px rgba(0, 0, 0, 0.1);
+    /* Raised / hoverable elements: buttons, lifted cards */
+    --shadow-surface-alt: 0 6px 18px rgba(0, 0, 0, 0.15);
+    /* "Shadow" that draws attention */
+    --shadow-pop: 0 0 6px rgba(124, 92, 255, 0.3), 0 2px 6px rgba(124, 92, 255, 0.15);
+    --shadow-pop-yellow: 0 0 2px rgba(255, 251, 0, .35), 0 1px 3px rgba(255, 251, 0, .25);
+    --shadow-pop-green: 0 0 6px rgba(48, 220, 108, 0.5), 0 2px 6px rgba(48, 220, 108, 0.25);
+
+    /* Diff display specific colors */
+    --diff-line-text-color: var(--color-text);
+    --diff-line-number-color: #a0a0b0;
+    --diff-line-removed-color-bg: #fbb;
+    --diff-line-added-color-bg: #beb;
+    --diff-char-removed-color-bg: #f88;
+    --diff-char-added-color-bg: #8d8;
+    --diff-plus-count: #1a7f37;
+    --diff-minus-count: #cf222e;
+}

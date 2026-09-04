@@ -1,0 +1,11 @@
+version: '3'
+
+tasks:
+  build-twigg:
+    sources:
+      - "twigg.js"
+    generates:
+      - "bundle.js"
+    desc: "Creates twigg bundle"
+    cmds:
+      - "npx esbuild twigg.js --bundle --outfile=files/bundle.js --format=esm --minify"

@@ -1,0 +1,16 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "build",
+        "type": "shell",
+        "command": "task build",
+        "options": {
+          "env": {
+            "DOCUSAURUS_SITE_URL": "http://localhost:9001"
+          }
+        }
+      }
+    ]
+}
+  

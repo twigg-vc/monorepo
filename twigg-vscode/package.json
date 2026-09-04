@@ -1,0 +1,89 @@
+{
+  "name": "twigg",
+  "displayName": "Twigg",
+  "publisher": "Twigg",
+  "description": "Twigg version control",
+  "version": "0.0.5",
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "icon": "resources/logo/twigg-purple-text-128x128.png",
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onSCMProvider",
+    "onSave"
+  ],
+  "main": "./out/extension.js",
+  "homepage": "https://twigg.vc",
+  "bugs": {
+    "url": "https://discord.gg/udpz3faxwQ"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/twigg-vc/monorepo.git",
+    "directory": "twigg-vscode"
+  },
+  "contributes": {
+    "configuration": {
+      "title": "Twigg",
+      "properties": {
+        "twigg.path": {
+          "type": "string",
+          "default": "tw",
+          "description": "Path of the tw binary."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "twigg.status",
+        "title": "Twigg: Status",
+        "icon": {
+          "light": "resources/icons/light/refresh.svg",
+          "dark": "resources/icons/dark/refresh.svg"
+        }
+      }
+    ],
+    "views": {
+      "scm": [
+        {
+          "type": "webview",
+          "id": "twigg.graph",
+          "name": "Twigg Graph"
+        }
+      ]
+    },
+    "menus": {
+      "scm/title": [
+        {
+          "command": "twigg.status",
+          "group": "navigation",
+          "when": "scmProvider == twigg"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.19.11",
+    "@types/vscode": "^1.93.0",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
+    "@typescript-eslint/parser": "^8.17.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.9.2",
+    "eslint": "^9.16.0",
+    "typescript": "^5.7.2"
+  }
+}

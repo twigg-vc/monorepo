@@ -1,0 +1,39 @@
+version: '3'
+
+includes:
+  tw:
+    taskfile: ../tw
+    dir: ../tw
+
+tasks:
+  build:
+    desc: "Build all Docker images"
+    cmds:
+      - task: _build_docker_image
+        vars: { TARGET: base }
+      - task: _build_docker_image
+        vars: { TARGET: go }
+      - task: _build_docker_image
+        vars: { TARGET: node-20 }
+      - task: _build_docker_image
+        vars: { TARGET: bun }
+  _build_docker_image:
+    desc: "Helper task to build a docker image"
+    internal: true
+    cmds:
+      - docker build --target {{.TARGET}} -f DOCKERFILE --build-arg TW_ID={{.TWIGG_ID}} -t twigg-{{.TARGET}}-runner:{{.TWIGG_ID}} ..
+      - docker tag twigg-{{.TARGET}}-runner:{{.TWIGG_ID}} twigg-{{.TARGET}}-runner:latest
+  build-runner:
+    desc: "Build twigg-runner-linux"
+    cmds:
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/twigg-runner-linux
+  build-lxd-image:
+    desc: "Build twigg-vm-runner LXD image"
+    cmds:
+      - task: tw:build-linux
+      - task: build-runner
+      - go run ./builder/. --tw="../tw/bin/tw_linux_latest" --twigg-runner="bin/twigg-runner-linux"
+
+vars:
+  TWIGG_ID:
+    sh: tw id

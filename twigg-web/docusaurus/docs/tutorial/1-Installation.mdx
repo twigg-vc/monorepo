@@ -1,0 +1,49 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 1. Installation
+
+Chose your OS.
+<Tabs defaultValue="linux" groupId="os" queryString="os">
+    <TabItem value="linux" label="Linux">
+        Run the following command:
+        ```
+        curl -fSL -o /tmp/tw https://twigg.vc/bin/tw_linux_latest \
+          && sudo install -m 0755 /tmp/tw /usr/local/bin/tw \
+          && rm /tmp/tw
+        ```
+    </TabItem> 
+    <TabItem value="windows" label="Windows">
+        Run the following command:
+        ```
+        curl.exe -fSL -o "$env:TEMP\tw.exe" https://twigg.vc/bin/tw_win_latest;
+        $dir="$env:LOCALAPPDATA\Programs\tw";
+        New-Item -Force -ItemType Directory $dir | Out-Null;
+        Move-Item -Force "$env:TEMP\tw.exe" "$dir\tw.exe";
+        $up=[Environment]::GetEnvironmentVariable("Path","User");
+        if (-not ($up -split ';' -contains $dir)) {
+          setx PATH "$up;$dir" | Out-Null
+        };
+        "Installed in $dir. Open a new terminal and run: tw -v"
+        ```
+        :::note
+        Sorry, we know this looks hacky. We're working on providing a "Click to install".
+        :::
+    </TabItem> 
+    <TabItem value="macos" label="MacOS">
+        Minimum supported version: 11.0
+        ```
+        sudo mkdir -p /usr/local/bin
+
+        URL=$(
+          test "$(uname -m)" = "arm64" \
+            && echo https://twigg.vc/bin/tw_mac_silicon_latest \
+            || echo https://twigg.vc/bin/tw_mac_intel_latest
+        )
+
+        curl -fSL -o /tmp/tw "$URL" \
+          && sudo install -m 0755 /tmp/tw /usr/local/bin/tw \
+          && rm /tmp/tw
+        ```
+    </TabItem> 
+</Tabs>

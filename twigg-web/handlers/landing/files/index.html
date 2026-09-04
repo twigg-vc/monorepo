@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Twigg — Open Source Critique</title>
+    <meta name="description"
+        content="Twigg is the open source alternative to Critique, Google's internal code collaboration platform. Stacked commits, code review, OWNERS, and CI/CD.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap">
+
+    <!-- ==========================================================
+       Design tokens + base styles
+       ========================================================== -->
+    <style>
+        :root {
+            /* Typography */
+            --mono: 'JetBrains Mono', monospace;
+
+            /* Font sizes */
+            --font-xs: 12px;
+            --font-sm: 14px;
+            --font-md: 16px;
+            --font-lg: 18px;
+            --font-xl: 36px;
+            --font-xxl: 60px;
+
+            /* Font weights */
+            --weight-normal: 400;
+            --weight-medium: 500;
+            --weight-semibold: 600;
+            --weight-bold: 700;
+
+            /* Line height & letter spacing */
+            --leading-tight: 1.1;
+            --leading-body: 1.65;
+            --leading-loose: 1.8;
+            --tracking-wide: 0.12em;
+            --tracking-tight: -0.02em;
+
+            /* Corner radius */
+            --radius-sm: 10px;
+            --radius-md: 12px;
+            --radius-full: 100px;
+
+            /* Spacing */
+            --space-0: 4px;
+            --space-1: 8px;
+            --space-2: 12px;
+            --space-3: 16px;
+            --space-4: 24px;
+            --space-5: 28px;
+            --space-6: 32px;
+            --space-7: 48px;
+            --space-8: 64px;
+            --space-9: 88px;
+            --space-10: 120px;
+
+            /* Layout */
+            --container: 1120px;
+            --container-md: 880px;
+            --container-sm: 640px;
+            --measure: 62ch;
+
+            /* Page backgrounds */
+            --bg: #0c0a11;
+            --bg-tint: #0e0b15;
+            --bg-footer: #0a0810;
+
+            /* Card surfaces */
+            --card: #110d1b;
+            --card-tint: #120e21;
+            --card-hi: #151027;
+
+            /* Borders */
+            --line: #201c2b;
+            --line-card: #241f33;
+            --line-strong: #322a4d;
+            --line-hover: #3b3255;
+
+            /* Brand */
+            --primary: #7c5cff;
+            --primary-hover: #8d70ff;
+            --accent: #a794ff;
+            --accent-hover: #c6baff;
+
+            /* Text */
+            --ink: #f5f3fb;
+            --text: #e8e5f2;
+            --text-soft: #c9c3da;
+            --muted: #9d97b0;
+            --faint: #6f6885;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Space Grotesk', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: var(--accent-hover);
+        }
+
+        ::selection {
+            background: var(--primary);
+            color: #fff;
+        }
+    </style>
+
+    <!-- ==========================================================
+       Hover states
+       (reusable helpers)
+       ========================================================== -->
+    <style>
+        .hover-accent:hover {
+            color: var(--accent) !important;
+        }
+
+        .hover-fill:hover {
+            background: var(--primary-hover) !important;
+            color: #fff !important;
+        }
+
+        .hover-outline:hover {
+            border-color: var(--primary) !important;
+            color: #fff !important;
+        }
+
+        .hover-opacity:hover {
+            opacity: 0.85 !important;
+        }
+
+        .hover-border:hover {
+            border-color: var(--line-hover) !important;
+        }
+
+        .hover-border-ink:hover {
+            border-color: var(--line-hover) !important;
+            color: var(--ink) !important;
+        }
+
+        .hover-border-text:hover {
+            border-color: var(--line-hover) !important;
+            color: var(--text) !important;
+        }
+    </style>
+
+    <!-- ==========================================================
+       Reusable helper classes
+       (only styles shared by multiple elements; one-off elements
+       are styled inline)
+       ========================================================== -->
+    <style>
+        /* Layout */
+        .top-line-border {
+            border-top: 1px solid var(--line);
+        }
+
+        .tinted-background {
+            background: var(--bg-tint);
+        }
+
+        .container-max-width {
+            max-width: var(--container);
+        }
+
+        /* Calls to action */
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+            font-weight: var(--weight-semibold);
+        }
+
+        .btn-outline {
+            border: 1px solid var(--line-strong);
+            color: var(--text);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-sm);
+        }
+
+        .btn-mono {
+            padding: var(--space-2) var(--space-4);
+            font-weight: var(--weight-medium);
+            font-family: var(--mono);
+        }
+
+        .btn-block {
+            display: block;
+            text-align: center;
+            padding: var(--space-2);
+            border-radius: var(--radius-sm);
+            font-weight: var(--weight-semibold);
+            font-size: var(--font-sm);
+        }
+
+        /* Mono uppercase labels (color set per use) */
+        .mono-caps {
+            font-family: var(--mono);
+            font-size: var(--font-xs);
+            letter-spacing: var(--tracking-wide);
+            text-transform: uppercase;
+        }
+
+        /* Customer logos */
+        .customer-logo {
+            display: flex;
+            align-items: center;
+            opacity: 0.55;
+        }
+
+        .customer-logo img {
+            height: 26px;
+            display: block;
+            filter: brightness(0) invert(1);
+        }
+
+        /* Typography */
+        .heading-xl {
+            margin: 0 0 var(--space-2);
+            font-size: var(--font-xl);
+            letter-spacing: var(--tracking-tight);
+            font-weight: var(--weight-bold);
+            color: var(--ink);
+        }
+
+        .body-text {
+            margin: 0;
+            font-size: var(--font-md);
+            line-height: var(--leading-body);
+            color: var(--muted);
+        }
+
+        /* Vertical stacks */
+        .stack {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        /* Feature cards */
+        .feature-card {
+            border: 1px solid var(--line-card);
+            border-radius: var(--radius-md);
+            padding: var(--space-5);
+            background: var(--card);
+        }
+
+        .feature-map {
+            display: flex;
+            align-items: baseline;
+            gap: var(--space-2);
+            font-family: var(--mono);
+            font-size: var(--font-xs);
+            margin-bottom: var(--space-2);
+        }
+
+        .feature-map span:first-child {
+            color: var(--muted);
+        }
+
+        .feature-map span:nth-child(2) {
+            color: var(--faint);
+        }
+
+        .feature-map span:last-child {
+            color: var(--accent);
+        }
+
+        .feature-title {
+            margin: 0 0 var(--space-2);
+            font-size: var(--font-lg);
+            font-weight: var(--weight-semibold);
+            color: var(--ink);
+        }
+
+        .feature-text {
+            margin: 0;
+            font-size: var(--font-sm);
+            line-height: var(--leading-body);
+            color: var(--muted);
+        }
+
+        .code {
+            font-family: var(--mono);
+            color: var(--text-soft);
+        }
+
+        /* Pricing plans */
+        .plan-card {
+            border: 1px solid var(--line-card);
+            border-radius: var(--radius-md);
+            padding: var(--space-5);
+            background: var(--card);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .plan-label {
+            font-family: var(--mono);
+            font-size: var(--font-xs);
+            color: var(--muted);
+            margin-bottom: var(--space-2);
+        }
+
+        .plan-price {
+            font-size: var(--font-xl);
+            font-weight: var(--weight-bold);
+            color: var(--ink);
+        }
+
+        .plan-per {
+            font-size: var(--font-sm);
+            font-weight: var(--weight-normal);
+            color: var(--faint);
+        }
+
+        .plan-features {
+            margin: var(--space-4) 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+            font-size: var(--font-sm);
+            color: var(--text-soft);
+        }
+
+        .plan-highlight {
+            color: var(--text);
+        }
+
+        /* Link cards (founders, critique references) */
+        .person-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid var(--line-card);
+            border-radius: var(--radius-sm);
+            padding: var(--space-3);
+            background: var(--card);
+            color: var(--text-soft);
+        }
+
+        .person-name {
+            font-weight: var(--weight-semibold);
+            font-size: var(--font-md);
+        }
+
+        .ref-card {
+            display: block;
+            border: 1px solid var(--line-card);
+            border-radius: var(--radius-sm);
+            padding: var(--space-3);
+            background: var(--card);
+            color: var(--text-soft);
+        }
+
+        .ref-title {
+            font-size: var(--font-sm);
+            line-height: var(--leading-body);
+        }
+
+        .link-label {
+            font-family: var(--mono);
+            font-size: var(--font-xs);
+            color: var(--primary);
+        }
+
+        /* Utilities */
+        .narrow {
+            max-width: var(--container-sm);
+        }
+
+        .measure {
+            max-width: var(--measure);
+        }
+
+        .mt-1 {
+            margin-top: var(--space-1);
+        }
+
+        .mb-7 {
+            margin-bottom: var(--space-7);
+        }
+
+        .italic {
+            font-style: italic;
+        }
+
+        .text-soft {
+            color: var(--text-soft);
+        }
+
+        .em-accent {
+            color: var(--accent);
+            font-style: normal;
+        }
+
+        /* Shown only on mobile, where it toggles the nav menu */
+        .mobile-menu-button {
+            display: none;
+        }
+
+        /* Responsive (mobile). !important is needed to beat inline styles. */
+        @media (max-width: 720px) {
+            .wrap-two-rows-mobile {
+                height: auto !important;
+                flex-wrap: wrap;
+                row-gap: var(--space-2);
+                padding: var(--space-2) var(--space-6) !important;
+            }
+
+            .mobile-menu-button {
+                display: block;
+            }
+
+            /* Pushes the nav's right-hand group (Get started + menu button) over */
+            .wrap-two-rows-mobile .btn-primary {
+                margin-left: auto;
+            }
+
+            .full-row-mobile {
+                display: none !important;
+                order: 1;
+                width: 100%;
+                margin-left: 0 !important;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--space-3) !important;
+            }
+
+            .full-row-mobile.open {
+                display: flex !important;
+            }
+
+            .stack-mobile {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: var(--space-2) !important;
+            }
+
+            .single-column-mobile {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div style="min-height: 100vh; background: var(--bg);">
+
+        <!-- ==========================================================
+       NAV
+       ========================================================== -->
+        <div style="
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  ">
+            <div class="container-max-width wrap-two-rows-mobile" style="
+      margin: 0 auto;
+      padding: 0 var(--space-6);
+      height: var(--space-8);
+      display: flex;
+      align-items: center;
+      gap: var(--space-5);
+    ">
+
+                <a href="#" style="display: flex; align-items: center;">
+                    <img src="twigg-logo.png" alt="Twigg" style="height: 38px; display: block;">
+                </a>
+
+                <div id="nav-menu" class="full-row-mobile"
+                    style="display: flex; align-items: center; gap: var(--space-5); font-size: var(--font-sm); margin-left: auto;">
+                    <a href="#map" class="hover-accent" style="color: var(--text-soft); font-weight: var(--weight-medium);">Features</a>
+                    <a href="#pricing" class="hover-accent" style="color: var(--text-soft); font-weight: var(--weight-medium);">Pricing</a>
+                    <a href="#about" class="hover-accent" style="color: var(--text-soft); font-weight: var(--weight-medium);">About us</a>
+                    <a href="#critique" class="hover-accent" style="color: var(--text-soft); font-weight: var(--weight-medium);">Critique??</a>
+                </div>
+
+                <a href="/login" class="hover-fill btn-primary"
+                    style="padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); font-size: var(--font-sm);">Get started</a>
+
+                <button id="menu-button" class="hover-outline btn-outline mobile-menu-button" aria-label="Show menu"
+                    style="background: none; padding: var(--space-1) var(--space-2); cursor: pointer; font-family: inherit;">☰</button>
+
+            </div>
+        </div>
+
+        <!-- ==========================================================
+       HERO
+       ========================================================== -->
+        <div style="max-width: var(--container-md); margin: 0 auto; padding: var(--space-10) var(--space-6); text-align: center;">
+
+            <h1 style="
+      margin: 0 0 var(--space-4);
+      font-size: var(--font-xxl);
+      line-height: var(--leading-tight);
+      letter-spacing: var(--tracking-tight);
+      font-weight: var(--weight-bold);
+      color: var(--ink);
+      text-wrap: balance;
+    ">Open Source alternative to&nbsp;Critique.</h1>
+
+            <p style="
+      margin: 0 auto var(--space-7);
+      font-size: var(--font-lg);
+      line-height: var(--leading-body);
+      color: var(--muted);
+      max-width: var(--measure);
+      text-wrap: pretty;
+    "><a href="#critique">Critique</a> is the tool Google's engineers use every day to collaborate on software. Twigg
+                is that workflow, built in the open, for everyone.</p>
+
+            <!-- Calls to action -->
+            <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3);">
+
+                <a href="/login" class="hover-fill btn-primary"
+                    style="padding: var(--space-3) var(--space-6); border-radius: var(--radius-sm); font-size: var(--font-md);">Get started for free</a>
+
+                <div style="display: flex; justify-content: center; align-items: center; gap: var(--space-2); flex-wrap: wrap;">
+                    <a href="/docs/v/2" class="hover-outline btn-outline btn-mono">Read the docs</a>
+
+                    <a href="https://github.com/twigg-vc/monorepo" class="hover-outline btn-outline btn-mono">See the source</a>
+
+                    <a href="https://discord.com/invite/ncPE6cDkC4" class="hover-outline btn-outline btn-mono">Join the community</a>
+                </div>
+
+            </div>
+
+            <!-- Social proof -->
+            <div style="margin-top: var(--space-9); display: flex; flex-direction: column; align-items: center; gap: var(--space-4);">
+
+                <div class="mono-caps text-soft">Powering development at</div>
+
+                <div style="display: flex; align-items: center; gap: var(--space-8);">
+                    <a href="https://navi.app/" class="hover-opacity customer-logo">
+                        <img src="logo-navi.png" alt="Navi">
+                    </a>
+                    <a href="https://www.nexussaude.com.br/" class="hover-opacity customer-logo">
+                        <img src="logo-nexus.png" alt="Nexus Saúde">
+                    </a>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ==========================================================
+       FEATURES — "how it maps" from Critique to Twigg
+       ========================================================== -->
+        <div id="map" class="top-line-border tinted-background">
+            <div class="container-max-width" style="margin: 0 auto; padding: var(--space-9) var(--space-6);">
+
+                <div class="mono-caps" style="color: var(--primary); margin-bottom: var(--space-2);">Features</div>
+
+                <h2 class="heading-xl">Everything that makes Critique great</h2>
+
+                <p class="body-text measure mb-7">
+                    If you've used Critique, Twigg will feel familiar on day one.
+                </p>
+
+                <div class="single-column-mobile" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4);">
+
+                    <!-- Card: small, dependent changes -->
+                    <div class="hover-border feature-card">
+                        <div class="feature-map">
+                            <span>small CLs</span>
+                            <span>→</span>
+                            <span>stacked commits</span>
+                        </div>
+                        <h3 class="feature-title">Small,
+                            dependent changes</h3>
+                        <p class="feature-text">Ship work as a
+                            stack of small commits that build on each other. Each one is reviewed and merged
+                            independently.</p>
+                    </div>
+
+                    <!-- Card: stable versioned identifiers -->
+                    <div class="hover-border feature-card">
+                        <div class="feature-map">
+                            <span>cl/67</span>
+                            <span>→</span>
+                            <span>c/67v0, c/67v1, ...</span>
+                        </div>
+                        <h3 class="feature-title">Stable
+                            versioned identifiers</h3>
+                        <p class="feature-text">When a commit
+                            is pushed to the server, it gets a number: <span
+                                class="code">c/67v0</span>. Amend it, push
+                            it, and <span class="code">c/67v1</span> is
+                            created. No version is ever lost.</p>
+                    </div>
+
+                    <!-- Card: iterate under review -->
+                    <div class="hover-border feature-card">
+                        <div class="feature-map">
+                            <span>snapshots</span>
+                            <span>→</span>
+                            <span>commit versions</span>
+                        </div>
+                        <h3 class="feature-title">Iterate
+                            under review</h3>
+                        <p class="feature-text">Address
+                            feedback by pushing a new version of the same commit. Reviewers see the changes and how they
+                            evolved, version to version.</p>
+                    </div>
+
+                    <!-- Card: hierarchical ownership -->
+                    <div class="hover-border feature-card">
+                        <div class="feature-map">
+                            <span>code ownership</span>
+                            <span>→</span>
+                            <span>OWNERS files</span>
+                        </div>
+                        <h3 class="feature-title">Hierarchical
+                            ownership</h3>
+                        <p class="feature-text">Declare who
+                            owns each part of the repo. Ownership cascades down directories.</p>
+                    </div>
+
+                    <!-- Card: tests on every commit -->
+                    <div class="hover-border feature-card">
+                        <div class="feature-map">
+                            <span>presubmits / rollouts</span>
+                            <span>→</span>
+                            <span>built-in CI/CD</span>
+                        </div>
+                        <h3 class="feature-title">Tests on
+                            every commit</h3>
+                        <p class="feature-text">Path-aware jobs
+                            run on every commit, with unlimited minutes.</p>
+                    </div>
+
+                    <!-- Card: easy multiplayer -->
+                    <div class="hover-border feature-card">
+                        <div class="feature-map">
+                            <span>patch in a CL</span>
+                            <span>→</span>
+                            <span>tw pull c/67</span>
+                        </div>
+                        <h3 class="feature-title">Easy
+                            multiplayer</h3>
+                        <p class="feature-text"><span
+                                class="code">tw pull c/67</span>, <span
+                                class="code">tw amend</span>, <span
+                                class="code">tw push</span>: that's all it
+                            takes to contribute to someone else's commit.</p>
+                    </div>
+
+                    <!-- Card: simpler than Git -->
+                    <div class="hover-border feature-card">
+                        <div class="feature-map">
+                            <span>branches · unfinished rebase</span>
+                            <span>→</span>
+                            <span>gone</span>
+                        </div>
+                        <h3 class="feature-title">Simpler than
+                            Git</h3>
+                        <p class="feature-text">Commits and
+                            commit versions: that's it. No branches, no staging areas, no unfinished rebase states.</p>
+                    </div>
+
+                    <!-- Card: risk-free to try -->
+                    <div class="hover-border feature-card">
+                        <div class="feature-map">
+                            <span>gradual adoption</span>
+                            <span>→</span>
+                            <span>git mirror</span>
+                        </div>
+                        <h3 class="feature-title">Risk-free to
+                            try</h3>
+                        <p class="feature-text">Submitted
+                            changes are automatically pushed to your <a
+                                href="/docs/v/2/git-mirror">mirrored Git repo</a>, so switching off
+                            costs nothing.</p>
+                    </div>
+
+                </div>
+
+                <!-- Open source banner -->
+                <div class="stack-mobile" style="
+        margin-top: var(--space-5);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius-md);
+        padding: var(--space-4) var(--space-5);
+        background: var(--card-tint);
+        display: flex;
+        gap: var(--space-4);
+        align-items: baseline;
+        justify-content: space-between;
+      ">
+                    <div style="font-size: var(--font-md); line-height: var(--leading-body); color: var(--text-soft);">Twigg is <span
+                            style="color: var(--accent); font-weight: var(--weight-semibold);">open source</span>. Read it, host it,
+                        contribute to it.</div>
+                    <a href="https://github.com/twigg-vc/monorepo"
+                        style="font-family: var(--mono); font-size: var(--font-sm); white-space: nowrap;">see the source →</a>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ==========================================================
+       PRICING
+       ========================================================== -->
+        <div id="pricing" class="top-line-border">
+            <div class="container-max-width" style="margin: 0 auto; padding: var(--space-9) var(--space-6);">
+
+                <div class="mb-7">
+                    <div class="mono-caps" style="color: var(--primary); margin-bottom: var(--space-2);">Pricing</div>
+
+                    <h2 class="heading-xl">Simple and predictable</h2>
+
+                    <p class="body-text measure">
+                        <span class="text-soft">Simple:</span> every plan is the full product, and you
+                        just pick a size.<br><span class="text-soft">Predictable:</span> unlimited CI/CD
+                        minutes on every plan. Your bill only changes if you need more repos, team seats, storage, or
+                        CI/CD parallelism.</p>
+                </div>
+
+                <div class="single-column-mobile" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); align-items: stretch;">
+
+                    <!-- Plan: Free -->
+                    <div class="plan-card">
+                        <div class="plan-label">
+                            FREE</div>
+                        <div class="plan-price">$0<span
+                                class="plan-per"> /mo</span></div>
+
+                        <div class="plan-features">
+                            <div>1 user · 1 repository</div>
+                            <div>250 MB storage</div>
+                            <div>Stacked changes &amp; code review &amp; CI/CD &amp; OWNERS</div>
+                            <div class="plan-highlight">Unlimited CI/CD minutes</div>
+                        </div>
+
+                        <a href="/login" class="hover-outline btn-outline btn-block">Get Free</a>
+                    </div>
+
+                    <!-- Plan: Solo -->
+                    <div class="plan-card">
+                        <div class="plan-label">
+                            SOLO</div>
+                        <div class="plan-price">$12<span
+                                class="plan-per"> /mo</span></div>
+
+                        <div class="plan-features">
+                            <div>Up to 3 users · unlimited repos</div>
+                            <div>10 GB storage</div>
+                            <div>Stacked changes &amp; code review &amp; CI/CD &amp; OWNERS</div>
+                            <div class="plan-highlight">Unlimited CI/CD minutes · 1× concurrency</div>
+                        </div>
+
+                        <a href="/login" class="hover-outline btn-outline btn-block">Get Solo</a>
+                    </div>
+
+                    <!-- Plan: Team (highlighted) -->
+                    <div class="plan-card" style="
+          border-color: var(--primary);
+          background: var(--card-hi);
+          box-shadow: 0 16px 60px -20px rgba(124, 92, 255, 0.35);
+        ">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-2);">
+                            <div style="font-family: var(--mono); font-size: var(--font-xs); color: var(--accent);">TEAM</div>
+                            <div style="
+              font-family: var(--mono);
+              font-size: var(--font-xs);
+              background: var(--primary);
+              color: #fff;
+              border-radius: var(--radius-full);
+              padding: var(--space-0) var(--space-2);
+            ">RECOMMENDED</div>
+                        </div>
+
+                        <div class="plan-price">$18<span
+                                class="plan-per"> /user/mo</span></div>
+
+                        <div class="plan-features">
+                            <div>Unlimited users &amp; repos</div>
+                            <div>50 GB storage</div>
+                            <div>Stacked changes &amp; code review &amp; CI/CD &amp; OWNERS</div>
+                            <div class="plan-highlight">Unlimited CI/CD minutes · 3× concurrency</div>
+                        </div>
+
+                        <a href="/login" class="hover-fill btn-primary btn-block">Get Team</a>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ==========================================================
+       ABOUT US
+       ========================================================== -->
+        <div id="about" class="top-line-border tinted-background">
+            <div class="container-max-width single-column-mobile" style="
+      margin: 0 auto;
+      padding: var(--space-9) var(--space-6);
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: var(--space-8);
+      align-items: start;
+    ">
+
+                <div>
+                    <div class="mono-caps" style="color: var(--primary); margin-bottom: var(--space-2);">About us</div>
+
+                    <h2 class="heading-xl">An Open Source, bootstrapped company</h2>
+
+                    <p class="body-text" style="margin-bottom: var(--space-3);">We're a
+                        bootstrapped company: we fund the project with services and our paid hosted instance.</p>
+                    <p class="body-text">Twigg is fully <a
+                            href="https://github.com/twigg-vc/monorepo">open source</a>: even if we all vanish in the AI
+                        apocalypse, the project will survive. Anyone (or anything) can modify, extend, and self-host
+                        Twigg.</p>
+                </div>
+
+                <!-- Founders -->
+                <div class="stack">
+                    <div class="mono-caps text-soft">The <em class="em-accent">actual</em> gang of three</div>
+
+                    <a href="https://www.linkedin.com/in/andrebianchessi" class="hover-border-ink person-card">
+                        <span class="person-name">André Bianchessi</span>
+                        <span class="link-label">LinkedIn
+                            →</span>
+                    </a>
+
+                    <a href="https://www.linkedin.com/in/jo%C3%A3o-bianchessi-02484b20a/" class="hover-border-ink person-card">
+                        <span class="person-name">João Bianchessi</span>
+                        <span class="link-label">LinkedIn
+                            →</span>
+                    </a>
+
+                    <a href="https://www.linkedin.com/in/marcos-bianchessi-317755350/" class="hover-border-ink person-card">
+                        <span class="person-name">Marcos Bianchessi</span>
+                        <span class="link-label">LinkedIn
+                            →</span>
+                    </a>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ==========================================================
+       CRITIQUE EXPLAINER
+       ========================================================== -->
+        <div id="critique" class="top-line-border">
+            <div class="container-max-width" style="margin: 0 auto; padding: var(--space-9) var(--space-6);">
+
+                <div class="narrow mb-7">
+                    <div class="mono-caps" style="color: var(--primary); margin-bottom: var(--space-2);">Critique??</div>
+
+                    <h2 class="heading-xl">What's Critique?</h2>
+
+                    <p class="body-text">Google's <em class="em-accent">awesome</em> internal code collaboration
+                        platform. Don't take our word for it:</p>
+                </div>
+
+                <div class="stack narrow">
+
+                    <a href="https://abseil.io/resources/swe-book/html/ch19.html" class="hover-border-text ref-card">
+                        <div class="ref-title">How Critique works, from Google's own <span class="italic">Software Engineering at Google</span>.</div>
+                        <div class="link-label mt-1">
+                            Critique: Google's Code Review Tool →</div>
+                    </a>
+
+                    <a href="https://read.engineerscodex.com/p/how-google-takes-the-pain-out-of" class="hover-border-text ref-card">
+                        <div class="ref-title italic">"The number of useful
+                            comments decreases and review latency increases as the size of the change increases."</div>
+                        <div class="link-label mt-1">
+                            How Google takes the pain out of code reviews →</div>
+                    </a>
+
+                    <a href="https://developers.facebook.com/blog/post/2022/11/15/meta-developers-workflow-exploring-tools-used-to-code/"
+                        class="hover-border-text ref-card">
+                        <div class="ref-title">Meta's engineering blog on the internal tools
+                            its developers code with.</div>
+                        <div class="link-label mt-1">
+                            Meta developers' workflow →</div>
+                    </a>
+
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ==========================================================
+       FOOTER
+       ========================================================== -->
+        <div style="border-top: 1px solid var(--line); background: var(--bg-footer);">
+            <div class="container-max-width" style="margin: 0 auto; padding: var(--space-5) var(--space-6) var(--space-6);">
+                <div style="text-align: center; font-size: var(--font-xs); line-height: var(--leading-loose); color: var(--faint);">© 2026 Twigg.
+                    Trademarks belong to their owners.<br>Twigg is independent and not affiliated with Google or Meta.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.getElementById("menu-button").addEventListener("click", function () {
+            document.getElementById("nav-menu").classList.toggle("open");
+        });
+
+        document.querySelectorAll("#nav-menu a").forEach(function (link) {
+            link.addEventListener("click", function () {
+                document.getElementById("nav-menu").classList.remove("open");
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,52 @@
+# All paths are relative to the monorepo root.
+# -> This dockerfile must be executed in the context of the root
+# -> I.e. run `docker build -f DOCKERFILE ..` from this dir or
+# -> `docker build -f ./twigg-runner/DOCKERFILE .` at the repo root
+FROM golang:1.26-alpine AS builder
+
+ARG `
+
+WORKDIR /monorepo
+
+# Build the runner binary
+COPY go.mod go.sum /monorepo/
+COPY twigg-runner /monorepo/twigg-runner
+RUN go build -o twigg-runner.bin ./twigg-runner
+
+# Build twigg CLI (the runner uses it)
+# Note that we must copy all the necessary files to build the tw CLI
+COPY twigg /monorepo/twigg
+COPY buildmeta /monorepo/buildmeta
+COPY base /monorepo/base
+COPY tw /monorepo/tw
+COPY data /monorepo/data
+COPY twiggbuildflags /monorepo/twiggbuildflags
+RUN go build -ldflags "-X 'monorepo/buildmeta.Version=$TW_ID'" -o tw.bin ./tw
+
+# Base target
+FROM alpine:latest AS base
+COPY --from=builder /monorepo/twigg-runner.bin /twigg-runner.bin
+COPY --from=builder /monorepo/tw.bin /usr/local/bin/tw
+RUN chmod +x /usr/local/bin/tw
+ENTRYPOINT ["/twigg-runner.bin"]
+
+# Go target
+FROM golang:1.26-alpine AS go
+COPY --from=builder /monorepo/twigg-runner.bin /twigg-runner.bin
+COPY --from=builder /monorepo/tw.bin /usr/local/bin/tw
+RUN chmod +x /usr/local/bin/tw
+ENTRYPOINT ["/twigg-runner.bin"]
+
+# Node target
+FROM node:20-alpine AS node-20
+COPY --from=builder /monorepo/twigg-runner.bin /twigg-runner.bin
+COPY --from=builder /monorepo/tw.bin /usr/local/bin/tw
+RUN chmod +x /usr/local/bin/tw
+ENTRYPOINT ["/twigg-runner.bin"]
+
+# Bun target
+FROM oven/bun:1-alpine AS bun
+COPY --from=builder /monorepo/twigg-runner.bin /twigg-runner.bin
+COPY --from=builder /monorepo/tw.bin /usr/local/bin/tw
+RUN chmod +x /usr/local/bin/tw
+ENTRYPOINT ["/twigg-runner.bin"]

@@ -1,0 +1,2 @@
+# Bash command to create 100 commits on top of each other
+for i in {1..100}; do echo "$(printf 'Random content %s\n' {1..500})$RANDOM" > "file_$RANDOM.txt"; ag commit "Random commit $i"; done

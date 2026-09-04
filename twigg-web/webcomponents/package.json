@@ -1,0 +1,25 @@
+{
+    "name": "web-components",
+    "scripts": {
+        "test": "tsc --noEmit && web-test-runner"
+    },
+    "dependencies": {
+        "chart.js": "^4.5.0",
+        "chartjs-plugin-datalabels": "^2.2.0",
+        "cytoscape": "^3.33.1",
+        "dompurify": "^3.4.12",
+        "highlight.js": "^11.11.1",
+        "lit": "^3.2.1",
+        "marked": "^16.2.0"
+    },
+    "devDependencies": {
+        "@open-wc/testing": "^4.0.0",
+        "@types/mocha": "^10.0.10",
+        "@types/node": "^24.6.0",
+        "@web/dev-server-esbuild": "^2.0.0",
+        "@web/test-runner": "^0.20.2",
+        "@web/test-runner-puppeteer": "^0.18.0",
+        "esbuild": "0.25.1",
+        "typescript": "^7.0.2"
+    }
+}

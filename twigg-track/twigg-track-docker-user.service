@@ -1,0 +1,21 @@
+[Unit]
+Description=Allow LXD job bridge traffic through Docker's iptables FORWARD chain
+# Docker sets the iptables FORWARD chain policy to DROP when it starts and
+# only adds accepts for its own bridges. LXD keeps its rules in its own
+# nftables table, which cannot override that drop (a drop in any table is
+# final), so egress from the LXD job bridge dies in docker's chain and VMs
+# never reach the internet.
+# See https://canonical.com/lxd/docs/default/howto/network_bridge_firewalld/
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# The "-C || -I" makes each rule idempotent across unit restarts.
+ExecStart=/bin/sh -c '/usr/sbin/iptables -C DOCKER-USER -i twigg-runner-br -j ACCEPT || /usr/sbin/iptables -I DOCKER-USER -i twigg-runner-br -j ACCEPT'
+ExecStart=/bin/sh -c '/usr/sbin/iptables -C DOCKER-USER -o twigg-runner-br -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT || /usr/sbin/iptables -I DOCKER-USER -o twigg-runner-br -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT'
+
+[Install]
+WantedBy=multi-user.target

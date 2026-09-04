@@ -1,0 +1,130 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+    /* Primary */
+    --ifm-color-primary: #7c5cff;
+
+    /* Darker shades (hover, active, emphasis) */
+    --ifm-color-primary-dark: #6f52e6;
+    --ifm-color-primary-darker: #684ddb;
+    --ifm-color-primary-darkest: #5540b8;
+
+    /* Lighter shades (backgrounds, subtle accents) */
+    --ifm-color-primary-light: #8a6dff;
+    --ifm-color-primary-lighter: #9a84ff;
+    --ifm-color-primary-lightest: #b8a9ff;
+
+    --docusaurus-highlighted-code-line-bg: rgba(124, 92, 255, 0.12);
+
+    /* =========================
+       Spacing (rem scale)
+       ========================= */
+    --size-rem-1: 0.25rem;
+    --size-rem-2: 0.5rem;
+    --size-rem-3: 0.75rem;
+    --size-rem-4: 1rem;
+    --size-rem-5: 1.25rem;
+
+    /* =========================
+       Radius
+       ========================= */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+
+    /* =========================
+           Font
+    ========================= */
+    --weight-semi-bold: 600;
+
+    /* =========================
+               Input
+    ========================= */
+    --normal-input-max-width: 420px;
+
+    /* =========================
+       Effects
+       ========================= */
+    --focus-ring-primary: 0 0 0 2px rgba(124, 92, 255, 0.15);
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+/* Dark mode – lighter for contrast on dark backgrounds */
+[data-theme='dark'] {
+    /* Primary */
+    --ifm-color-primary: #9a84ff;
+
+    /* Darker (still lighter than light-mode darks) */
+    --ifm-color-primary-dark: #8b74f0;
+    --ifm-color-primary-darker: #836ce6;
+    --ifm-color-primary-darkest: #6d5ac2;
+
+    /* Lighter / glow accents */
+    --ifm-color-primary-light: #a897ff;
+    --ifm-color-primary-lighter: #b8a9ff;
+    --ifm-color-primary-lightest: #d6ccff;
+
+    /* Code highlight */
+    --docusaurus-highlighted-code-line-bg: rgba(154, 132, 255, 0.18);
+}
+
+.git-mirror-url-generator-box {
+    margin-top: var(--size-rem-4);
+    margin-bottom: var(--size-rem-4);
+    padding: var(--size-rem-5);
+    border: 1px solid var(--ifm-color-emphasis-300);
+    border-radius: var(--radius-md);
+    background: var(--ifm-background-surface-color);
+}
+
+.git-mirror-url-generator-input {
+    display: block;
+    width: 100%;
+    max-width: var(--normal-input-max-width);
+    margin-top: var(--size-rem-2);
+    margin-bottom: var(--size-rem-4);
+    padding: var(--size-rem-2) var(--size-rem-3);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--ifm-color-emphasis-300);
+    background: var(--ifm-background-color);
+    color: var(--ifm-font-color-base);
+}
+
+.git-mirror-url-generator-input:focus {
+    outline: none;
+    border-color: var(--ifm-color-primary);
+    box-shadow: var(--focus-ring-primary);
+}
+
+.git-mirror-url-generator-url-display {
+    margin-top: var(--size-rem-4);
+    padding: var(--size-rem-3);
+    border-radius: var(--radius-sm);
+    background: var(--ifm-code-background);
+    border: 1px solid var(--ifm-color-emphasis-200);
+    overflow-x: auto;
+}
+
+.git-mirror-url-generator-copy-btn {
+    margin-top: var(--size-rem-1);
+    padding: var(--size-rem-2) var(--size-rem-4);
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--ifm-color-primary);
+    color: white;
+    font-weight: var(--weight-semi-bold);
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.git-mirror-url-generator-copy-btn:hover {
+    background: var(--ifm-color-primary-dark);
+}
+
+.git-mirror-url-generator-copy-btn:active {
+    transform: translateY(1px);
+}
