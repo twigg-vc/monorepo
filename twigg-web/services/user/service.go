@@ -199,11 +199,11 @@ func (it userIter) Err() error {
 func readUserDataFromOtherSources(
 	db webdb.WebDb,
 	u *User) error {
-	q, err := db.GetQuota(u.quotaOwnerName())
+	q, err := db.GetQuota(quotaOwnerName(*u))
 	if err != nil {
 		return err
 	}
-	qUsed, qLimitted, err := db.GetQuotaUsed(u.quotaOwnerName())
+	qUsed, qLimitted, err := db.GetQuotaUsed(quotaOwnerName(*u))
 	if err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func readUserDataFromOtherSources(
 	return nil
 }
 
-func (u User) quotaOwnerName() string {
+func quotaOwnerName(u User) string {
 	return strconv.FormatInt(u.Id, 10)
 }
 
@@ -594,7 +594,7 @@ func (s service) HandleStripeCheckoutSessionSuccess(w context.Context,
 	default:
 		return User{}, fmt.Errorf("%d is not a valid plan", plan)
 	}
-	err = s.db.SetQuota(u.quotaOwnerName(), quota)
+	err = s.db.SetQuota(quotaOwnerName(u), quota)
 	if err != nil {
 		return User{}, fmt.Errorf("failed to set quota: %s", err)
 	}
@@ -663,7 +663,7 @@ func (s service) HandlesSubscriptionDeleted(
 	if err != nil {
 		return User{}, fmt.Errorf("failed to inactivate stripe sub: %s", err)
 	}
-	err = s.db.FreezeQuota(u.quotaOwnerName())
+	err = s.db.FreezeQuota(quotaOwnerName(u))
 	if err != nil {
 		return User{}, fmt.Errorf("failed to freeze quota: %s", err)
 	}
@@ -728,7 +728,7 @@ func (s service) HandleManualSubscriptionDeleted(w context.Context, userId int64
 	if u.State != user.UserState_ManualSubscription {
 		return fmt.Errorf("%d is not on a manual subscription", userId)
 	}
-	err = s.db.FreezeQuota(u.quotaOwnerName())
+	err = s.db.FreezeQuota(quotaOwnerName(u))
 	if err != nil {
 		return fmt.Errorf("failed to freeze quota: %s", err)
 	}
@@ -791,7 +791,7 @@ func (s service) HandleManualPaymentSuccess(w context.Context, userId int64,
 	default:
 		return User{}, fmt.Errorf("%d is not a valid plan", plan)
 	}
-	err = s.db.SetQuota(user.quotaOwnerName(), quota)
+	err = s.db.SetQuota(quotaOwnerName(user), quota)
 	if err != nil {
 		return User{}, fmt.Errorf("failed to set quota: %s", err)
 	}
@@ -837,7 +837,7 @@ func (s service) ManualReset(w context.Context, userId int64) error {
 			return fmt.Errorf("failed to inactivate stripe sub: %s", err)
 		}
 	}
-	err = s.db.FreezeQuota(u.quotaOwnerName())
+	err = s.db.FreezeQuota(quotaOwnerName(u))
 	if err != nil {
 		return fmt.Errorf("failed to freeze quota: %s", err)
 	}
