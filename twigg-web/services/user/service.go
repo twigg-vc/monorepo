@@ -428,7 +428,7 @@ func (s service) UpdateUsername(w context.Context, id int64, username string) (U
 	if u.Username != "" {
 		return User{}, errors.New("changing username is not allowed")
 	}
-	u.SetUsername(username)
+	SetUsername(&u, username)
 
 	return u, s.updateUser(u, w)
 }
@@ -451,7 +451,7 @@ func (s service) ChooseUsernameAndStartTrial(w context.Context, id int64, userna
 	if u.Username != "" {
 		return User{}, errors.New("changing username is not allowed")
 	}
-	u.SetUsername(username)
+	SetUsername(&u, username)
 	err = s.updateUser(u, w)
 	if err != nil {
 		return User{}, err
@@ -528,7 +528,7 @@ func (s service) GetUserForPaymentWithStripe(
 	}
 
 	// Update and save the user
-	u.StartStripePayment(stripeSessionId, stripeSessionUrl, priceId, quantity)
+	StartStripePayment(&u, stripeSessionId, stripeSessionUrl, priceId, quantity)
 	err = s.updateUser(u, w)
 	if err != nil {
 		return
@@ -604,7 +604,7 @@ func (s service) HandleStripeCheckoutSessionSuccess(w context.Context,
 	}
 
 	// Update and save the user
-	u.HandleStripePaymentCompleted(plan, quantity, stripeSubscriptionID)
+	HandleStripePaymentCompleted(&u, plan, quantity, stripeSubscriptionID)
 	err = s.updateUser(u, w)
 	if err != nil {
 		return User{}, fmt.Errorf("failed to update User: %s", err)
@@ -672,7 +672,7 @@ func (s service) HandlesSubscriptionDeleted(
 		return User{}, err
 	}
 
-	u.DeleteStripeSubscription()
+	DeleteStripeSubscription(&u)
 	err = s.updateUser(u, w)
 	if err != nil {
 		return User{}, fmt.Errorf("failed to update User: %s", err)
@@ -736,7 +736,7 @@ func (s service) HandleManualSubscriptionDeleted(w context.Context, userId int64
 	if err != nil {
 		return err
 	}
-	u.DeleteManualSubscription()
+	DeleteManualSubscription(&u)
 	return s.updateUser(u, w)
 }
 
@@ -751,7 +751,7 @@ func (s service) deleteCurrentStripeSessionIfItExists(u *User) error {
 	if err != nil {
 		return err
 	}
-	u.StopPayingWithStripe()
+	StopPayingWithStripe(u)
 	return nil
 }
 
@@ -800,7 +800,7 @@ func (s service) HandleManualPaymentSuccess(w context.Context, userId int64,
 		return User{}, err
 	}
 
-	user.ManuallyPayForPlan(plan, quantity)
+	ManuallyPayForPlan(&user, plan, quantity)
 	err = s.updateUser(user, w)
 	if err != nil {
 		return User{}, fmt.Errorf("failed to update User: %s", err)
@@ -846,7 +846,7 @@ func (s service) ManualReset(w context.Context, userId int64) error {
 		return err
 	}
 
-	u.ResetManually()
+	ResetManually(&u)
 	return s.updateUser(u, w)
 }
 

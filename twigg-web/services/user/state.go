@@ -14,7 +14,7 @@ func SignupUserWithPassword(email, username, passwordHash string) User {
 		Username:     username,
 		PasswordHash: passwordHash,
 	}
-	u.CheckStateOrDie()
+	CheckStateOrDie(u)
 	return u
 }
 
@@ -24,19 +24,19 @@ func SignupWithOAuth(email string) User {
 		State: user.UserState_NoUsername,
 		Email: email,
 	}
-	u.CheckStateOrDie()
+	CheckStateOrDie(u)
 	return u
 }
 
-func (u *User) SetUsername(username string) {
+func SetUsername(u *User, username string) {
 	u.Username = username
 	if u.State == user.UserState_NoUsername {
 		u.State = user.UserState_NoSubscription
 	}
-	u.CheckStateOrDie()
+	CheckStateOrDie(*u)
 }
 
-func (u *User) ResetManually() {
+func ResetManually(u *User) {
 	// Some of these fields are saved on other tables, but this resets them
 	// anyway
 	u.State = user.UserState_NoSubscription
@@ -49,20 +49,21 @@ func (u *User) ResetManually() {
 	u.StripeSessionQuantity = 0
 	u.StripeSubscriptionID = ""
 	u.TotalQuota = u.QuotaUsed
-	u.CheckStateOrDie()
+	CheckStateOrDie(*u)
 }
 
-func (u *User) ManuallyPayForPlan(plan SubscriptionPlan, quantity int64) {
+func ManuallyPayForPlan(u *User, plan SubscriptionPlan, quantity int64) {
 	if u.State != user.UserState_NoSubscription {
 		panicF("cant ManuallyPayForPlan on state %s", u.State)
 	}
 	u.State = user.UserState_ManualSubscription
 	u.SelfPaidSubscription = plan
 	u.SelfPaidSubscriptionQuantity = quantity
-	u.CheckStateOrDie()
+	CheckStateOrDie(*u)
 }
 
-func (u *User) StartStripePayment(
+func StartStripePayment(
+	u *User,
 	StripeSessionId,
 	StripeSessionUrl string,
 	StripeSessionPriceId stripeclient.PriceId,
@@ -78,10 +79,10 @@ func (u *User) StartStripePayment(
 	u.StripeSessionUrl = StripeSessionUrl
 	u.StripeSessionPriceId = StripeSessionPriceId
 	u.StripeSessionQuantity = StripeSessionQuantity
-	u.CheckStateOrDie()
+	CheckStateOrDie(*u)
 }
 
-func (u *User) StopPayingWithStripe() {
+func StopPayingWithStripe(u *User) {
 	if u.State != user.UserState_PayingWithStripe {
 		panicF("cant cancelStripePayment on state %s", u.State)
 	}
@@ -90,32 +91,32 @@ func (u *User) StopPayingWithStripe() {
 	u.StripeSessionUrl = ""
 	u.StripeSessionPriceId = ""
 	u.StripeSessionQuantity = 0
-	u.CheckStateOrDie()
+	CheckStateOrDie(*u)
 }
 
-func (u *User) DeleteStripeSubscription() {
+func DeleteStripeSubscription(u *User) {
 	if u.State != user.UserState_StripeSubscription {
 		panicF("cant DeleteStripeSubscription on state %s", u.State)
 	}
 
-	u.DeleteSubscription()
+	DeleteSubscription(u)
 	u.StripeSubscriptionID = ""
 	u.StripeSessionId = ""
 	u.StripeSessionUrl = ""
 	u.StripeSessionPriceId = ""
 	u.StripeSessionQuantity = 0
-	u.CheckStateOrDie()
+	CheckStateOrDie(*u)
 }
-func (u *User) DeleteManualSubscription() {
+func DeleteManualSubscription(u *User) {
 	if u.State != user.UserState_ManualSubscription {
 		panicF("cant DeleteManualSubscription on state %s", u.State)
 	}
-	u.DeleteSubscription()
-	u.CheckStateOrDie()
+	DeleteSubscription(u)
+	CheckStateOrDie(*u)
 }
 
-func (u *User) HandleStripePaymentCompleted(
-	plan SubscriptionPlan, quantity int64, stripeSubscriptionId string) {
+func HandleStripePaymentCompleted(
+	u *User, plan SubscriptionPlan, quantity int64, stripeSubscriptionId string) {
 	if u.State != user.UserState_PayingWithStripe {
 		panicF("cant handleStripePayment on state %s", u.State)
 	}
@@ -128,12 +129,12 @@ func (u *User) HandleStripePaymentCompleted(
 	u.StripeSessionUrl = ""
 	u.StripeSessionPriceId = ""
 	u.StripeSessionQuantity = 0
-	u.CheckStateOrDie()
+	CheckStateOrDie(*u)
 }
 
 // helper to set all properties that need to be set when a user
 // cancels any kind of subscription
-func (u *User) DeleteSubscription() {
+func DeleteSubscription(u *User) {
 	u.State = user.UserState_NoSubscription
 	u.SelfPaidSubscription = Subscription_None
 	u.SelfPaidSubscriptionQuantity = 0
@@ -144,7 +145,7 @@ const MaxUsersInTrialPlan = 1
 
 // Function used to validade the fields of a user given its state.
 // It panics if it finds any inconsistency.
-func (u User) CheckStateOrDie() {
+func CheckStateOrDie(u User) {
 	s := u.State
 
 	if s == user.UserState_None {
