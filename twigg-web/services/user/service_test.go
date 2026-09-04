@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"monorepo/twigg-web/services/stripeclient"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 	"reflect"
 	"testing"
@@ -59,7 +60,7 @@ func TestCreateAndGetUsernameWithPassword(t *testing.T) {
 		t.Fatal(err)
 	}
 	expectedUser := User{
-		State:                        UserState_NoSubscription,
+		State:                        user.UserState_NoSubscription,
 		Id:                           1,
 		Email:                        "my@email.com",
 		IsOrganization:               false,
@@ -184,7 +185,7 @@ func TestGetAll(t *testing.T) {
 	// Expects descending order
 	expectedUsers := []User{
 		{
-			State:                        UserState_NoSubscription,
+			State:                        user.UserState_NoSubscription,
 			Id:                           3,
 			Email:                        "third@email.com",
 			IsOrganization:               false,
@@ -201,7 +202,7 @@ func TestGetAll(t *testing.T) {
 			StripeSubscriptionID:         "",
 		},
 		{
-			State:                        UserState_NoSubscription,
+			State:                        user.UserState_NoSubscription,
 			Id:                           2,
 			Email:                        "second@email.com",
 			Username:                     "second",
@@ -217,7 +218,7 @@ func TestGetAll(t *testing.T) {
 			StripeSubscriptionID:         "",
 		},
 		{
-			State:                        UserState_NoSubscription,
+			State:                        user.UserState_NoSubscription,
 			Id:                           1,
 			Email:                        "first@email.com",
 			Username:                     "first",
@@ -560,7 +561,7 @@ func TestHandleStripeCheckoutSessionSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if u.State != UserState_PayingWithStripe {
+	if u.State != user.UserState_PayingWithStripe {
 		t.Fatal("wrong state")
 	}
 	jobLimit.checkLimits(u.Id, 0, 0)
@@ -576,7 +577,7 @@ func TestHandleStripeCheckoutSessionSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if u.State != UserState_StripeSubscription {
+	if u.State != user.UserState_StripeSubscription {
 		t.Fatal("wrong state")
 	}
 	if u.SelfPaidSubscription != Subscription_Solo {
@@ -643,7 +644,7 @@ func TestStripeCancelAndReactivation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if u.State != UserState_NoSubscription {
+	if u.State != user.UserState_NoSubscription {
 		t.Fatal("wrong state")
 	}
 
@@ -664,7 +665,7 @@ func TestStripeCancelAndReactivation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if u.State != UserState_StripeSubscription {
+	if u.State != user.UserState_StripeSubscription {
 		t.Fatal("wrong state")
 	}
 }
@@ -922,7 +923,7 @@ func TestHandlesSubscriptionDeleted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if u.State != UserState_StripeSubscription {
+	if u.State != user.UserState_StripeSubscription {
 		t.Fatal("wrong stripe state")
 	}
 	subscriptionId := u.StripeSubscriptionID
@@ -945,7 +946,7 @@ func TestHandlesSubscriptionDeleted(t *testing.T) {
 	// Note that the plan fields are not updated bc PaymentPlanIsActive
 	// shows the plan is inactive
 	expectUser := User{
-		State:                        UserState_NoSubscription,
+		State:                        user.UserState_NoSubscription,
 		Id:                           1,
 		Email:                        "appa@mail.com",
 		IsOrganization:               false,
@@ -1007,7 +1008,7 @@ func TestHandleSuccessfulManualPayment(t *testing.T) {
 	}
 
 	expectedUser := User{
-		State:                        UserState_ManualSubscription,
+		State:                        user.UserState_ManualSubscription,
 		Id:                           1,
 		Email:                        "aang@southern-temple.air",
 		IsOrganization:               false,
@@ -1146,7 +1147,7 @@ func TestChooseUsernameAndStartTrial(t *testing.T) {
 	jobLimit.checkLimits(u.Id, TrialMaxParallelJobs, TrialMaxParallelTimeoutSum)
 
 	expectedUser := User{
-		State:                        UserState_ManualSubscription,
+		State:                        user.UserState_ManualSubscription,
 		Id:                           1,
 		Email:                        email,
 		IsOrganization:               false,
@@ -1275,7 +1276,7 @@ func TestRegisterNewUserFromOAuth(t *testing.T) {
 		t.Fatal(err)
 	}
 	expectedUser := User{
-		State:                        UserState_NoUsername,
+		State:                        user.UserState_NoUsername,
 		Id:                           1,
 		Email:                        emailFromOAuthProvider,
 		IsOrganization:               false,
@@ -1334,7 +1335,7 @@ func TestUpdateUsername(t *testing.T) {
 		t.Fatal(err)
 	}
 	expectedUser := User{
-		State:                        UserState_NoSubscription,
+		State:                        user.UserState_NoSubscription,
 		Id:                           1,
 		Email:                        emailFromOAuthProvider,
 		IsOrganization:               false,
@@ -1416,7 +1417,7 @@ func TestUpdateCliKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	expectedUser := User{
-		State:                        UserState_NoSubscription,
+		State:                        user.UserState_NoSubscription,
 		Id:                           1,
 		Email:                        "yoda@twigg.vc",
 		IsOrganization:               false,
@@ -1470,7 +1471,7 @@ func TestDeleteCliKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	deletedCliKeyUser := User{
-		State:                        UserState_NoSubscription,
+		State:                        user.UserState_NoSubscription,
 		Id:                           1,
 		Email:                        "yoda@twigg.vc",
 		IsOrganization:               false,
@@ -1598,7 +1599,7 @@ func TestCreateNewOrganizationUser(t *testing.T) {
 	}
 
 	expectedUser := User{
-		State:                        UserState_ManualSubscription,
+		State:                        user.UserState_ManualSubscription,
 		Id:                           1,
 		Email:                        "",
 		IsOrganization:               true,

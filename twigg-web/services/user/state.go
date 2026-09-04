@@ -3,12 +3,13 @@ package user
 import (
 	"fmt"
 	"monorepo/twigg-web/services/stripeclient"
+	"monorepo/twigg-web/user"
 )
 
 // Id is not populated
 func SignupUserWithPassword(email, username, passwordHash string) User {
 	u := User{
-		State:        UserState_NoSubscription,
+		State:        user.UserState_NoSubscription,
 		Email:        email,
 		Username:     username,
 		PasswordHash: passwordHash,
@@ -20,7 +21,7 @@ func SignupUserWithPassword(email, username, passwordHash string) User {
 // Id is not populated
 func SignupWithOAuth(email string) User {
 	u := User{
-		State: UserState_NoUsername,
+		State: user.UserState_NoUsername,
 		Email: email,
 	}
 	u.CheckStateOrDie()
@@ -29,8 +30,8 @@ func SignupWithOAuth(email string) User {
 
 func (u *User) SetUsername(username string) {
 	u.Username = username
-	if u.State == UserState_NoUsername {
-		u.State = UserState_NoSubscription
+	if u.State == user.UserState_NoUsername {
+		u.State = user.UserState_NoSubscription
 	}
 	u.CheckStateOrDie()
 }
@@ -38,7 +39,7 @@ func (u *User) SetUsername(username string) {
 func (u *User) ResetManually() {
 	// Some of these fields are saved on other tables, but this resets them
 	// anyway
-	u.State = UserState_NoSubscription
+	u.State = user.UserState_NoSubscription
 	u.CliKeyHash = ""
 	u.SelfPaidSubscription = Subscription_None
 	u.SelfPaidSubscriptionQuantity = 0
@@ -52,10 +53,10 @@ func (u *User) ResetManually() {
 }
 
 func (u *User) ManuallyPayForPlan(plan SubscriptionPlan, quantity int64) {
-	if u.State != UserState_NoSubscription {
+	if u.State != user.UserState_NoSubscription {
 		panicF("cant ManuallyPayForPlan on state %s", u.State)
 	}
-	u.State = UserState_ManualSubscription
+	u.State = user.UserState_ManualSubscription
 	u.SelfPaidSubscription = plan
 	u.SelfPaidSubscriptionQuantity = quantity
 	u.CheckStateOrDie()
@@ -66,13 +67,13 @@ func (u *User) StartStripePayment(
 	StripeSessionUrl string,
 	StripeSessionPriceId stripeclient.PriceId,
 	StripeSessionQuantity int64) {
-	if u.State == UserState_NoUsername {
+	if u.State == user.UserState_NoUsername {
 		panicF("cant StartStripePayment on state %s", u.State)
 	}
 	if u.StripeId == "" {
 		panicF("stripeId must be set before calling StartStripePayment")
 	}
-	u.State = UserState_PayingWithStripe
+	u.State = user.UserState_PayingWithStripe
 	u.StripeSessionId = StripeSessionId
 	u.StripeSessionUrl = StripeSessionUrl
 	u.StripeSessionPriceId = StripeSessionPriceId
@@ -81,10 +82,10 @@ func (u *User) StartStripePayment(
 }
 
 func (u *User) StopPayingWithStripe() {
-	if u.State != UserState_PayingWithStripe {
+	if u.State != user.UserState_PayingWithStripe {
 		panicF("cant cancelStripePayment on state %s", u.State)
 	}
-	u.State = UserState_NoSubscription
+	u.State = user.UserState_NoSubscription
 	u.StripeSessionId = ""
 	u.StripeSessionUrl = ""
 	u.StripeSessionPriceId = ""
@@ -93,7 +94,7 @@ func (u *User) StopPayingWithStripe() {
 }
 
 func (u *User) DeleteStripeSubscription() {
-	if u.State != UserState_StripeSubscription {
+	if u.State != user.UserState_StripeSubscription {
 		panicF("cant DeleteStripeSubscription on state %s", u.State)
 	}
 
@@ -106,7 +107,7 @@ func (u *User) DeleteStripeSubscription() {
 	u.CheckStateOrDie()
 }
 func (u *User) DeleteManualSubscription() {
-	if u.State != UserState_ManualSubscription {
+	if u.State != user.UserState_ManualSubscription {
 		panicF("cant DeleteManualSubscription on state %s", u.State)
 	}
 	u.DeleteSubscription()
@@ -115,11 +116,11 @@ func (u *User) DeleteManualSubscription() {
 
 func (u *User) HandleStripePaymentCompleted(
 	plan SubscriptionPlan, quantity int64, stripeSubscriptionId string) {
-	if u.State != UserState_PayingWithStripe {
+	if u.State != user.UserState_PayingWithStripe {
 		panicF("cant handleStripePayment on state %s", u.State)
 	}
 
-	u.State = UserState_StripeSubscription
+	u.State = user.UserState_StripeSubscription
 	u.SelfPaidSubscription = plan
 	u.SelfPaidSubscriptionQuantity = quantity
 	u.StripeSubscriptionID = stripeSubscriptionId
@@ -133,7 +134,7 @@ func (u *User) HandleStripePaymentCompleted(
 // helper to set all properties that need to be set when a user
 // cancels any kind of subscription
 func (u *User) DeleteSubscription() {
-	u.State = UserState_NoSubscription
+	u.State = user.UserState_NoSubscription
 	u.SelfPaidSubscription = Subscription_None
 	u.SelfPaidSubscriptionQuantity = 0
 }
@@ -146,13 +147,13 @@ const MaxUsersInTrialPlan = 1
 func (u User) CheckStateOrDie() {
 	s := u.State
 
-	if s == UserState_None {
+	if s == user.UserState_None {
 		panicF("got user with None state")
 	}
 	if u.Email == "" && !u.IsOrganization {
 		panicF("%s without email", s)
 	}
-	if s == UserState_NotSignedUp {
+	if s == user.UserState_NotSignedUp {
 		// The NotSignedUp state only exists so that the User struct can
 		// be used as a "container" for the email of an account that hasn't
 		// signed up yet.
@@ -160,16 +161,16 @@ func (u User) CheckStateOrDie() {
 	}
 
 	switch s {
-	case UserState_None:
-	case UserState_NoUsername:
+	case user.UserState_None:
+	case user.UserState_NoUsername:
 		if u.Username != "" {
 			panicF("%s with username", s)
 		}
-	case UserState_NoSubscription:
+	case user.UserState_NoSubscription:
 		if u.HasSub() {
 			panicF("%s with sub", s)
 		}
-	case UserState_PayingWithStripe:
+	case user.UserState_PayingWithStripe:
 		if u.HasSub() {
 			panicF("%s with sub", s)
 		}
@@ -182,7 +183,7 @@ func (u User) CheckStateOrDie() {
 			u.StripeSessionQuantity == 0 {
 			panicF("%s without required fields", s)
 		}
-	case UserState_StripeSubscription:
+	case user.UserState_StripeSubscription:
 		if !u.HasSub() {
 			panicF("%s without sub", s)
 		}
@@ -192,34 +193,13 @@ func (u User) CheckStateOrDie() {
 		if u.StripeSubscriptionID == "" {
 			panicF("%s without subscription id", s)
 		}
-	case UserState_ManualSubscription:
+	case user.UserState_ManualSubscription:
 		if !u.HasSub() {
 			panicF("%s without sub", s)
 		}
 		if u.Username == "" {
 			panicF("%s without username", s)
 		}
-	default:
-		panic("unknown state")
-	}
-}
-
-func (s UserState) String() string {
-	switch s {
-	case UserState_None:
-		return "none"
-	case UserState_NotSignedUp:
-		return "NotSignedUp"
-	case UserState_NoUsername:
-		return "NoUsername"
-	case UserState_NoSubscription:
-		return "InactivePaymentPlan"
-	case UserState_PayingWithStripe:
-		return "PayingWithStripe"
-	case UserState_StripeSubscription:
-		return "StripeSubscription"
-	case UserState_ManualSubscription:
-		return "ManualSubscription"
 	default:
 		panic("unknown state")
 	}

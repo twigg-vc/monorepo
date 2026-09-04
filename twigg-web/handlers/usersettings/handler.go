@@ -6,7 +6,8 @@ import (
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/keys"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
@@ -43,7 +44,7 @@ func (hl handler) handlePostSetUsername(w http.ResponseWriter,
 
 	username := r.FormValue(routes.SetUsernameParamName)
 	username = strings.ToLower(username)
-	if !user.UsernameIsValid(username) {
+	if !userservice.UsernameIsValid(username) {
 		http.Error(w, "invalid username", http.StatusBadRequest)
 		return
 	}

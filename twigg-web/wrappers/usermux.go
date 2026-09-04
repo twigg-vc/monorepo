@@ -6,7 +6,8 @@ import (
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/stripeclient"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 	"net/http"
 )
@@ -15,7 +16,7 @@ type userMux struct {
 	authMux      AuthMux
 	stripeClient stripeclient.StripeClient
 	db           webdb.WebDb
-	userService  user.Service
+	userService  userservice.Service
 }
 
 func (m userMux) HandleFuncR(pattern string,
@@ -309,7 +310,7 @@ func (m userMux) getOrgAndUserPermissionInOrgIfNeeded(
 	dbRead context.Context,
 	haveOrgParamInRequest bool,
 	orgId int64,
-) (org user.User, userPermissionInOrg permissions.Permission, ok bool) {
+) (org userservice.User, userPermissionInOrg permissions.Permission, ok bool) {
 	if !haveOrgParamInRequest {
 		ok = true
 		return

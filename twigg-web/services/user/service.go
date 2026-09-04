@@ -8,6 +8,7 @@ import (
 	"log"
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/services/stripeclient"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 	"net/mail"
 	"regexp"
@@ -375,7 +376,7 @@ func (s service) CreateNewOrganizationUser(w context.Context, organizationUserna
 	u := User{
 		Email:          "",
 		IsOrganization: true,
-		State:          UserState_NoSubscription,
+		State:          user.UserState_NoSubscription,
 		Username:       organizationUsername,
 	}
 	const selfPaidSubscriptionSeatsInUse = 0 // This column is deprecated
@@ -552,7 +553,7 @@ func (s service) HandleStripeCheckoutSessionSuccess(w context.Context,
 
 	// The session was already paid. This is probably stripe replaying a
 	// message for us. Lets just check and panic if not.
-	if u.State == UserState_StripeSubscription {
+	if u.State == user.UserState_StripeSubscription {
 		if u.SelfPaidSubscription != stripePriceIdToPaymentPlan(
 			priceId, s.stripeClient) {
 			panic("stripe send a invalid price id for paying user")
@@ -724,7 +725,7 @@ func (s service) HandleManualSubscriptionDeleted(w context.Context, userId int64
 	if err != nil {
 		return err
 	}
-	if u.State != UserState_ManualSubscription {
+	if u.State != user.UserState_ManualSubscription {
 		return fmt.Errorf("%d is not on a manual subscription", userId)
 	}
 	err = s.db.FreezeQuota(u.quotaOwnerName())
@@ -743,7 +744,7 @@ func (s service) HandleManualSubscriptionDeleted(w context.Context, userId int64
 // fieds on the user
 func (s service) deleteCurrentStripeSessionIfItExists(u *User) error {
 	// Nothing to cancel if not paying
-	if u.State != UserState_PayingWithStripe {
+	if u.State != user.UserState_PayingWithStripe {
 		return nil
 	}
 	err := s.stripeClient.ExpireStripeSession(u.StripeSessionId)
