@@ -196,46 +196,23 @@ func (s service) SetStatusOfPipelineStage(tx context.Context, pipelineId string,
 	if err != nil {
 		return err
 	}
-	res, err := s.db.Bind(tx).Exec(`
-		UPDATE jobPipelineStages
-		SET status = ?
-		WHERE jobPipelineId = ? AND stage = ?
-	`,
-		status,
-		pipelineId,
-		stage,
-	)
-	if err != nil {
-		return err
-	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
+	stageIsNotFoundErr, err := s.db.SetPipelineStageStatus(tx, pipelineId, stage, status)
+	if stageIsNotFoundErr {
 		return fmt.Errorf("jobPipelineId=%q stage=%d not found", pipelineId, stage)
+	}
+	if err != nil {
+		return err
 	}
 
 	return s.updatePipelineStatus(tx, pipeline)
 }
 
 func (s service) SetResumerOfPipelineStage(tx context.Context, pipelineId string, stage int32, userId int64) error {
-	res, err := s.db.Bind(tx).Exec(`
-		UPDATE jobPipelineStages
-		SET isResumedByUser = ?, resumedByUserId = ?
-		WHERE jobPipelineId = ? AND stage = ?
-	`, true, userId, pipelineId, stage)
-	if err != nil {
-		return err
-	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
+	isNotFoundErr, err := s.db.SetPipelineStageResumer(tx, pipelineId, stage, userId)
+	if isNotFoundErr {
 		return fmt.Errorf("jobPipelineId=%q stage=%d not found", pipelineId, stage)
 	}
-	return nil
+	return err
 }
 
 // Reads all the stages and sets the pipeline status based on the stages.

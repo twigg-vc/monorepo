@@ -646,6 +646,20 @@ func (db WebDb) GetPipelineStages(ctx context.Context,
 	return db.db.GetPipelineStages(ctx, pipelineId)
 }
 
+// Sets the status of a pipeline stage. If there is none, isNotFoundErr is true
+// and err is ErrNotFound.
+func (db WebDb) SetPipelineStageStatus(writeCtx context.Context, pipelineId string,
+	stage int32, status job.JobStatus) (isNotFoundErr bool, err error) {
+	return db.db.SetPipelineStageStatus(writeCtx, pipelineId, stage, status)
+}
+
+// Marks a pipeline stage as resumed by the user. If there is none,
+// isNotFoundErr is true and err is ErrNotFound.
+func (db WebDb) SetPipelineStageResumer(writeCtx context.Context, pipelineId string,
+	stage int32, userId int64) (isNotFoundErr bool, err error) {
+	return db.db.SetPipelineStageResumer(writeCtx, pipelineId, stage, userId)
+}
+
 // Adapts the read context to the twigg server read interface.
 func (db WebDb) GetServerRead(ctx context.Context) server.Read {
 	return db.Bind(ctx)

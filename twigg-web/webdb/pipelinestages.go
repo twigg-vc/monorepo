@@ -80,3 +80,50 @@ func (it pipelineStageIterWrapper) Get() (job.PipelineStage, error) {
 }
 func (it pipelineStageIterWrapper) Next() bool { return it.rows.Next() }
 func (it pipelineStageIterWrapper) Err() error { return it.rows.Err() }
+
+// Sets the status of a pipeline stage. If there is none, isNotFoundErr is true
+// and err is ErrNotFound.
+func (db webDb) SetPipelineStageStatus(writeCtx context.Context, pipelineId string,
+	stage int32, status job.JobStatus) (isNotFoundErr bool, err error) {
+	if status == "" {
+		return false, fmt.Errorf("missing status")
+	}
+	res, err := db.s.Exec(writeCtx, `
+		UPDATE jobPipelineStages
+		SET status = ?
+		WHERE jobPipelineId = ? AND stage = ?
+	`, status, pipelineId, stage)
+	if err != nil {
+		return false, fmt.Errorf("failed to update pipeline stage status: %w", err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if affected == 0 {
+		return true, ErrNotFound
+	}
+	return false, nil
+}
+
+// Marks a pipeline stage as resumed by the user. If there is none,
+// isNotFoundErr is true and err is ErrNotFound.
+func (db webDb) SetPipelineStageResumer(writeCtx context.Context, pipelineId string,
+	stage int32, userId int64) (isNotFoundErr bool, err error) {
+	res, err := db.s.Exec(writeCtx, `
+		UPDATE jobPipelineStages
+		SET isResumedByUser = ?, resumedByUserId = ?
+		WHERE jobPipelineId = ? AND stage = ?
+	`, true, userId, pipelineId, stage)
+	if err != nil {
+		return false, fmt.Errorf("failed to update pipeline stage resumer: %w", err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if affected == 0 {
+		return true, ErrNotFound
+	}
+	return false, nil
+}
