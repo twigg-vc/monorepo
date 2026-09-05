@@ -12,7 +12,6 @@ import (
 	"monorepo/twigg-web/services/twiggtoken"
 	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/user"
-	"monorepo/twigg-web/webdb"
 	"monorepo/twigg/commit"
 	"monorepo/twigg/server"
 	"monorepo/twigg/xchange"
@@ -22,7 +21,7 @@ import (
 )
 
 type handler struct {
-	db         webdb.WebDb
+	db         Db
 	uSrv       userservice.Service
 	rSrv       reposervice.Service
 	ciq        CiCdQueue
@@ -167,7 +166,7 @@ func (hl handler) handlePush(w http.ResponseWriter, r *http.Request) {
 // Returns the result of the verifier and the user.
 // The user is returned just in case it's needed anywhere else to avoid
 // reading it again. Check the verifierResult for errors
-func newVerifier(r *http.Request, uSrv userservice.Service, repoSrv reposervice.Service, dbRead context.Context, permSrv webdb.WebDb, repoOwner user.User, repoId uint64, isPull bool, signer twiggtoken.TokenSigner) (verifierResult, user.User) {
+func newVerifier(r *http.Request, uSrv userservice.Service, repoSrv reposervice.Service, dbRead context.Context, permSrv Db, repoOwner user.User, repoId uint64, isPull bool, signer twiggtoken.TokenSigner) (verifierResult, user.User) {
 	if !repoOwner.HasSub() {
 		return verifierResult{
 			ok:       false,
