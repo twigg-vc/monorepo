@@ -136,7 +136,7 @@ func (q *trackQueue) Put(ownerId int64, jobId string, pl runnerlib.JobPayload, t
 		return err
 	}
 	now := time.Now().UnixNano()
-	err = q.db.InsertTrackQueueJob(tx, jobId, ownerId, payloadBytes,
+	err = q.db.InsertTrackQueueJobIfNotExists(tx, jobId, ownerId, payloadBytes,
 		statusQueued, now)
 	if err != nil {
 		return err

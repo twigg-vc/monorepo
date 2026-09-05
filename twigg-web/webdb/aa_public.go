@@ -804,9 +804,9 @@ func (db WebDb) SetUserStripeId(writeCtx context.Context, userId int64,
 }
 
 // Adds a job to the track queue. Does nothing if the job is already queued.
-func (db WebDb) InsertTrackQueueJob(writeCtx context.Context, jobId string,
+func (db WebDb) InsertTrackQueueJobIfNotExists(writeCtx context.Context, jobId string,
 	ownerId int64, payload []byte, status string, createdAtNs int64) error {
-	return db.db.InsertTrackQueueJob(writeCtx, jobId, ownerId, payload, status,
+	return db.db.InsertTrackQueueJobIfNotExists(writeCtx, jobId, ownerId, payload, status,
 		createdAtNs)
 }
 

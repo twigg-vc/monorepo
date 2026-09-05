@@ -6,7 +6,7 @@ import (
 )
 
 // Adds a job to the track queue. Does nothing if the job is already queued.
-func (db webDb) InsertTrackQueueJob(writeCtx context.Context, jobId string,
+func (db webDb) InsertTrackQueueJobIfNotExists(writeCtx context.Context, jobId string,
 	ownerId int64, payload []byte, status string, createdAtNs int64) error {
 	if jobId == "" {
 		return fmt.Errorf("missing jobId")

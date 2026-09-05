@@ -25,10 +25,10 @@ func TestInsertAndCountTrackQueueJobs(t *testing.T) {
 		t.Fatalf("expected an empty queue, got %d jobs", count)
 	}
 
-	if err := b.InsertTrackQueueJob(w, "job-1", 7, []byte("payload"), "queued", 1234); err != nil {
+	if err := b.InsertTrackQueueJobIfNotExists(w, "job-1", 7, []byte("payload"), "queued", 1234); err != nil {
 		t.Fatal(err)
 	}
-	if err := b.InsertTrackQueueJob(w, "job-2", 7, []byte("payload"), "queued", 5678); err != nil {
+	if err := b.InsertTrackQueueJobIfNotExists(w, "job-2", 7, []byte("payload"), "queued", 5678); err != nil {
 		t.Fatal(err)
 	}
 
@@ -41,7 +41,7 @@ func TestInsertAndCountTrackQueueJobs(t *testing.T) {
 	}
 
 	// Putting a job is idempotent.
-	if err := b.InsertTrackQueueJob(w, "job-1", 8, []byte("other"), "queued", 9999); err != nil {
+	if err := b.InsertTrackQueueJobIfNotExists(w, "job-1", 8, []byte("other"), "queued", 9999); err != nil {
 		t.Fatal(err)
 	}
 	count, err = b.CountTrackQueueJobs(w)
