@@ -48,7 +48,7 @@ No ternaries. Use explicit `if/else` with both branches. Prefer `var x = undefin
 **twigg-web** — single self-contained binary:
 - `handlers/` — HTTP handlers, reached through layered mux wrappers (`wrappers/`) that inject request data.
 - `services/` — business logic, consumed by handlers.
-- `webdb/` — DB implementation. New code defines the minimal DB interface it needs; don't import the DB directly. Table setup and simple CRUD belong on WebDb, not in services — legacy services are being migrated one commit at a time; see `twigg-web/SERVICE_TO_WEBDB.md`.
+- `webdb/` — DB implementation. New code defines the minimal DB interface it needs; don't import the DB directly. Table setup goes in `webdb/migrations/*.sql` and simple CRUD belongs on WebDb, not in services — a service only survives when it does more than CRUD, and then it consumes its own minimal `Db` interface.
 - Frontend: Lit components (`/twigg-web/webcomponents`) (TypeScript, esbuild); Embedded into the binary.
 - Docs: Docusaurus (`twigg-web/docusaurus`). Embedded into the binary.
 

@@ -2,7 +2,6 @@ package webdb
 
 import (
 	"context"
-	"database/sql"
 	"io"
 	"monorepo/base/iterator"
 	"monorepo/data/blobdb"
@@ -670,27 +669,6 @@ func (db WebDb) GetServerWrite(writeCtx context.Context) server.Write {
 	return db.Bind(writeCtx)
 }
 
-// DEPRECATED
-// This method should not be used. It only exists while we're migrating off a
-// bad legacy implementation
-func (db WebDb) Exec(writeCtx context.Context, query string, args ...any) (sql.Result, error) {
-	return db.db.s.Exec(writeCtx, query, args...)
-}
-
-// DEPRECATED
-// This method should not be used. It only exists while we're migrating off a
-// bad legacy implementation
-func (db WebDb) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
-	return db.db.s.QueryRow(ctx, query, args...)
-}
-
-// DEPRECATED
-// This method should not be used. It only exists while we're migrating off a
-// bad legacy implementation
-func (db WebDb) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	return db.db.s.Query(ctx, query, args...)
-}
-
 // Returns a new context that contains a read/write context and the db itself.
 // This allows for methods to be executed directly on it; without haivng to pass
 // the db around. It's needed for the twigg methods.
@@ -825,21 +803,6 @@ func (c Ctx) CountUserAssetsWithPermission(userId int64, permission permissions.
 }
 func (c Ctx) CountUsersWithPermission(assetId string, p permissions.Permission) (int64, error) {
 	return c.db.CountUsersWithPermission(c.ctx, assetId, p)
-}
-
-// DEPRECATED
-func (c Ctx) Exec(query string, args ...any) (sql.Result, error) {
-	return c.db.Exec(c.ctx, query, args...)
-}
-
-// DEPRECATED
-func (c Ctx) QueryRow(query string, args ...any) *sql.Row {
-	return c.db.QueryRow(c.ctx, query, args...)
-}
-
-// DEPRECATED
-func (c Ctx) Query(query string, args ...any) (*sql.Rows, error) {
-	return c.db.Query(c.ctx, query, args...)
 }
 
 // Writes the mutable columns of the user row. The
