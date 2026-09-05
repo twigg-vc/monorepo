@@ -618,6 +618,21 @@ func (db WebDb) GetPipeline(ctx context.Context, repoId, commitId, commitVersion
 	return db.db.GetPipeline(ctx, repoId, commitId, commitVersion, path, name, runNumber)
 }
 
+// Sets the status of the pipeline with that key. No-op if there is none.
+func (db WebDb) SetPipelineStatus(writeCtx context.Context, repoId, commitId, commitVersion uint64,
+	path, name string, runNumber int64, status job.PipelineStatus) error {
+	return db.db.SetPipelineStatus(writeCtx, repoId, commitId, commitVersion, path, name,
+		runNumber, status)
+}
+
+// Returns the pipelines of a repo defined at that path and name, newest first.
+// Use afterInternalPipelineId to read the pipelines after a previously read
+// one; zero reads from the newest.
+func (db WebDb) GetRepoPipelinesByRef(ctx context.Context, repoId uint64,
+	path, name string, afterInternalPipelineId int64) (iterator.I[job.Pipeline], error) {
+	return db.db.GetRepoPipelinesByRef(ctx, repoId, path, name, afterInternalPipelineId)
+}
+
 // Adapts the read context to the twigg server read interface.
 func (db WebDb) GetServerRead(ctx context.Context) server.Read {
 	return db.Bind(ctx)

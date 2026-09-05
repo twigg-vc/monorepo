@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math"
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/webdb"
@@ -357,21 +356,8 @@ func (s service) updatePipelineStatus(tx context.Context, pipe job.Pipeline) err
 	if pipelineStatus == pipe.Status {
 		return nil
 	}
-	_, err = s.db.Bind(tx).Exec(`
-		UPDATE jobPipelines
-		SET status=?
-		WHERE repoId=? AND commitId=? AND commitVersion=?
-		AND path=? AND name=? AND runNumber=?
-	`,
-		pipelineStatus,
-		pipe.RepoId,
-		pipe.Commit,
-		pipe.CommitVersion,
-		pipe.Path,
-		pipe.Name,
-		pipe.RunNumber,
-	)
-	return err
+	return s.db.SetPipelineStatus(tx, pipe.RepoId, pipe.Commit, pipe.CommitVersion,
+		pipe.Path, pipe.Name, pipe.RunNumber, pipelineStatus)
 }
 
 func (s service) PutPipelineRef(tx context.Context,
@@ -399,60 +385,5 @@ func (s service) GetRepoPipelineRefs(tx context.Context,
 
 func (s service) GetRepoPipelinesByRef(tx context.Context,
 	repoId uint64, filePath string, jobName string, afterInternalJobId int64) (iterator.I[job.Pipeline], error) {
-	if afterInternalJobId == 0 {
-		afterInternalJobId = math.MaxInt64
-	}
-	rows, err := s.db.Bind(tx).Query(`
-		SELECT
-			internalJobPipelineId,
-			repoId,
-			commitId,
-			commitVersion,
-			path,
-			name,
-			runNumber,
-			numberOfStages,
-			status,
-			createdTime,
-			isCreatedByUser,
-			createdByUserId
-		FROM jobPipelines
-		WHERE repoId = ? AND path = ? AND name = ? AND internalJobPipelineId < ?
-		ORDER BY internalJobPipelineId DESC
-	`, repoId, filePath, jobName, afterInternalJobId)
-	if err != nil {
-		return nil, err
-	}
-	return pipelinesByName{rows}, err
-}
-
-type pipelinesByName struct {
-	rows *sql.Rows
-}
-
-func (it pipelinesByName) Get() (job.Pipeline, error) {
-	var j job.Pipeline
-	if err := it.rows.Scan(
-		&j.InternalId,
-		&j.RepoId,
-		&j.Commit,
-		&j.CommitVersion,
-		&j.Path,
-		&j.Name,
-		&j.RunNumber,
-		&j.NumberOfStages,
-		&j.Status,
-		&j.CreatedTime,
-		&j.IsCreatedByUser,
-		&j.CreatedByUserId,
-	); err != nil {
-		return job.Pipeline{}, fmt.Errorf("pipelinesByName.Get: failed to scan job: %w", err)
-	}
-	return j, nil
-}
-func (it pipelinesByName) Next() bool {
-	return it.rows.Next()
-}
-func (it pipelinesByName) Err() error {
-	return it.rows.Err()
+	return s.db.GetRepoPipelinesByRef(tx, repoId, filePath, jobName, afterInternalJobId)
 }
