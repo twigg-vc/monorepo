@@ -308,9 +308,8 @@ type ServerKeyAndTokenAuthTrackMuxRequest struct {
 
 // ########## Creates a mux for users that have owner permission in organization
 func NewOrgOwnerMux(configName string, userWithSubMux UserWithSubMux,
-	permSrv webdb.WebDb,
 	userSrv userservice.Service) OrgOwnerMux {
-	return orgOwnerMux{configName, userWithSubMux, permSrv, userSrv}
+	return orgOwnerMux{configName, userWithSubMux, userSrv}
 }
 
 type OrgOwnerMux interface {
@@ -337,9 +336,8 @@ type OrgOwnerMuxRequest struct {
 
 // ########## Creates a mux for users that have member permission in organization
 func NewOrgMemberMux(configName string, userWithSubMux UserWithSubMux,
-	permSrv webdb.WebDb,
 	userSrv userservice.Service) OrgMemberMux {
-	return orgMemberMux{configName, userWithSubMux, permSrv, userSrv}
+	return orgMemberMux{configName, userWithSubMux, userSrv}
 }
 
 type OrgMemberMux interface {
@@ -366,9 +364,8 @@ type OrgMemberMuxRequest struct {
 
 // ########## Creates a mux for users that have owner or member permission in organization
 func NewOrgOwnerOrMemberMux(configName string, userWithSubMux UserWithSubMux,
-	permSrv webdb.WebDb,
 	userSrv userservice.Service) OrgOwnerOrMemberMux {
-	return orgOwnerOrMemberMux{configName, userWithSubMux, permSrv, userSrv}
+	return orgOwnerOrMemberMux{configName, userWithSubMux, userSrv}
 }
 
 type OrgOwnerOrMemberMux interface {

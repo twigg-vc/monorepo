@@ -283,8 +283,8 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 	userRepoPipelineMux := wrappers.NewUserRepoPipelineMux(userRepoMux, jobsService)
 	serverKeyAuthTrackMux := wrappers.NewServerKeyAuthTrackMux(s.C.TwiggServerKey, s.mux)
 	serverKeyAndTokenAuthTrackMux := wrappers.NewServerKeyAndTokenAuthTrackMux(s.C.TwiggServerKey, tokenSigner, s.mux)
-	orgOwnerMux := wrappers.NewOrgOwnerMux(s.C.Name, userWithSubMux, sDb, userSrv)
-	orgOwnerOrMemberMux := wrappers.NewOrgOwnerOrMemberMux(s.C.Name, userWithSubMux, sDb, userSrv)
+	orgOwnerMux := wrappers.NewOrgOwnerMux(s.C.Name, userWithSubMux, userSrv)
+	orgOwnerOrMemberMux := wrappers.NewOrgOwnerOrMemberMux(s.C.Name, userWithSubMux, userSrv)
 
 	// Register handlers to the muxes
 	s.mux.HandleFunc("GET /health",
