@@ -11,7 +11,6 @@ import (
 	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/twiggtoken"
-	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
 	"slices"
@@ -19,7 +18,7 @@ import (
 
 type handler struct {
 	js       JobsStorage
-	db       webdb.WebDb
+	db       Db
 	tq       TrackQueue
 	trackObs TrackObserver
 	secrets  Secrets

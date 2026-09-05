@@ -7,12 +7,11 @@ import (
 	"monorepo/twigg-track/trackclient"
 	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 )
 
 func AddHandlers(
-	configName string, js JobsStorage, db webdb.WebDb,
+	configName string, js JobsStorage, db Db,
 	tq TrackQueue, trackObs TrackObserver, secrets Secrets,
 	cdQueue CdQueue,
 	serverKeyAuthTrackMux wrappers.ServerKeyAuthTrackMux,
@@ -27,6 +26,11 @@ func AddHandlers(
 	}
 	serverKeyAndTokenAuthTrackMux.HandleFunc("GET "+routes.TrackWebhooksSecrets, h.handleGetSecrets)
 	serverKeyAuthTrackMux.HandleFunc("PUT "+routes.TrackWebhooksPath, h.handleTrackWebhook)
+}
+
+type Db interface {
+	BeginRead() (readCtx context.Context, closeTx func(), err error)
+	BeginWrite() (writeCtx context.Context, closeTx func(), commitTx func() error, err error)
 }
 
 type JobsStorage interface {
