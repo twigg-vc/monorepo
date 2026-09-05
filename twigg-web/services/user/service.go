@@ -120,19 +120,9 @@ func (s service) RegisterNewUser(w context.Context,
 		return user.User{}, errInvalidUsername
 	}
 
-	const selfPaidSubscriptionSeatsInUse = 0 // This column is deprecated
-
 	u := SignupUserWithPassword(email, username, passwordHash)
-	err = s.db.Bind(w).QueryRow(`
-		INSERT INTO users2 (
-			email, state, isOrganization,
-			selfPaidSubscription, selfPaidSubscriptionQuantity, selfPaidSubscriptionSeatsInUse,
-			username, passwordHash
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		RETURNING id;
-	`, u.Email, u.State, false,
-		u.SelfPaidSubscription, u.SelfPaidSubscriptionQuantity, selfPaidSubscriptionSeatsInUse,
-		u.Username, u.PasswordHash).Scan(&u.Id)
+	u.Id, err = s.db.CreateUser(w, u.Email, u.State, false, u.Username,
+		u.PasswordHash, u.SelfPaidSubscription, u.SelfPaidSubscriptionQuantity)
 	if err != nil {
 		return user.User{}, fmt.Errorf("failed to insert new user: %s", err)
 	}
@@ -153,16 +143,9 @@ func (s service) RegisterNewUserFromOAuth(w context.Context, email string) (user
 		return user.User{}, errors.New("email already used by another account")
 	}
 
-	const selfPaidSubscriptionSeatsInUse = 0 // This column is deprecated
 	u := SignupWithOAuth(email)
-	err = s.db.Bind(w).QueryRow(`
-		INSERT INTO users2 (
-			email, state, isOrganization,
-			selfPaidSubscription, selfPaidSubscriptionQuantity, selfPaidSubscriptionSeatsInUse
-		) VALUES (?, ?, ?, ?, ?, ?)
-		RETURNING id;
-	`, u.Email, u.State, false,
-		u.SelfPaidSubscription, u.SelfPaidSubscriptionQuantity, selfPaidSubscriptionSeatsInUse).Scan(&u.Id)
+	u.Id, err = s.db.CreateUser(w, u.Email, u.State, false, u.Username,
+		u.PasswordHash, u.SelfPaidSubscription, u.SelfPaidSubscriptionQuantity)
 	if err != nil {
 		return user.User{}, fmt.Errorf("failed to insert new oauth user: %s", err)
 	}
@@ -191,28 +174,9 @@ func (s service) CreateNewOrganizationUser(w context.Context, organizationUserna
 		State:          user.UserState_NoSubscription,
 		Username:       organizationUsername,
 	}
-	const selfPaidSubscriptionSeatsInUse = 0 // This column is deprecated
-	err = s.db.Bind(w).QueryRow(`
-		INSERT INTO users2 (
-			email,
-			isOrganization,
-			state,
-			username,
-			selfPaidSubscription,
-			selfPaidSubscriptionQuantity,
-			selfPaidSubscriptionSeatsInUse
-		)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-		RETURNING id;
-	`,
-		u.Email,
-		u.IsOrganization,
-		u.State,
-		u.Username,
-		u.SelfPaidSubscription,
-		u.SelfPaidSubscriptionQuantity,
-		selfPaidSubscriptionSeatsInUse,
-	).Scan(&u.Id)
+	u.Id, err = s.db.CreateUser(w, u.Email, u.State, u.IsOrganization,
+		u.Username, u.PasswordHash, u.SelfPaidSubscription,
+		u.SelfPaidSubscriptionQuantity)
 	if err != nil {
 		return user.User{}, err
 	}
