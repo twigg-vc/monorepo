@@ -383,3 +383,47 @@ func TestGetUserIsOrganization(t *testing.T) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
+
+func TestCreateUser(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userId, err := b.CreateUser(w, "someone@twigg.vc",
+		user.UserState_NoSubscription, false, "someone", "password-hash",
+		user.Subscription_Solo, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if userId != 1 {
+		t.Fatalf("expected first user id 1, got %d", userId)
+	}
+
+	got, isNotFoundErr, err := b.GetUser(w, userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isNotFoundErr {
+		t.Fatal("created user was not found")
+	}
+	want := user.User{
+		Id:                           userId,
+		Email:                        "someone@twigg.vc",
+		State:                        user.UserState_NoSubscription,
+		IsOrganization:               false,
+		Username:                     "someone",
+		PasswordHash:                 "password-hash",
+		SelfPaidSubscription:         user.Subscription_Solo,
+		SelfPaidSubscriptionQuantity: 1,
+	}
+	if got != want {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}

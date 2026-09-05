@@ -788,3 +788,13 @@ func (db WebDb) GetUserIsOrganization(ctx context.Context,
 	userId int64) (isOrganization bool, isNotFoundErr bool, err error) {
 	return db.db.GetUserIsOrganization(ctx, userId)
 }
+
+// Inserts a user row and returns the id assigned to it. The columns that are
+// not taken here keep their table default.
+func (db WebDb) CreateUser(writeCtx context.Context, email string,
+	state user.UserState, isOrganization bool, username, passwordHash string,
+	selfPaidSubscription user.SubscriptionPlan,
+	selfPaidSubscriptionQuantity int64) (userId int64, err error) {
+	return db.db.CreateUser(writeCtx, email, state, isOrganization, username,
+		passwordHash, selfPaidSubscription, selfPaidSubscriptionQuantity)
+}

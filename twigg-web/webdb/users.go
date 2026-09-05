@@ -10,6 +10,35 @@ import (
 	"strconv"
 )
 
+// Inserts a user row and returns the id assigned to it. The columns that are
+// not taken here keep their table default.
+func (db webDb) CreateUser(writeCtx context.Context, email string,
+	state user.UserState, isOrganization bool, username, passwordHash string,
+	selfPaidSubscription user.SubscriptionPlan,
+	selfPaidSubscriptionQuantity int64) (userId int64, err error) {
+	// The column is NOT NULL in the table but no longer used.
+	const deprecatedSeatsInUse = 0
+	err = db.s.QueryRow(writeCtx, `
+		INSERT INTO users2 (
+			email,
+			state,
+			isOrganization,
+			username,
+			passwordHash,
+			selfPaidSubscription,
+			selfPaidSubscriptionQuantity,
+			selfPaidSubscriptionSeatsInUse
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		RETURNING id;
+	`, email, state, isOrganization, username, passwordHash,
+		selfPaidSubscription, selfPaidSubscriptionQuantity,
+		deprecatedSeatsInUse).Scan(&userId)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create user: %w", err)
+	}
+	return userId, nil
+}
+
 // Writes every column of the user row and returns the stored user. A zero id
 // inserts a new row. The quota fields are not written: they live in the quota
 // db, so they are read back into the returned user.
