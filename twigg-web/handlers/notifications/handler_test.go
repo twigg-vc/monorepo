@@ -10,7 +10,7 @@ import (
 
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/notification"
-	"monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 )
 

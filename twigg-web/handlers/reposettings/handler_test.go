@@ -8,7 +8,7 @@ import (
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
 	reposervice "monorepo/twigg-web/services/repo"
-	"monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/server"
 	"net/http"

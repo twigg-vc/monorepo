@@ -4,9 +4,9 @@ import (
 	"context"
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/permissions"
-	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/repo"
-	"monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/routes"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 )
 

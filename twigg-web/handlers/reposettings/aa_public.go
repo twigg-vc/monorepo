@@ -7,7 +7,7 @@ import (
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/secrets"
 	"monorepo/twigg-web/services/mirror"
-	"monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/server"
 )
