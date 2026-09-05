@@ -4,7 +4,8 @@ package seed
 
 import (
 	"monorepo/twigg-web/services/repo"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 )
 
@@ -20,7 +21,7 @@ type SeedUser struct {
 
 // CreateUsersIfNotExist creates the users if they don't exist yet.
 // Panics if anything goes wrong.
-func CreateUsersIfNotExistOrDie(users []SeedUser, db webdb.WebDb, u user.Service) {
+func CreateUsersIfNotExistOrDie(users []SeedUser, db webdb.WebDb, u userservice.Service) {
 	createUsersIfNotExistOrDie(users, db, u)
 }
 
@@ -35,6 +36,6 @@ type SeedRepo struct {
 
 // CreateRepoIfNotExistsOrDie creates repositories if they don't exist.
 // Panics if anything goes wrong.
-func CreateRepoIfNotExistsOrDie(seedRepos []SeedRepo, db webdb.WebDb, u user.Service, rSrv repo.Service) {
+func CreateRepoIfNotExistsOrDie(seedRepos []SeedRepo, db webdb.WebDb, u userservice.Service, rSrv repo.Service) {
 	createRepoIfNotExistsOrDie(seedRepos, db, u, rSrv)
 }

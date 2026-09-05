@@ -7,7 +7,7 @@ import (
 	"monorepo/twigg-web/services/digitalocean"
 	"monorepo/twigg-web/services/oauthclient"
 	"monorepo/twigg-web/services/session"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/srvconfig"
 	"monorepo/twigg-web/webdb"
 	"time"
@@ -42,7 +42,7 @@ func getDb(c srvconfig.SrvConfig) (db webdb.WebDb, closeDb func()) {
 }
 
 func (s Srv) getSessionService(
-	db webdb.WebDb, userSrv user.Service,
+	db webdb.WebDb, userSrv userservice.Service,
 	googleOAuthClient oauthclient.Google,
 	microsoftOAuthClient oauthclient.Microsoft) session.Service {
 	if s.C.MockAuthUser && s.C.InsecureAuthCookies {

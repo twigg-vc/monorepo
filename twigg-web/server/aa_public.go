@@ -51,7 +51,7 @@ import (
 	"monorepo/twigg-web/services/sign"
 	"monorepo/twigg-web/services/stripeclient"
 	"monorepo/twigg-web/services/trackqueue"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/srvconfig"
 	"monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/webcomponents/bundles"
@@ -217,7 +217,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 		log.Fatalf("failed to setup trackqueue: %s", err)
 		return
 	}
-	userSrv_, err := user.NewService(trackQueue, stripeClient, sDb, s.C.PasswordSalt)
+	userSrv_, err := userservice.NewService(trackQueue, stripeClient, sDb, s.C.PasswordSalt)
 	if err != nil {
 		log.Fatalf("failed to setup users: %s", err)
 		return

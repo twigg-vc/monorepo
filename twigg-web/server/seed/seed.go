@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/services/repo"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 )
 
-func createUsersIfNotExistOrDie(seedUsers []SeedUser, db webdb.WebDb, u user.Service) {
+func createUsersIfNotExistOrDie(seedUsers []SeedUser, db webdb.WebDb, u userservice.Service) {
 	if len(seedUsers) == 0 {
 		return
 	}
@@ -41,7 +42,7 @@ func createUsersIfNotExistOrDie(seedUsers []SeedUser, db webdb.WebDb, u user.Ser
 	}
 }
 
-func createRepoIfNotExistsOrDie(seedRepos []SeedRepo, db webdb.WebDb, u user.Service, rSrv repo.Service) {
+func createRepoIfNotExistsOrDie(seedRepos []SeedRepo, db webdb.WebDb, u userservice.Service, rSrv repo.Service) {
 	if len(seedRepos) == 0 {
 		return
 	}

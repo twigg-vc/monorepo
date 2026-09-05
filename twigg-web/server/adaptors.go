@@ -6,7 +6,8 @@ import (
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/repo"
 	reposervice "monorepo/twigg-web/services/repo"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"time"
 )
 
@@ -22,7 +23,7 @@ func (r RepoServiceAdaptor) GetRepoOwnerId(rl context.Context, repoId uint64) (i
 
 // Simple adaptor for user service
 type UserServiceAdaptor struct {
-	user.Service
+	userservice.Service
 }
 
 func (u UserServiceAdaptor) GetMaxAllowedTimeout(repoOwnerId int64, repoId uint64, tx context.Context) (time.Duration, error) {
@@ -32,11 +33,11 @@ func (u UserServiceAdaptor) GetMaxAllowedTimeout(repoOwnerId int64, repoId uint6
 	}
 	switch usr.SelfPaidSubscription {
 	case user.Subscription_Trial:
-		return user.TrialMaxJobTimeout, nil
+		return userservice.TrialMaxJobTimeout, nil
 	case user.Subscription_Solo:
-		return user.SoloMaxJobTimeout, nil
+		return userservice.SoloMaxJobTimeout, nil
 	case user.Subscription_Team:
-		return user.TeamMaxJobTimeout, nil
+		return userservice.TeamMaxJobTimeout, nil
 	default:
 		return 0, nil
 	}
@@ -44,7 +45,7 @@ func (u UserServiceAdaptor) GetMaxAllowedTimeout(repoOwnerId int64, repoId uint6
 
 type userCanCreateRepoAdaptor struct {
 	repoService reposervice.Service
-	userService user.Service
+	userService userservice.Service
 }
 
 func (a userCanCreateRepoAdaptor) CanCreateRepo(u user.User, r context.Context) (bool, error) {
