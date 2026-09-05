@@ -16,8 +16,8 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-track/trackclient"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/services/sign"
 	"monorepo/twigg-web/services/twiggtoken"
 	"monorepo/twigg-web/wrappers"
@@ -296,18 +296,18 @@ func TestHandlePipelinesSuccessOfTwoStages(t *testing.T) {
 		testJobName       string = "build-and-push"
 		testRunNumber     int64  = 1
 	)
-	pipelineId := jobs.PipelineId(testRepoId, testCommit, testCommitVersion,
+	pipelineId := job.PipelineId(testRepoId, testCommit, testCommitVersion,
 		testPath, testJobName, testRunNumber)
-	jobsStorage.pipelinesById[pipelineId] = jobs.Pipeline{
-		Status:         jobs.PipelineStatusRunning,
+	jobsStorage.pipelinesById[pipelineId] = job.Pipeline{
+		Status:         job.PipelineStatusRunning,
 		NumberOfStages: 2,
 	}
-	jobsStorage.pipelineStagesByPipelineId[pipelineId] = []jobs.PipelineStage{
-		{PipelineId: pipelineId, Stage: 0, Status: jobs.JobStatusRunning},
-		{PipelineId: pipelineId, Stage: 1, Status: jobs.JobStatusWaiting},
+	jobsStorage.pipelineStagesByPipelineId[pipelineId] = []job.PipelineStage{
+		{PipelineId: pipelineId, Stage: 0, Status: job.JobStatusRunning},
+		{PipelineId: pipelineId, Stage: 1, Status: job.JobStatusWaiting},
 	}
-	stage0Id := jobs.PipelineStageId(pipelineId, 0)
-	stage1Id := jobs.PipelineStageId(pipelineId, 1)
+	stage0Id := job.PipelineStageId(pipelineId, 0)
+	stage1Id := job.PipelineStageId(pipelineId, 1)
 
 	// We get a webhook saying the stage 0 finished
 	// Stage 0 stage should update to "success" and Stage 1 should still be
@@ -315,9 +315,9 @@ func TestHandlePipelinesSuccessOfTwoStages(t *testing.T) {
 	// The stage0 should be marked as done in the trackqueue
 	testGotStageZeroSucces := func() {
 		checkOkWebhook(stage0Id, trackclient.TrackJobStatusSuccess, mockWebhookParser, h, t)
-		jobsStorage.checkPipelineStatus(pipelineId, jobs.PipelineStatusRunning, t)
-		jobsStorage.checkPipelineStageStatus(pipelineId, 0, jobs.JobStatusSuccess, t)
-		jobsStorage.checkPipelineStageStatus(pipelineId, 1, jobs.JobStatusWaiting, t)
+		jobsStorage.checkPipelineStatus(pipelineId, job.PipelineStatusRunning, t)
+		jobsStorage.checkPipelineStageStatus(pipelineId, 0, job.JobStatusSuccess, t)
+		jobsStorage.checkPipelineStageStatus(pipelineId, 1, job.JobStatusWaiting, t)
 		trackQueue.checkJobFinished(stage0Id, t)
 		cdQueue.checkIsEnqueued(pipelineId, 1, t)
 	}
@@ -330,17 +330,17 @@ func TestHandlePipelinesSuccessOfTwoStages(t *testing.T) {
 	// an error
 	checkBadWebhook(stage1Id, trackclient.TrackJobStatusFail, mockWebhookParser, h, t)
 	// Let's mock as it we had published the stage1 to be "posted"
-	jobsStorage.pipelineStagesByPipelineId[pipelineId] = []jobs.PipelineStage{
-		{PipelineId: pipelineId, Stage: 0, Status: jobs.JobStatusSuccess},
-		{PipelineId: pipelineId, Stage: 1, Status: jobs.JobStatusPosted},
+	jobsStorage.pipelineStagesByPipelineId[pipelineId] = []job.PipelineStage{
+		{PipelineId: pipelineId, Stage: 0, Status: job.JobStatusSuccess},
+		{PipelineId: pipelineId, Stage: 1, Status: job.JobStatusPosted},
 	}
 
 	// Send a webhook communicating stage 1 started running
 	testStageOneStartedToRun := func() {
 		checkOkWebhook(stage1Id, trackclient.TrackJobStatusRunning, mockWebhookParser, h, t)
-		jobsStorage.checkPipelineStatus(pipelineId, jobs.PipelineStatusRunning, t)
-		jobsStorage.checkPipelineStageStatus(pipelineId, 0, jobs.JobStatusSuccess, t)
-		jobsStorage.checkPipelineStageStatus(pipelineId, 1, jobs.JobStatusRunning, t)
+		jobsStorage.checkPipelineStatus(pipelineId, job.PipelineStatusRunning, t)
+		jobsStorage.checkPipelineStageStatus(pipelineId, 0, job.JobStatusSuccess, t)
+		jobsStorage.checkPipelineStageStatus(pipelineId, 1, job.JobStatusRunning, t)
 	}
 	testStageOneStartedToRun()
 	testStageOneStartedToRun()
@@ -350,9 +350,9 @@ func TestHandlePipelinesSuccessOfTwoStages(t *testing.T) {
 	sizeBeforeStageOneSuccess := len(cdQueue.queue)
 	testGotStageOneSuccess := func() {
 		checkOkWebhook(stage1Id, trackclient.TrackJobStatusSuccess, mockWebhookParser, h, t)
-		jobsStorage.checkPipelineStatus(pipelineId, jobs.PipelineStatusSuccess, t)
-		jobsStorage.checkPipelineStageStatus(pipelineId, 0, jobs.JobStatusSuccess, t)
-		jobsStorage.checkPipelineStageStatus(pipelineId, 1, jobs.JobStatusSuccess, t)
+		jobsStorage.checkPipelineStatus(pipelineId, job.PipelineStatusSuccess, t)
+		jobsStorage.checkPipelineStageStatus(pipelineId, 0, job.JobStatusSuccess, t)
+		jobsStorage.checkPipelineStageStatus(pipelineId, 1, job.JobStatusSuccess, t)
 		trackQueue.checkJobFinished(stage0Id, t)
 		trackQueue.checkJobFinished(stage1Id, t)
 		cdQueue.checkQueueSize(sizeBeforeStageOneSuccess, t)
@@ -391,27 +391,27 @@ func TestHandlePipelinesCancelation(t *testing.T) {
 	// Stage0: success
 	// Stage1: running
 	// Stage2: waiting
-	pipelineId := jobs.PipelineId( /*repoId*/ 100,
+	pipelineId := job.PipelineId( /*repoId*/ 100,
 		/*commit*/ 101 /*commitV*/, 102,
 		"path/to/cd", "jobname" /*runNumber*/, 1)
-	jobsStorage.pipelinesById[pipelineId] = jobs.Pipeline{
-		Status:         jobs.PipelineStatusRunning,
+	jobsStorage.pipelinesById[pipelineId] = job.Pipeline{
+		Status:         job.PipelineStatusRunning,
 		NumberOfStages: 2,
 	}
-	jobsStorage.pipelineStagesByPipelineId[pipelineId] = []jobs.PipelineStage{
-		{PipelineId: pipelineId, Stage: 0, Status: jobs.JobStatusSuccess},
-		{PipelineId: pipelineId, Stage: 1, Status: jobs.JobStatusRunning},
-		{PipelineId: pipelineId, Stage: 2, Status: jobs.JobStatusWaiting},
+	jobsStorage.pipelineStagesByPipelineId[pipelineId] = []job.PipelineStage{
+		{PipelineId: pipelineId, Stage: 0, Status: job.JobStatusSuccess},
+		{PipelineId: pipelineId, Stage: 1, Status: job.JobStatusRunning},
+		{PipelineId: pipelineId, Stage: 2, Status: job.JobStatusWaiting},
 	}
-	stage1Id := jobs.PipelineStageId(pipelineId, 1)
+	stage1Id := job.PipelineStageId(pipelineId, 1)
 
 	// Post a webhook that says Stage1 was canceled
 	testStage1WasCanceled := func() {
 		checkOkWebhook(stage1Id, trackclient.TrackJobStatusCancel, mockWebhookParser, h, t)
-		jobsStorage.checkPipelineStatus(pipelineId, jobs.PipelineStatusCancel, t)
-		jobsStorage.checkPipelineStageStatus(pipelineId, 0, jobs.JobStatusSuccess, t)
-		jobsStorage.checkPipelineStageStatus(pipelineId, 1, jobs.JobStatusCanceled, t)
-		jobsStorage.checkPipelineStageStatus(pipelineId, 2, jobs.JobStatusWaiting, t)
+		jobsStorage.checkPipelineStatus(pipelineId, job.PipelineStatusCancel, t)
+		jobsStorage.checkPipelineStageStatus(pipelineId, 0, job.JobStatusSuccess, t)
+		jobsStorage.checkPipelineStageStatus(pipelineId, 1, job.JobStatusCanceled, t)
+		jobsStorage.checkPipelineStageStatus(pipelineId, 2, job.JobStatusWaiting, t)
 		trackQueue.checkJobFinished(stage1Id, t)
 		cdQueue.checkIsNotEnqueued(pipelineId, 1, t)
 	}
@@ -437,7 +437,7 @@ func TestHandleJobCancelation(t *testing.T) {
 		cdQueue:  cdQueue,
 		tq:       trackQueue,
 	}
-	mockJob := jobs.Job{
+	mockJob := job.Job{
 		InternalId:    1,
 		RepoId:        2,
 		Commit:        3,
@@ -445,7 +445,7 @@ func TestHandleJobCancelation(t *testing.T) {
 		Path:          "path/to/file",
 		Name:          "jobname",
 		RunNumber:     5,
-		Status:        jobs.JobStatusRunning,
+		Status:        job.JobStatusRunning,
 	}
 	mockJobId := mockJob.Id()
 	jobsStorage.jobsById[mockJobId] = mockJob
@@ -453,7 +453,7 @@ func TestHandleJobCancelation(t *testing.T) {
 	// Helper to test cancelation of the mockJobId
 	testJobWasCanceled := func() {
 		checkOkWebhook(mockJobId, trackclient.TrackJobStatusCancel, mockWebhookParser, h, t)
-		jobsStorage.checkJobStatus(mockJobId, jobs.JobStatusCanceled, t)
+		jobsStorage.checkJobStatus(mockJobId, job.JobStatusCanceled, t)
 		trackQueue.checkJobFinished(mockJobId, t)
 	}
 	// Run twice to check idempotency
@@ -494,27 +494,27 @@ func checkBadWebhook(stageId string, status trackclient.TrackJobStatus,
 }
 
 type fakeJobsStorage struct {
-	jobsById                   map[string]jobs.Job
-	pipelinesById              map[string]jobs.Pipeline
-	pipelineStagesByPipelineId map[string][]jobs.PipelineStage
+	jobsById                   map[string]job.Job
+	pipelinesById              map[string]job.Pipeline
+	pipelineStagesByPipelineId map[string][]job.PipelineStage
 }
 
 func newFakeJobStorage() *fakeJobsStorage {
 	return &fakeJobsStorage{
-		jobsById:                   map[string]jobs.Job{},
-		pipelinesById:              map[string]jobs.Pipeline{},
-		pipelineStagesByPipelineId: map[string][]jobs.PipelineStage{},
+		jobsById:                   map[string]job.Job{},
+		pipelinesById:              map[string]job.Pipeline{},
+		pipelineStagesByPipelineId: map[string][]job.PipelineStage{},
 	}
 }
 
-func (js fakeJobsStorage) GetJobById(rl context.Context, id string) (jobs.Job, error) {
+func (js fakeJobsStorage) GetJobById(rl context.Context, id string) (job.Job, error) {
 	j, ok := js.jobsById[id]
 	if !ok {
 		return j, errors.New("not found")
 	}
 	return j, nil
 }
-func (js fakeJobsStorage) SetJobStatus(wl context.Context, id string, status jobs.JobStatus) error {
+func (js fakeJobsStorage) SetJobStatus(wl context.Context, id string, status job.JobStatus) error {
 	jobCopy, ok := js.jobsById[id]
 	if !ok {
 		return errors.New("not found")
@@ -523,14 +523,14 @@ func (js fakeJobsStorage) SetJobStatus(wl context.Context, id string, status job
 	js.jobsById[id] = jobCopy
 	return nil
 }
-func (js fakeJobsStorage) GetPipelineStagesById(tx context.Context, id string) (iterator.I[jobs.PipelineStage], error) {
+func (js fakeJobsStorage) GetPipelineStagesById(tx context.Context, id string) (iterator.I[job.PipelineStage], error) {
 	stages, ok := js.pipelineStagesByPipelineId[id]
 	if !ok {
 		return nil, errors.New("not found")
 	}
 	return iterator.NewIterFromSlice(stages), nil
 }
-func (js fakeJobsStorage) SetStatusOfPipelineStage(tx context.Context, pipelineId string, stage int32, status jobs.JobStatus) error {
+func (js fakeJobsStorage) SetStatusOfPipelineStage(tx context.Context, pipelineId string, stage int32, status job.JobStatus) error {
 	stages, ok := js.pipelineStagesByPipelineId[pipelineId]
 	if !ok {
 		return errors.New("pipeline not found")
@@ -540,23 +540,23 @@ func (js fakeJobsStorage) SetStatusOfPipelineStage(tx context.Context, pipelineI
 	}
 	stages[stage].Status = status
 	isLastStage := stage == int32(len(stages)-1)
-	if isLastStage || slices.Contains([]jobs.JobStatus{
-		jobs.JobStatusFail,
-		jobs.JobStatusTimeout,
-		jobs.JobStatusCanceled,
+	if isLastStage || slices.Contains([]job.JobStatus{
+		job.JobStatusFail,
+		job.JobStatusTimeout,
+		job.JobStatusCanceled,
 	}, status) {
 		pipelineCopy := js.pipelinesById[pipelineId]
 		switch status {
-		case jobs.JobStatusFail:
-			pipelineCopy.Status = jobs.PipelineStatusFail
-		case jobs.JobStatusTimeout:
-			pipelineCopy.Status = jobs.PipelineStatusFail
-		case jobs.JobStatusCanceled:
-			pipelineCopy.Status = jobs.PipelineStatusCancel
-		case jobs.JobStatusRunning:
-			pipelineCopy.Status = jobs.PipelineStatusRunning
+		case job.JobStatusFail:
+			pipelineCopy.Status = job.PipelineStatusFail
+		case job.JobStatusTimeout:
+			pipelineCopy.Status = job.PipelineStatusFail
+		case job.JobStatusCanceled:
+			pipelineCopy.Status = job.PipelineStatusCancel
+		case job.JobStatusRunning:
+			pipelineCopy.Status = job.PipelineStatusRunning
 		default:
-			pipelineCopy.Status = jobs.PipelineStatusSuccess
+			pipelineCopy.Status = job.PipelineStatusSuccess
 		}
 		js.pipelinesById[pipelineId] = pipelineCopy
 	}
@@ -564,14 +564,14 @@ func (js fakeJobsStorage) SetStatusOfPipelineStage(tx context.Context, pipelineI
 	js.pipelineStagesByPipelineId[pipelineId] = stages
 	return nil
 }
-func (js fakeJobsStorage) checkPipelineStatus(pipelineId string, expected jobs.PipelineStatus, t *testing.T) {
+func (js fakeJobsStorage) checkPipelineStatus(pipelineId string, expected job.PipelineStatus, t *testing.T) {
 	t.Helper()
 	p := js.pipelinesById[pipelineId]
 	if p.Status != expected {
 		t.Fatalf("expected status %q got %q", expected, p.Status)
 	}
 }
-func (js fakeJobsStorage) checkPipelineStageStatus(pipelineId string, stage int32, expected jobs.JobStatus, t *testing.T) {
+func (js fakeJobsStorage) checkPipelineStageStatus(pipelineId string, stage int32, expected job.JobStatus, t *testing.T) {
 	t.Helper()
 	stages := js.pipelineStagesByPipelineId[pipelineId]
 	if stage >= int32(len(stages)) {
@@ -582,7 +582,7 @@ func (js fakeJobsStorage) checkPipelineStageStatus(pipelineId string, stage int3
 	}
 }
 
-func (js fakeJobsStorage) checkJobStatus(jobId string, expected jobs.JobStatus, t *testing.T) {
+func (js fakeJobsStorage) checkJobStatus(jobId string, expected job.JobStatus, t *testing.T) {
 	t.Helper()
 	gotJob, ok := js.jobsById[jobId]
 	if !ok {
