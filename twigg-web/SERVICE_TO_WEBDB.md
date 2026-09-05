@@ -72,8 +72,25 @@ Already migrated — use as reference implementations:
   after reading it; `UserQuotaOwnerName` is exposed so no consumer formats the
   quota key.
 
-Still legacy (create tables in their constructor): `services/jobs`,
-`services/trackqueue`.
+- Track queue: `webdb/migrations/0000010_track_queue.sql`, `webdb/trackqueue.go`,
+  `webdb/trackqueue_test.go` — surviving service: `services/trackqueue` keeps the
+  publish and janitor loops, the `runnerlib.JobPayload` JSON and the track client
+  calls. Like the CI queue, its loops run outside the request handlers, so its Db
+  interface includes `BeginWrite`/`BeginRead`. No entity to move: the payload
+  crosses the boundary as `[]byte` and the statuses as plain `string`, with the
+  `queued`/`published` constants owned by the service.
+
+  The one method that is not a per-statement mirror is `AddTrackOwnerUsage`,
+  which takes deltas because the reserve (`+1`) and the release (`-1`) are the
+  same statement with a sign flip — both call sites use every parameter, which
+  is the test that matters. The pick stays one statement
+  (`GetOldestTrackQueueJobWithinOwnerLimits`) so that no window opens between
+  checking an owner's limits and reserving against them. Names carry the
+  conflict behaviour (`InsertTrackQueueJobIfNotExists`,
+  `InsertZeroTrackOwnerUsageIfNotExists`) because `Put` and `PutLimits` write
+  the same rows and each depends on the other's `ON CONFLICT` clause.
+
+Still legacy (create tables in their constructor): `services/jobs`.
 
 Out of scope: anything on a separate database (only the main WebDb sqlite db is
 being consolidated). Metrics was such a case and was removed instead of migrated
