@@ -8,7 +8,7 @@ import (
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/stripeclient"
-	"monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
 	"net/http/httptest"

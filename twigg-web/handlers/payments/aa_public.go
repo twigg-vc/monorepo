@@ -6,7 +6,8 @@ import (
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/session"
 	"monorepo/twigg-web/services/stripeclient"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
 
@@ -16,7 +17,7 @@ import (
 func AddHandlers(
 	db Db,
 	sessionS session.Service,
-	userS user.Service,
+	userS userservice.Service,
 	stripeClient StripeClient,
 	orgHelper OrgHelper,
 	mux wrappers.RlMux,
