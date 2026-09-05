@@ -24,38 +24,12 @@ func newService(db webdb.WebDb) service {
 
 func (s service) CiCdRunWasPublished(tx context.Context,
 	repoId uint64, commit uint64, commitV uint64, runNumber int64) (bool, error) {
-	var dummy int64
-	err := s.db.Bind(tx).QueryRow(`
-		SELECT
-			1
-		FROM cicdruns
-		WHERE
-			repoId = ?
-			AND commitId = ?
-			AND commitVersion = ?
-			AND runNumber = ?
-	`, repoId, commit, commitV, runNumber).Scan(&dummy)
-	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return dummy == 1, nil
+	return s.db.CiCdRunExists(tx, repoId, commit, commitV, runNumber)
 }
 
 func (s service) SetCiCdToPublished(tx context.Context,
 	repoId uint64, commit uint64, commitV uint64, runNumber int64) error {
-	_, err := s.db.Bind(tx).Exec(`
-		INSERT INTO cicdruns (
-			repoId,
-			commitId,
-			commitVersion,
-			runNumber,
-			nonce
-		) VALUES (?, ?, ?, ?, ?)
-	`, repoId, commit, commitV, runNumber, newNonce())
-	return err
+	return s.db.InsertCiCdRun(tx, repoId, commit, commitV, runNumber, newNonce())
 }
 
 func newNonce() string {

@@ -527,6 +527,19 @@ func (db WebDb) SetCiCdQueueRunStatus(writeCtx context.Context,
 		runNumber, nonce, status)
 }
 
+// Reports whether a CI/CD run was marked as published.
+func (db WebDb) CiCdRunExists(ctx context.Context,
+	repoId, commitId, commitVersion uint64, runNumber int64) (bool, error) {
+	return db.db.CiCdRunExists(ctx, repoId, commitId, commitVersion, runNumber)
+}
+
+// Marks a CI/CD run as published.
+func (db WebDb) InsertCiCdRun(writeCtx context.Context,
+	repoId, commitId, commitVersion uint64, runNumber int64, nonce string) error {
+	return db.db.InsertCiCdRun(writeCtx, repoId, commitId, commitVersion,
+		runNumber, nonce)
+}
+
 // Adapts the read context to the twigg server read interface.
 func (db WebDb) GetServerRead(ctx context.Context) server.Read {
 	return db.Bind(ctx)
