@@ -756,3 +756,17 @@ func (db WebDb) CountUsers(ctx context.Context) (int64, error) {
 func (db WebDb) GetAllUsers(ctx context.Context) (iterator.I[user.User], error) {
 	return db.db.GetAllUsers(ctx)
 }
+
+// Writes the stripe subscription row, replacing it if the subscription id is
+// already stored.
+func (db WebDb) UpsertStripeSubscription(writeCtx context.Context,
+	stripeSubscriptionId string, userId int64, isActive bool) error {
+	return db.db.UpsertStripeSubscription(writeCtx, stripeSubscriptionId, userId, isActive)
+}
+
+// Returns whether the stripe subscription is active. Returns ErrNotFound if
+// the subscription is not stored.
+func (db WebDb) GetStripeSubscriptionIsActive(ctx context.Context,
+	stripeSubscriptionId string) (isActive bool, isNotFoundErr bool, err error) {
+	return db.db.GetStripeSubscriptionIsActive(ctx, stripeSubscriptionId)
+}
