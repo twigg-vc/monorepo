@@ -770,3 +770,8 @@ func (db WebDb) GetStripeSubscriptionIsActive(ctx context.Context,
 	stripeSubscriptionId string) (isActive bool, isNotFoundErr bool, err error) {
 	return db.db.GetStripeSubscriptionIsActive(ctx, stripeSubscriptionId)
 }
+
+// Returns the name that identifies the user in the quota methods.
+func (db WebDb) UserQuotaOwnerName(userId int64) string {
+	return db.db.UserQuotaOwnerName(userId)
+}

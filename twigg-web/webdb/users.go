@@ -160,7 +160,7 @@ func (db webDb) getUserWhere(ctx context.Context, whereClause string,
 
 // Fills in the fields kept in the quota db instead of the users table.
 func (db webDb) readUserQuota(u *user.User) error {
-	owner := userQuotaOwner(u.Id)
+	owner := db.UserQuotaOwnerName(u.Id)
 	total, err := db.quota.GetQuota(owner)
 	if err != nil {
 		return fmt.Errorf("failed to get user quota: %w", err)
@@ -175,7 +175,7 @@ func (db webDb) readUserQuota(u *user.User) error {
 	return nil
 }
 
-func userQuotaOwner(userId int64) string {
+func (db webDb) UserQuotaOwnerName(userId int64) string {
 	return strconv.FormatInt(userId, 10)
 }
 

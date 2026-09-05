@@ -5,7 +5,6 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
-	"strconv"
 	"testing"
 )
 
@@ -134,7 +133,7 @@ func TestGetUserReadsQuotaFields(t *testing.T) {
 	}
 
 	const quota = 4096
-	if err := b.SetQuota(strconv.FormatInt(stored.Id, 10), quota); err != nil {
+	if err := b.SetQuota(b.UserQuotaOwnerName(stored.Id), quota); err != nil {
 		t.Fatal(err)
 	}
 
