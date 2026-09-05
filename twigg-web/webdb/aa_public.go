@@ -796,3 +796,9 @@ func (db WebDb) CreateUser(writeCtx context.Context, email string,
 	return db.db.CreateUser(writeCtx, email, state, isOrganization, username,
 		passwordHash, selfPaidSubscription, selfPaidSubscriptionQuantity)
 }
+
+// Writes only the stripe id of the user row.
+func (db WebDb) SetUserStripeId(writeCtx context.Context, userId int64,
+	stripeId string) error {
+	return db.db.SetUserStripeId(writeCtx, userId, stripeId)
+}

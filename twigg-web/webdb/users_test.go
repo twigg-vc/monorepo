@@ -413,3 +413,40 @@ func TestCreateUser(t *testing.T) {
 		t.Fatalf("got %+v, want %+v", got, want)
 	}
 }
+
+func TestSetUserStripeId(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userId, err := b.CreateUser(w, "someone@twigg.vc",
+		user.UserState_NoSubscription, false, "someone", "", user.Subscription_None, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created, _, err := b.GetUser(w, userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := b.SetUserStripeId(w, userId, "cus_1"); err != nil {
+		t.Fatal(err)
+	}
+
+	got, _, err := b.GetUser(w, userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := created
+	want.StripeId = "cus_1"
+	if got != want {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}

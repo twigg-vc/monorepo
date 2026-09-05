@@ -83,6 +83,20 @@ func (db webDb) UpdateUser(writeCtx context.Context, u user.User) error {
 	return nil
 }
 
+// Writes only the stripe id of the user row.
+func (db webDb) SetUserStripeId(writeCtx context.Context, userId int64,
+	stripeId string) error {
+	_, err := db.s.Exec(writeCtx, `
+		UPDATE users2
+		SET stripeId = ?
+		WHERE id = ?;
+	`, stripeId, userId)
+	if err != nil {
+		return fmt.Errorf("failed to set user stripe id: %w", err)
+	}
+	return nil
+}
+
 const selectUserColumns = `
 	SELECT
 		id,
