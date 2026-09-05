@@ -2,14 +2,12 @@ package landing
 
 import (
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
 )
 
 func AddHandlers(
 	rt routes.Router,
-	db webdb.WebDb,
 	mux wrappers.RlMux,
 	wrap func(http.HandlerFunc) http.HandlerFunc) {
 	if wrap == nil {

@@ -302,7 +302,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 				w.Write([]byte("ok"))
 			})
 	}
-	landing.AddHandlers(rt, sDb, s.mux, nil)
+	landing.AddHandlers(rt, s.mux, nil)
 	bundles.AddHandler(s.mux)
 	webcomponents.AddHandler(s.mux)
 	termsandprivacy.AddHandlers(s.mux)
