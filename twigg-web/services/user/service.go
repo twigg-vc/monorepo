@@ -279,11 +279,7 @@ func (s service) GetUserForPaymentWithStripe(
 			return u, false, err
 		}
 		u.StripeId = stripeId
-		_, err = s.db.Bind(w).Exec(`
-			UPDATE users2
-			SET stripeId = ?
-			WHERE id = ?
-		`, stripeId, u.Id)
+		err = s.db.SetUserStripeId(w, u.Id, stripeId)
 		if err != nil {
 			return u, false, fmt.Errorf("failed to set stripe id: %s", err)
 		}
