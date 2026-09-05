@@ -52,3 +52,40 @@ func TestInsertAndCountTrackQueueJobs(t *testing.T) {
 		t.Fatalf("the conflicting insert added a job: got %d", count)
 	}
 }
+
+func TestInsertTrackOwnerUsageIfNotExists(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, isNotFoundErr, err := b.GetTrackOwnerLimits(w, 7)
+	if !isNotFoundErr {
+		t.Fatalf("expected the owner to not be tracked yet, got err %v", err)
+	}
+
+	if err := b.InsertZeroTrackOwnerUsageIfNotExists(w, 7); err != nil {
+		t.Fatal(err)
+	}
+
+	// A new owner gets the limits the table defaults to.
+	maxJobs, maxTimeoutMs, isNotFoundErr, err := b.GetTrackOwnerLimits(w, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isNotFoundErr {
+		t.Fatal("the tracked owner was not found")
+	}
+	if maxJobs != 1 {
+		t.Fatalf("got maxJobs %d, want 1", maxJobs)
+	}
+	if maxTimeoutMs != 60_000 {
+		t.Fatalf("got maxTimeoutMs %d, want 60000", maxTimeoutMs)
+	}
+}

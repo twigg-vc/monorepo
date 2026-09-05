@@ -141,11 +141,7 @@ func (q *trackQueue) Put(ownerId int64, jobId string, pl runnerlib.JobPayload, t
 	if err != nil {
 		return err
 	}
-	_, err = q.db.Bind(tx).Exec(`
-		INSERT INTO owner_usage2 (owner_id, running_jobs, running_timeout_ms)
-		VALUES (?, 0, 0)
-		ON CONFLICT (owner_id) DO NOTHING
-	`, ownerId)
+	err = q.db.InsertZeroTrackOwnerUsageIfNotExists(tx, ownerId)
 	if err != nil {
 		return err
 	}
@@ -229,16 +225,8 @@ func (q *trackQueue) PutLimits(ownerId int64, maxJobs int,
 
 func (q *trackQueue) GetLimits(ownerId int64, tx context.Context) (maxJobs int,
 	maxTimeout time.Duration, err error) {
-	var maxJobsInt64 int64
-	var maxTimeoutMs int64
-	err = q.db.Bind(tx).QueryRow(`
-	SELECT
-		max_running_jobs,
-		max_running_timeout_ms
-	FROM owner_usage2
-	WHERE owner_id = ?
-    `, ownerId).Scan(&maxJobsInt64, &maxTimeoutMs)
-	if errors.Is(err, sql.ErrNoRows) {
+	maxJobsInt64, maxTimeoutMs, isNotFoundErr, err := q.db.GetTrackOwnerLimits(tx, ownerId)
+	if isNotFoundErr {
 		err = nil
 		maxJobsInt64 = defaultMaxRunningJobs
 		maxTimeoutMs = defaultMaxRunningTimeoutMs

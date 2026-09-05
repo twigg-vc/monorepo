@@ -814,3 +814,18 @@ func (db WebDb) InsertTrackQueueJobIfNotExists(writeCtx context.Context, jobId s
 func (db WebDb) CountTrackQueueJobs(ctx context.Context) (int64, error) {
 	return db.db.CountTrackQueueJobs(ctx)
 }
+
+// Starts tracking the owner's usage. Does nothing if the owner is already
+// tracked, so the limits already set for it are kept.
+func (db WebDb) InsertZeroTrackOwnerUsageIfNotExists(writeCtx context.Context,
+	ownerId int64) error {
+	return db.db.InsertZeroTrackOwnerUsageIfNotExists(writeCtx, ownerId)
+}
+
+// Returns the limits set for the owner. Returns ErrNotFound if the owner is
+// not tracked.
+func (db WebDb) GetTrackOwnerLimits(ctx context.Context,
+	ownerId int64) (maxJobs int64, maxTimeoutMs int64, isNotFoundErr bool,
+	err error) {
+	return db.db.GetTrackOwnerLimits(ctx, ownerId)
+}
