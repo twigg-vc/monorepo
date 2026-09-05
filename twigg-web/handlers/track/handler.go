@@ -8,8 +8,8 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-track/trackclient"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/services/twiggtoken"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
@@ -38,18 +38,18 @@ func (h handler) handleTrackWebhook(w http.ResponseWriter, r wrappers.ServerKeyA
 		return
 	}
 
-	var incomingJobStatus jobs.JobStatus
+	var incomingJobStatus job.JobStatus
 	switch trackJob.Status {
 	case trackclient.TrackJobStatusSuccess:
-		incomingJobStatus = jobs.JobStatusSuccess
+		incomingJobStatus = job.JobStatusSuccess
 	case trackclient.TrackJobStatusFail:
-		incomingJobStatus = jobs.JobStatusFail
+		incomingJobStatus = job.JobStatusFail
 	case trackclient.TrackJobStatusTimeout:
-		incomingJobStatus = jobs.JobStatusTimeout
+		incomingJobStatus = job.JobStatusTimeout
 	case trackclient.TrackJobStatusRunning:
-		incomingJobStatus = jobs.JobStatusRunning
+		incomingJobStatus = job.JobStatusRunning
 	case trackclient.TrackJobStatusCancel:
-		incomingJobStatus = jobs.JobStatusCanceled
+		incomingJobStatus = job.JobStatusCanceled
 	default:
 		log.Printf("[track webhook] got invalid job.Status=%q. job.id=%v", incomingJobStatus, trackJob.Id)
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -57,7 +57,7 @@ func (h handler) handleTrackWebhook(w http.ResponseWriter, r wrappers.ServerKeyA
 	}
 
 	ok := false
-	if jobs.MightBePipelineStageId(trackJob.Id) {
+	if job.MightBePipelineStageId(trackJob.Id) {
 		ok = h.handlePipelineStageWebhook(w, incomingJobStatus, trackJob.Id)
 	} else {
 		ok = h.handleNonPipelineWebhook(w, incomingJobStatus, trackJob.Id)
@@ -68,14 +68,14 @@ func (h handler) handleTrackWebhook(w http.ResponseWriter, r wrappers.ServerKeyA
 }
 
 // Statuses that a job can be once it's done running in the track server
-var finishedStatuses = []jobs.JobStatus{
-	jobs.JobStatusSuccess,
-	jobs.JobStatusFail,
-	jobs.JobStatusTimeout,
-	jobs.JobStatusCanceled}
+var finishedStatuses = []job.JobStatus{
+	job.JobStatusSuccess,
+	job.JobStatusFail,
+	job.JobStatusTimeout,
+	job.JobStatusCanceled}
 
 // Handles a webhook regarding a "single job" (i.e. not of a pipeline)
-func (h handler) handleNonPipelineWebhook(w http.ResponseWriter, incomingJobStatus jobs.JobStatus, jobId string) (handledOk bool) {
+func (h handler) handleNonPipelineWebhook(w http.ResponseWriter, incomingJobStatus job.JobStatus, jobId string) (handledOk bool) {
 	wl, ul, commit, err := h.db.BeginWrite()
 	defer ul()
 	if err != nil {
@@ -103,10 +103,10 @@ func (h handler) handleNonPipelineWebhook(w http.ResponseWriter, incomingJobStat
 	isRunningToFinished := false
 	switch localJob.Status {
 	// Locally the job has `posted` status
-	case jobs.JobStatusPosted:
-		isPostedToRunning = incomingJobStatus == jobs.JobStatusRunning
+	case job.JobStatusPosted:
+		isPostedToRunning = incomingJobStatus == job.JobStatusRunning
 	// Locally the job has `running` status
-	case jobs.JobStatusRunning:
+	case job.JobStatusRunning:
 		isRunningToFinished = slices.Contains(finishedStatuses, incomingJobStatus)
 	default:
 	}
@@ -142,7 +142,7 @@ func (h handler) handleNonPipelineWebhook(w http.ResponseWriter, incomingJobStat
 }
 
 // Handles a webhook regarding a stage of a pipeline
-func (h handler) handlePipelineStageWebhook(w http.ResponseWriter, incomingStageStatus jobs.JobStatus, stageId string) (handledOk bool) {
+func (h handler) handlePipelineStageWebhook(w http.ResponseWriter, incomingStageStatus job.JobStatus, stageId string) (handledOk bool) {
 	wl, ul, commit, err := h.db.BeginWrite()
 	defer ul()
 	if err != nil {
@@ -152,14 +152,14 @@ func (h handler) handlePipelineStageWebhook(w http.ResponseWriter, incomingStage
 	}
 	// Get all the stages of the pipeline
 	RepoId, Commit, CommitVersion,
-		Path, Name, RunNumber, Stage, stageIdIsOk := jobs.ParsePipelineStageId(stageId)
+		Path, Name, RunNumber, Stage, stageIdIsOk := job.ParsePipelineStageId(stageId)
 	if !stageIdIsOk {
 		log.Printf("bad stageId: %s", stageId)
 		http.Error(w, "bad stageId", http.StatusBadRequest)
 		return
 	}
 	incomingStage := int64(Stage)
-	pipelineId := jobs.PipelineId(RepoId, Commit, CommitVersion, Path, Name, RunNumber)
+	pipelineId := job.PipelineId(RepoId, Commit, CommitVersion, Path, Name, RunNumber)
 	stagesIter, err := h.js.GetPipelineStagesById(wl, pipelineId)
 	if err != nil {
 		log.Printf("failed to get stages: %s", err)
@@ -195,11 +195,11 @@ func (h handler) handlePipelineStageWebhook(w http.ResponseWriter, incomingStage
 	// running -> success/fail/timeout/cancel
 	isPostedToRunning := false
 	isRunningToFinished := false
-	if localStage.Status == jobs.JobStatusPosted &&
-		incomingStageStatus == jobs.JobStatusRunning {
+	if localStage.Status == job.JobStatusPosted &&
+		incomingStageStatus == job.JobStatusRunning {
 		isPostedToRunning = true
 	}
-	if (localStage.Status == jobs.JobStatusRunning) &&
+	if (localStage.Status == job.JobStatusRunning) &&
 		slices.Contains(
 			finishedStatuses, incomingStageStatus) {
 		isRunningToFinished = true
@@ -217,8 +217,8 @@ func (h handler) handlePipelineStageWebhook(w http.ResponseWriter, incomingStage
 	// later on.
 	currentRunningOrPostedStage := int64(-1)
 	for i := int64(0); i < int64(len(stages)); i++ {
-		if stages[i].Status == jobs.JobStatusRunning ||
-			stages[i].Status == jobs.JobStatusPosted {
+		if stages[i].Status == job.JobStatusRunning ||
+			stages[i].Status == job.JobStatusPosted {
 			currentRunningOrPostedStage = int64(i)
 			break
 		}
@@ -262,7 +262,7 @@ func (h handler) handlePipelineStageWebhook(w http.ResponseWriter, incomingStage
 	}
 	// Enqueue the execution of the next stage
 	isLastStage := incomingStage == int64(len(stages)-1)
-	isCanceled := incomingStageStatus == jobs.JobStatusCanceled
+	isCanceled := incomingStageStatus == job.JobStatusCanceled
 	if !isLastStage && !isCanceled {
 		err = h.cdQueue.ResumeCdToStage(pipelineId, Stage+1)
 		if err != nil {

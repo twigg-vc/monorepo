@@ -5,8 +5,8 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-track/trackclient"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 )
@@ -30,10 +30,10 @@ func AddHandlers(
 }
 
 type JobsStorage interface {
-	GetJobById(rl context.Context, id string) (jobs.Job, error)
-	SetJobStatus(wl context.Context, id string, status jobs.JobStatus) error
-	GetPipelineStagesById(tx context.Context, id string) (iterator.I[jobs.PipelineStage], error)
-	SetStatusOfPipelineStage(tx context.Context, pipelineId string, stage int32, status jobs.JobStatus) error
+	GetJobById(rl context.Context, id string) (job.Job, error)
+	SetJobStatus(wl context.Context, id string, status job.JobStatus) error
+	GetPipelineStagesById(tx context.Context, id string) (iterator.I[job.PipelineStage], error)
+	SetStatusOfPipelineStage(tx context.Context, pipelineId string, stage int32, status job.JobStatus) error
 }
 
 type TrackQueue interface {
