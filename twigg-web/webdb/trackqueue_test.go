@@ -53,7 +53,7 @@ func TestInsertAndCountTrackQueueJobs(t *testing.T) {
 	}
 }
 
-func TestInsertTrackOwnerUsageIfNotExists(t *testing.T) {
+func TestInsertZeroTrackOwnerUsageIfNotExists(t *testing.T) {
 	b, cl, err := webdb.NewMem()
 	if err != nil {
 		t.Fatal(err)
@@ -87,5 +87,57 @@ func TestInsertTrackOwnerUsageIfNotExists(t *testing.T) {
 	}
 	if maxTimeoutMs != 60_000 {
 		t.Fatalf("got maxTimeoutMs %d, want 60000", maxTimeoutMs)
+	}
+}
+
+func TestSetTrackOwnerLimits(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The owner does not have to be tracked yet.
+	if err := b.SetTrackOwnerLimits(w, 7, 3, 90_000); err != nil {
+		t.Fatal(err)
+	}
+	maxJobs, maxTimeoutMs, isNotFoundErr, err := b.GetTrackOwnerLimits(w, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isNotFoundErr {
+		t.Fatal("the owner was not tracked")
+	}
+	if maxJobs != 3 || maxTimeoutMs != 90_000 {
+		t.Fatalf("got limits %d/%d, want 3/90000", maxJobs, maxTimeoutMs)
+	}
+
+	// Queueing a job for the owner must not reset the limits.
+	if err := b.InsertZeroTrackOwnerUsageIfNotExists(w, 7); err != nil {
+		t.Fatal(err)
+	}
+	maxJobs, maxTimeoutMs, _, err = b.GetTrackOwnerLimits(w, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if maxJobs != 3 || maxTimeoutMs != 90_000 {
+		t.Fatalf("the limits were reset to %d/%d", maxJobs, maxTimeoutMs)
+	}
+
+	// Setting them again overwrites them.
+	if err := b.SetTrackOwnerLimits(w, 7, 5, 120_000); err != nil {
+		t.Fatal(err)
+	}
+	maxJobs, maxTimeoutMs, _, err = b.GetTrackOwnerLimits(w, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if maxJobs != 5 || maxTimeoutMs != 120_000 {
+		t.Fatalf("got limits %d/%d, want 5/120000", maxJobs, maxTimeoutMs)
 	}
 }

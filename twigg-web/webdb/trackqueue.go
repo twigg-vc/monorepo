@@ -43,6 +43,29 @@ func (db webDb) InsertZeroTrackOwnerUsageIfNotExists(writeCtx context.Context,
 	return nil
 }
 
+// Sets the limits of the owner. Starts tracking the owner with zero usage if
+// it is not tracked yet; the usage of an already tracked owner is kept.
+func (db webDb) SetTrackOwnerLimits(writeCtx context.Context, ownerId int64,
+	maxJobs int64, maxTimeoutMs int64) error {
+	_, err := db.s.Exec(writeCtx, `
+		INSERT INTO owner_usage2 (
+			owner_id,
+			running_jobs,
+			running_timeout_ms,
+			max_running_jobs,
+			max_running_timeout_ms
+		)
+		VALUES (?, 0, 0, ?, ?)
+		ON CONFLICT (owner_id) DO UPDATE SET
+			max_running_jobs = excluded.max_running_jobs,
+			max_running_timeout_ms = excluded.max_running_timeout_ms;
+	`, ownerId, maxJobs, maxTimeoutMs)
+	if err != nil {
+		return fmt.Errorf("failed to set track owner limits: %w", err)
+	}
+	return nil
+}
+
 // Returns the limits set for the owner. Returns ErrNotFound if the owner is
 // not tracked.
 func (db webDb) GetTrackOwnerLimits(ctx context.Context,

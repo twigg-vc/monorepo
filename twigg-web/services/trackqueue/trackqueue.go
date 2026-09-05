@@ -193,23 +193,8 @@ func (q *trackQueue) PutJobFinished(jobId string, tx context.Context) error {
 
 func (q *trackQueue) PutLimits(ownerId int64, maxJobs int,
 	maxTimeout time.Duration, tx context.Context) error {
-	_, err := q.db.Bind(tx).Exec(`
-	INSERT INTO owner_usage2 (
-		owner_id,
-		running_jobs,
-		running_timeout_ms,
-		max_running_jobs,
-		max_running_timeout_ms
-	)
-	VALUES (?, 0, 0, ?, ?)
-	ON CONFLICT (owner_id) DO UPDATE SET
-		max_running_jobs = excluded.max_running_jobs,
-		max_running_timeout_ms = excluded.max_running_timeout_ms
-    `,
-		ownerId,
-		maxJobs,
-		maxTimeout.Milliseconds(),
-	)
+	err := q.db.SetTrackOwnerLimits(tx, ownerId, int64(maxJobs),
+		maxTimeout.Milliseconds())
 	if err != nil {
 		return err
 	}

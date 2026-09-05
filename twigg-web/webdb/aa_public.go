@@ -829,3 +829,10 @@ func (db WebDb) GetTrackOwnerLimits(ctx context.Context,
 	err error) {
 	return db.db.GetTrackOwnerLimits(ctx, ownerId)
 }
+
+// Sets the limits of the owner. Starts tracking the owner with zero usage if
+// it is not tracked yet; the usage of an already tracked owner is kept.
+func (db WebDb) SetTrackOwnerLimits(writeCtx context.Context, ownerId int64,
+	maxJobs int64, maxTimeoutMs int64) error {
+	return db.db.SetTrackOwnerLimits(writeCtx, ownerId, maxJobs, maxTimeoutMs)
+}
