@@ -157,6 +157,23 @@ func (db webDb) GetUsername(ctx context.Context,
 	return username, false, nil
 }
 
+// Reads only whether the user is an organization.
+func (db webDb) GetUserIsOrganization(ctx context.Context,
+	userId int64) (isOrganization bool, isNotFoundErr bool, err error) {
+	err = db.s.QueryRow(ctx, `
+		SELECT isOrganization
+		FROM users2
+		WHERE id = ?;
+	`, userId).Scan(&isOrganization)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, true, ErrNotFound
+	}
+	if err != nil {
+		return false, false, fmt.Errorf("failed to query isOrganization: %w", err)
+	}
+	return isOrganization, false, nil
+}
+
 func (db webDb) getUserWhere(ctx context.Context, whereClause string,
 	arg any) (u user.User, isNotFoundErr bool, err error) {
 	u, err = scanUser(db.s.QueryRow(ctx, fmt.Sprintf(`

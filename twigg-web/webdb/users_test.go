@@ -327,3 +327,59 @@ func TestGetUsername(t *testing.T) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
+
+func TestGetUserIsOrganization(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	person, err := b.UpsertUser(w, user.User{
+		Email: "someone@twigg.vc",
+		State: user.UserState_NoSubscription,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	organization, err := b.UpsertUser(w, user.User{
+		Username:       "acme",
+		IsOrganization: true,
+		State:          user.UserState_NoSubscription,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	isOrganization, isNotFoundErr, err := b.GetUserIsOrganization(w, person.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isNotFoundErr {
+		t.Fatal("user was not found")
+	}
+	if isOrganization {
+		t.Fatal("expected the user to not be an organization")
+	}
+
+	isOrganization, _, err = b.GetUserIsOrganization(w, organization.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isOrganization {
+		t.Fatal("expected the user to be an organization")
+	}
+
+	_, isNotFoundErr, err = b.GetUserIsOrganization(w, 404)
+	if !isNotFoundErr {
+		t.Fatalf("expected isNotFoundErr, got err %v", err)
+	}
+	if !errors.Is(err, webdb.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
