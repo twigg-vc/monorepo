@@ -98,3 +98,78 @@ func getStagesOrDie(t *testing.T, b webdb.WebDb, ctx context.Context,
 	}
 	return iter
 }
+
+func TestSetPipelineStageStatusAndResumer(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const (
+		pipelineId  = "p-1.2.3.cGF0aA.bmFtZQ.4"
+		createdTime = "2026-09-05T00:00:00Z"
+	)
+
+	isNotFoundErr, err := b.SetPipelineStageStatus(w, pipelineId, 0, job.JobStatusRunning)
+	if !isNotFoundErr || err == nil {
+		t.Fatal("expected is not found err")
+	}
+	isNotFoundErr, err = b.SetPipelineStageResumer(w, pipelineId, 0, 99)
+	if !isNotFoundErr || err == nil {
+		t.Fatal("expected is not found err")
+	}
+
+	err = b.InsertPipelineStage(w, pipelineId, 0, "say hi", createdTime, job.JobStatusWaiting)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	isNotFoundErr, err = b.SetPipelineStageStatus(w, pipelineId, 0, job.JobStatusSuccess)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isNotFoundErr {
+		t.Fatal("got is not found err")
+	}
+	isNotFoundErr, err = b.SetPipelineStageResumer(w, pipelineId, 0, 99)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isNotFoundErr {
+		t.Fatal("got is not found err")
+	}
+
+	got, err := iterator.GetFirstN(10, getStagesOrDie(t, b, w, pipelineId))
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []job.PipelineStage{{
+		PipelineId:      pipelineId,
+		Stage:           0,
+		Name:            "say hi",
+		CreatedTime:     createdTime,
+		Status:          job.JobStatusSuccess,
+		IsResumedByUser: true,
+		ResumedByUserId: 99,
+	}}
+	if !slices.Equal(got, expected) {
+		t.Fatalf("expected the stage updated, got %+v", got)
+	}
+
+	// Another stage of the same pipeline is untouched
+	isNotFoundErr, err = b.SetPipelineStageStatus(w, pipelineId, 1, job.JobStatusFail)
+	if !isNotFoundErr || err == nil {
+		t.Fatal("expected is not found err")
+	}
+
+	_, err = b.SetPipelineStageStatus(w, pipelineId, 0, "")
+	if err == nil {
+		t.Fatal("expected an error when the status is missing")
+	}
+}
