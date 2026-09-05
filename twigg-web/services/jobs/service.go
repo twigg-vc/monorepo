@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"monorepo/base/iterator"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/webdb"
 	"time"
 )
@@ -139,8 +140,8 @@ func newNonce() string {
 
 func (s service) CreateNewJob(wl context.Context,
 	repoId uint64, commit uint64, commitV uint64,
-	filePath string, jobName string, runNumber int64, initialStatus JobStatus) (Job, error) {
-	j := Job{
+	filePath string, jobName string, runNumber int64, initialStatus job.JobStatus) (job.Job, error) {
+	j := job.Job{
 		RepoId:        repoId,
 		Commit:        commit,
 		CommitVersion: commitV,
@@ -157,10 +158,10 @@ func (s service) CreateNewJob(wl context.Context,
 		path = ? AND name = ? AND runNumber = ?`,
 		repoId, commit, commitV, filePath, jobName, runNumber).Scan(&dummyVar)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return Job{}, err
+		return job.Job{}, err
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
-		return Job{}, errors.New("runNumber already taken")
+		return job.Job{}, errors.New("runNumber already taken")
 	}
 	err = s.db.Bind(wl).QueryRow(`
 		INSERT INTO jobs3 (
@@ -185,15 +186,15 @@ func (s service) CreateNewJob(wl context.Context,
 		j.CreatedTime,
 	).Scan(&j.InternalId)
 	if err != nil {
-		return Job{}, fmt.Errorf("failed to CreateJob: %s", err)
+		return job.Job{}, fmt.Errorf("failed to CreateJob: %s", err)
 	}
 	return j, nil
 }
 
-func (s service) GetJobById(rl context.Context, id string) (job Job, err error) {
+func (s service) GetJobById(rl context.Context, id string) (j job.Job, err error) {
 	var idIsOk bool
-	job.RepoId, job.Commit, job.CommitVersion,
-		job.Path, job.Name, job.RunNumber, idIsOk = ParseJobId(id)
+	j.RepoId, j.Commit, j.CommitVersion,
+		j.Path, j.Name, j.RunNumber, idIsOk = job.ParseJobId(id)
 	if !idIsOk {
 		err = fmt.Errorf("bad job id %s", id)
 		return
@@ -206,27 +207,27 @@ func (s service) GetJobById(rl context.Context, id string) (job Job, err error) 
 		FROM jobs3
 		WHERE repoId = ? AND commitId = ? AND commitVersion = ? AND
 			path = ? AND name = ? AND runNumber = ?;
-	`, job.RepoId,
-		job.Commit,
-		job.CommitVersion,
-		job.Path,
-		job.Name,
-		job.RunNumber).Scan(
-		&job.InternalId,
-		&job.Status,
-		&job.CreatedTime,
+	`, j.RepoId,
+		j.Commit,
+		j.CommitVersion,
+		j.Path,
+		j.Name,
+		j.RunNumber).Scan(
+		&j.InternalId,
+		&j.Status,
+		&j.CreatedTime,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return job, fmt.Errorf("GetJobById: job %s not found: %w", id, err)
+			return j, fmt.Errorf("GetJobById: job %s not found: %w", id, err)
 		}
-		return job, fmt.Errorf("GetJobById: failed to scan row: %w", err)
+		return j, fmt.Errorf("GetJobById: failed to scan row: %w", err)
 	}
-	return job, nil
+	return j, nil
 }
-func (s service) SetJobStatus(wl context.Context, id string, status JobStatus) (err error) {
+func (s service) SetJobStatus(wl context.Context, id string, status job.JobStatus) (err error) {
 	RepoId, Commit, CommitVersion,
-		Path, Name, RunNumber, idIsOk := ParseJobId(id)
+		Path, Name, RunNumber, idIsOk := job.ParseJobId(id)
 	if !idIsOk {
 		err = fmt.Errorf("bad job id %s", id)
 		return
@@ -257,7 +258,7 @@ func (s service) GetCommitJobs(
 	repoId uint64,
 	commit uint64,
 	afterInternalJobId int64,
-) (iterator.I[Job], error) {
+) (iterator.I[job.Job], error) {
 	tx := s.db.Bind(rl)
 	if afterInternalJobId == 0 {
 		afterInternalJobId = math.MaxInt64
@@ -289,8 +290,8 @@ type commitJobs struct {
 	rows *sql.Rows
 }
 
-func (it commitJobs) Get() (Job, error) {
-	var j Job
+func (it commitJobs) Get() (job.Job, error) {
+	var j job.Job
 	var commitInt, commitVersion int64
 	if err := it.rows.Scan(
 		&j.InternalId,
@@ -303,7 +304,7 @@ func (it commitJobs) Get() (Job, error) {
 		&j.Status,
 		&j.CreatedTime,
 	); err != nil {
-		return Job{}, fmt.Errorf("commitJobs.Get: failed to scan job: %w", err)
+		return job.Job{}, fmt.Errorf("commitJobs.Get: failed to scan job: %w", err)
 	}
 	j.Commit = uint64(commitInt)
 	j.CommitVersion = uint64(commitVersion)
@@ -321,7 +322,7 @@ func (s service) GetRepoJobs(
 	rl context.Context,
 	repoId uint64,
 	afterInternalJobId int64,
-) (iterator.I[Job], error) {
+) (iterator.I[job.Job], error) {
 	if afterInternalJobId == 0 {
 		afterInternalJobId = math.MaxInt64
 	}
@@ -349,16 +350,16 @@ func (s service) GetRepoJobs(
 func (s service) CreateNewPipeline(tx context.Context,
 	repoId uint64, commit uint64, commitV uint64,
 	filePath string, jobName string, runNumber int64,
-	stageNames []string, isCreatedByUser bool, createdByUserId int64) (Pipeline, error) {
+	stageNames []string, isCreatedByUser bool, createdByUserId int64) (job.Pipeline, error) {
 	if len(stageNames) == 0 {
-		return Pipeline{}, fmt.Errorf("cant create Pipeline with no stages")
+		return job.Pipeline{}, fmt.Errorf("cant create Pipeline with no stages")
 	}
 	if !isCreatedByUser {
 		createdByUserId = 0
 	}
-	const initialStatus = PipelineStatusRunning
+	const initialStatus = job.PipelineStatusRunning
 	createdTime := time.Now().UTC().Format(time.RFC3339)
-	j := Pipeline{
+	j := job.Pipeline{
 		RepoId:          repoId,
 		Commit:          commit,
 		CommitVersion:   commitV,
@@ -378,10 +379,10 @@ func (s service) CreateNewPipeline(tx context.Context,
 		path = ? AND name = ? AND runNumber = ?`,
 		repoId, commit, commitV, filePath, jobName, runNumber).Scan(&dummyVar)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return Pipeline{}, err
+		return job.Pipeline{}, err
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
-		return Pipeline{}, errors.New("runNumber already taken")
+		return job.Pipeline{}, errors.New("runNumber already taken")
 	}
 	err = s.db.Bind(tx).QueryRow(`
 		INSERT INTO jobPipelines (
@@ -412,20 +413,20 @@ func (s service) CreateNewPipeline(tx context.Context,
 		j.CreatedByUserId,
 	).Scan(&j.InternalId)
 	if err != nil {
-		return Pipeline{}, fmt.Errorf("failed to CreateNewPipeline: %s", err)
+		return job.Pipeline{}, fmt.Errorf("failed to CreateNewPipeline: %s", err)
 	}
 	_, err = s.PutPipelineRef(tx, j.RepoId, j.Path, j.Name)
 	if err != nil {
-		return Pipeline{}, err
+		return job.Pipeline{}, err
 	}
 
 	// Create all the stages in waiting status
 	for i := range stageNames {
-		stage := PipelineStage{
+		stage := job.PipelineStage{
 			PipelineId:  j.Id(),
 			Stage:       int32(i),
 			Name:        stageNames[i],
-			Status:      JobStatusWaiting,
+			Status:      job.JobStatusWaiting,
 			CreatedTime: createdTime,
 		}
 		_, err = s.db.Bind(tx).Exec(`
@@ -444,21 +445,21 @@ func (s service) CreateNewPipeline(tx context.Context,
 			stage.Status,
 		)
 		if err != nil {
-			return Pipeline{}, err
+			return job.Pipeline{}, err
 		}
 	}
 
 	return j, nil
 }
-func (s service) GetPipelineById(rl context.Context, id string) (Pipeline, error) {
+func (s service) GetPipelineById(rl context.Context, id string) (job.Pipeline, error) {
 	p, _, err := s.getPipelineById(rl, id)
 	return p, err
 }
-func (s service) getPipelineById(rl context.Context, id string) (p Pipeline, isNotFoundErr bool, err error) {
+func (s service) getPipelineById(rl context.Context, id string) (p job.Pipeline, isNotFoundErr bool, err error) {
 	repoId, commitId, commitVersion,
-		path, name, runNumber, ok := ParsePipelineId(id)
+		path, name, runNumber, ok := job.ParsePipelineId(id)
 	if !ok {
-		return Pipeline{}, false, fmt.Errorf("bad PipelineId: %q", id)
+		return job.Pipeline{}, false, fmt.Errorf("bad PipelineId: %q", id)
 	}
 	err = s.db.Bind(rl).QueryRow(`
 		SELECT
@@ -487,7 +488,7 @@ func (s service) getPipelineById(rl context.Context, id string) (p Pipeline, isN
 		&p.CreatedByUserId,
 	)
 	if err != nil {
-		p = Pipeline{}
+		p = job.Pipeline{}
 		isNotFoundErr = errors.Is(err, sql.ErrNoRows)
 		return
 	}
@@ -499,7 +500,7 @@ func (s service) getPipelineById(rl context.Context, id string) (p Pipeline, isN
 	p.RunNumber = runNumber
 	return
 }
-func (s service) GetPipelineStagesById(rl context.Context, id string) (iterator.I[PipelineStage], error) {
+func (s service) GetPipelineStagesById(rl context.Context, id string) (iterator.I[job.PipelineStage], error) {
 	rows, err := s.db.Bind(rl).Query(`
 		SELECT
 			jobPipelineId,
@@ -523,8 +524,8 @@ type pipelineStages struct {
 	rows *sql.Rows
 }
 
-func (it pipelineStages) Get() (PipelineStage, error) {
-	var j PipelineStage
+func (it pipelineStages) Get() (job.PipelineStage, error) {
+	var j job.PipelineStage
 	if err := it.rows.Scan(
 		&j.PipelineId,
 		&j.Stage,
@@ -534,7 +535,7 @@ func (it pipelineStages) Get() (PipelineStage, error) {
 		&j.IsResumedByUser,
 		&j.ResumedByUserId,
 	); err != nil {
-		return PipelineStage{}, fmt.Errorf("pipelineStages.Get: failed to scan job: %w", err)
+		return job.PipelineStage{}, fmt.Errorf("pipelineStages.Get: failed to scan job: %w", err)
 	}
 	return j, nil
 }
@@ -545,7 +546,7 @@ func (it pipelineStages) Err() error {
 	return it.rows.Err()
 }
 
-func (s service) SetStatusOfPipelineStage(tx context.Context, pipelineId string, stage int32, status JobStatus) error {
+func (s service) SetStatusOfPipelineStage(tx context.Context, pipelineId string, stage int32, status job.JobStatus) error {
 	pipeline, isNotFoundErr, err := s.getPipelineById(tx, pipelineId)
 	if isNotFoundErr {
 		return fmt.Errorf("pipelineId=%s not found", pipelineId)
@@ -596,8 +597,8 @@ func (s service) SetResumerOfPipelineStage(tx context.Context, pipelineId string
 }
 
 // Reads all the stages and sets the pipeline status based on the stages.
-func (s service) updatePipelineStatus(tx context.Context, pipe Pipeline) error {
-	var currentStage PipelineStage
+func (s service) updatePipelineStatus(tx context.Context, pipe job.Pipeline) error {
+	var currentStage job.PipelineStage
 	stages, err := s.GetPipelineStagesById(tx, pipe.Id())
 	if err != nil {
 		return err
@@ -609,7 +610,7 @@ func (s service) updatePipelineStatus(tx context.Context, pipe Pipeline) error {
 		if err != nil {
 			return err
 		}
-		if currentStage.Status != JobStatusSuccess {
+		if currentStage.Status != job.JobStatusSuccess {
 			break
 		}
 	}
@@ -621,34 +622,34 @@ func (s service) updatePipelineStatus(tx context.Context, pipe Pipeline) error {
 		return nil
 	}
 
-	var pipelineStatus PipelineStatus
+	var pipelineStatus job.PipelineStatus
 	switch currentStage.Status {
-	case JobStatusWaitingManualStart:
-		pipelineStatus = PipelineStatusWaitingManualStart
-	case JobStatusWaiting:
-		pipelineStatus = PipelineStatusRunning
-	case JobStatusQueued:
-		pipelineStatus = PipelineStatusRunning
-	case JobStatusPosted:
-		pipelineStatus = PipelineStatusRunning
-	case JobStatusRunning:
-		pipelineStatus = PipelineStatusRunning
-	case JobStatusSuccess:
-		pipelineStatus = PipelineStatusSuccess
-	case JobStatusFail:
-		pipelineStatus = PipelineStatusFail
-	case JobStatusTimeout:
-		pipelineStatus = PipelineStatusFail
-	case JobStatusCanceled:
-		pipelineStatus = PipelineStatusCancel
-	case JobStatusTooManyJobs:
-		pipelineStatus = PipelineStatusFail
-	case JobStatusBadFileFormat:
-		pipelineStatus = PipelineStatusFail
-	case JobStatusBadFileSize:
-		pipelineStatus = PipelineStatusFail
-	case JobStatusExceedsPlanLimits:
-		pipelineStatus = PipelineStatusFail
+	case job.JobStatusWaitingManualStart:
+		pipelineStatus = job.PipelineStatusWaitingManualStart
+	case job.JobStatusWaiting:
+		pipelineStatus = job.PipelineStatusRunning
+	case job.JobStatusQueued:
+		pipelineStatus = job.PipelineStatusRunning
+	case job.JobStatusPosted:
+		pipelineStatus = job.PipelineStatusRunning
+	case job.JobStatusRunning:
+		pipelineStatus = job.PipelineStatusRunning
+	case job.JobStatusSuccess:
+		pipelineStatus = job.PipelineStatusSuccess
+	case job.JobStatusFail:
+		pipelineStatus = job.PipelineStatusFail
+	case job.JobStatusTimeout:
+		pipelineStatus = job.PipelineStatusFail
+	case job.JobStatusCanceled:
+		pipelineStatus = job.PipelineStatusCancel
+	case job.JobStatusTooManyJobs:
+		pipelineStatus = job.PipelineStatusFail
+	case job.JobStatusBadFileFormat:
+		pipelineStatus = job.PipelineStatusFail
+	case job.JobStatusBadFileSize:
+		pipelineStatus = job.PipelineStatusFail
+	case job.JobStatusExceedsPlanLimits:
+		pipelineStatus = job.PipelineStatusFail
 	default:
 		panic(fmt.Sprintf("unexpected status: %s", currentStage.Status))
 	}
@@ -675,7 +676,7 @@ func (s service) updatePipelineStatus(tx context.Context, pipe Pipeline) error {
 }
 
 func (s service) PutPipelineRef(tx context.Context,
-	repoId uint64, filePath string, jobName string) (PipelineRef, error) {
+	repoId uint64, filePath string, jobName string) (job.PipelineRef, error) {
 	_, err := s.db.Bind(tx).Exec(`
 		INSERT INTO jobPipelineRefs (
 			repoId,
@@ -692,9 +693,9 @@ func (s service) PutPipelineRef(tx context.Context,
 		false,
 	)
 	if err != nil {
-		return PipelineRef{}, fmt.Errorf("failed to PutPipelineRef : %s", err)
+		return job.PipelineRef{}, fmt.Errorf("failed to PutPipelineRef : %s", err)
 	}
-	return PipelineRef{
+	return job.PipelineRef{
 		RepoId: repoId,
 		Path:   filePath,
 		Name:   jobName,
@@ -717,7 +718,7 @@ func (s service) ArchivePipelineRefIfExists(tx context.Context,
 }
 
 func (s service) GetRepoPipelineRefs(tx context.Context,
-	repoId uint64, afterPath string, afterJobName string) (iterator.I[PipelineRef], error) {
+	repoId uint64, afterPath string, afterJobName string) (iterator.I[job.PipelineRef], error) {
 	args := []any{repoId}
 	querySuffix := ""
 	if afterPath != "" || afterJobName == "" {
@@ -746,14 +747,14 @@ type pipelineNames struct {
 	rows   *sql.Rows
 }
 
-func (it pipelineNames) Get() (PipelineRef, error) {
-	var j PipelineRef
+func (it pipelineNames) Get() (job.PipelineRef, error) {
+	var j job.PipelineRef
 	j.RepoId = it.repoId
 	if err := it.rows.Scan(
 		&j.Path,
 		&j.Name,
 	); err != nil {
-		return PipelineRef{}, fmt.Errorf("pipelineNames.Get: failed to scan job: %w", err)
+		return job.PipelineRef{}, fmt.Errorf("pipelineNames.Get: failed to scan job: %w", err)
 	}
 	return j, nil
 }
@@ -765,7 +766,7 @@ func (it pipelineNames) Err() error {
 }
 
 func (s service) GetRepoPipelinesByRef(tx context.Context,
-	repoId uint64, filePath string, jobName string, afterInternalJobId int64) (iterator.I[Pipeline], error) {
+	repoId uint64, filePath string, jobName string, afterInternalJobId int64) (iterator.I[job.Pipeline], error) {
 	if afterInternalJobId == 0 {
 		afterInternalJobId = math.MaxInt64
 	}
@@ -797,8 +798,8 @@ type pipelinesByName struct {
 	rows *sql.Rows
 }
 
-func (it pipelinesByName) Get() (Pipeline, error) {
-	var j Pipeline
+func (it pipelinesByName) Get() (job.Pipeline, error) {
+	var j job.Pipeline
 	if err := it.rows.Scan(
 		&j.InternalId,
 		&j.RepoId,
@@ -813,7 +814,7 @@ func (it pipelinesByName) Get() (Pipeline, error) {
 		&j.IsCreatedByUser,
 		&j.CreatedByUserId,
 	); err != nil {
-		return Pipeline{}, fmt.Errorf("pipelinesByName.Get: failed to scan job: %w", err)
+		return job.Pipeline{}, fmt.Errorf("pipelinesByName.Get: failed to scan job: %w", err)
 	}
 	return j, nil
 }

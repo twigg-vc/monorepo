@@ -3,22 +3,23 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"monorepo/twigg-web/job"
 )
 
 func (s service) SetToPosted(wl context.Context, jobIdOrPipelineStageId string) error {
-	if MightBePipelineStageId(jobIdOrPipelineStageId) {
-		repoId, commitId, commitV, path, name, runNumber, stage, ok := ParsePipelineStageId(jobIdOrPipelineStageId)
+	if job.MightBePipelineStageId(jobIdOrPipelineStageId) {
+		repoId, commitId, commitV, path, name, runNumber, stage, ok := job.ParsePipelineStageId(jobIdOrPipelineStageId)
 		if !ok {
 			return fmt.Errorf("bad PipelineStageId: %s", jobIdOrPipelineStageId)
 		}
 		return s.SetStatusOfPipelineStage(wl,
-			PipelineId(repoId, commitId, commitV, path, name, runNumber),
-			stage, JobStatusPosted)
+			job.PipelineId(repoId, commitId, commitV, path, name, runNumber),
+			stage, job.JobStatusPosted)
 	}
-	return s.SetJobStatus(wl, jobIdOrPipelineStageId, JobStatusPosted)
+	return s.SetJobStatus(wl, jobIdOrPipelineStageId, job.JobStatusPosted)
 }
 
-func (s service) GetPipelineStage(tx context.Context, pipelineId string, stageN int32) (PipelineStage, error) {
+func (s service) GetPipelineStage(tx context.Context, pipelineId string, stageN int32) (job.PipelineStage, error) {
 	stage, _, err := s.getPipelineStage(tx, pipelineId, stageN)
 	return stage, err
 }
@@ -30,18 +31,18 @@ func (s service) CanPutResumePipelineToStage(tx context.Context, pipelineId stri
 	if err != nil {
 		return false, err
 	}
-	return prevStage.Status == JobStatusSuccess, nil
+	return prevStage.Status == job.JobStatusSuccess, nil
 }
-func (s service) getPipelineStage(tx context.Context, pipelineId string, stageN int32) (stage PipelineStage, isNotFoundErr bool, err error) {
+func (s service) getPipelineStage(tx context.Context, pipelineId string, stageN int32) (stage job.PipelineStage, isNotFoundErr bool, err error) {
 	stagesIter, err := s.GetPipelineStagesById(tx, pipelineId)
 	if err != nil {
-		return PipelineStage{}, false, err
+		return job.PipelineStage{}, false, err
 	}
 	found := false
 	for stagesIter.Next() {
 		stage, err = stagesIter.Get()
 		if err != nil {
-			return PipelineStage{}, false, err
+			return job.PipelineStage{}, false, err
 		}
 		if stage.Stage == stageN {
 			found = true
@@ -50,10 +51,10 @@ func (s service) getPipelineStage(tx context.Context, pipelineId string, stageN 
 	}
 	err = stagesIter.Err()
 	if err != nil {
-		return PipelineStage{}, false, err
+		return job.PipelineStage{}, false, err
 	}
 	if !found {
-		return PipelineStage{}, true, fmt.Errorf("stage %d not found in pipelineId=%q", stageN, pipelineId)
+		return job.PipelineStage{}, true, fmt.Errorf("stage %d not found in pipelineId=%q", stageN, pipelineId)
 	}
 	return stage, false, nil
 }

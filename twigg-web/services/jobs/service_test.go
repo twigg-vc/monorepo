@@ -3,6 +3,7 @@ package jobs
 import (
 	"fmt"
 	"monorepo/base/iterator"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/webdb"
 	"reflect"
 	"testing"
@@ -80,7 +81,7 @@ func TestCreateJob(t *testing.T) {
 	runNumber := int64(3)
 
 	j, err := s.CreateNewJob(w, repoId, commit, commitV,
-		path, name, runNumber, JobStatusQueued)
+		path, name, runNumber, job.JobStatusQueued)
 	if err != nil {
 		t.Fatalf("CreateJob returned error: %v", err)
 	}
@@ -105,8 +106,8 @@ func TestCreateJob(t *testing.T) {
 	if j.RunNumber != runNumber {
 		t.Fatalf("expected runNumber %d, got %d", runNumber, j.RunNumber)
 	}
-	if j.Status != JobStatusQueued {
-		t.Fatalf("expected Status %q, got %q", JobStatusQueued, j.Status)
+	if j.Status != job.JobStatusQueued {
+		t.Fatalf("expected Status %q, got %q", job.JobStatusQueued, j.Status)
 	}
 	if j.CreatedTime == "" {
 		t.Fatalf("expected CreatedTime to be set, got empty")
@@ -232,11 +233,11 @@ func TestSetJobStatus(t *testing.T) {
 	runNumber := int64(3)
 
 	created, err := s.CreateNewJob(w, repoId, commit, commitV,
-		path, name, runNumber, JobStatusQueued)
+		path, name, runNumber, job.JobStatusQueued)
 	if err != nil {
 		t.Fatalf("CreateJob returned error: %v", err)
 	}
-	newStatus := JobStatusSuccess
+	newStatus := job.JobStatusSuccess
 	if err := s.SetJobStatus(w, created.Id(), newStatus); err != nil {
 		t.Fatalf("SetJobStatus returned error: %v", err)
 	}
@@ -272,21 +273,21 @@ func TestGetCommitJobs(t *testing.T) {
 	commitV := uint64(2)
 
 	// Jobs that must be return
-	_, err = s.CreateNewJob(w, repoId, commit, commitV, "file/path-1", "jobname1", 1, JobStatusQueued)
+	_, err = s.CreateNewJob(w, repoId, commit, commitV, "file/path-1", "jobname1", 1, job.JobStatusQueued)
 	if err != nil {
 		t.Fatalf("CreateNewJob returned error: %v", err)
 	}
-	_, err = s.CreateNewJob(w, repoId, commit, commitV, "file/path-2", "jobname2", 2, JobStatusPosted)
+	_, err = s.CreateNewJob(w, repoId, commit, commitV, "file/path-2", "jobname2", 2, job.JobStatusPosted)
 	if err != nil {
 		t.Fatalf("CreateNewJob returned error: %v", err)
 	}
 
 	// Noise jobs
-	_, err = s.CreateNewJob(w, repoId+99, commit, commitV, "file/other-1", "jobname3", 3, JobStatusQueued)
+	_, err = s.CreateNewJob(w, repoId+99, commit, commitV, "file/other-1", "jobname3", 3, job.JobStatusQueued)
 	if err != nil {
 		t.Fatalf("CreateNewJob returned error: %v", err)
 	}
-	_, err = s.CreateNewJob(w, repoId, commit+1, commitV, "file/other-2", "jobname4", 4, JobStatusQueued)
+	_, err = s.CreateNewJob(w, repoId, commit+1, commitV, "file/other-2", "jobname4", 4, job.JobStatusQueued)
 	if err != nil {
 		t.Fatalf("CreateNewJob returned error: %v", err)
 	}
@@ -307,13 +308,13 @@ func TestGetCommitJobs(t *testing.T) {
 	for i := range jobs {
 		jobs[i].CreatedTime = ""
 	}
-	expectedJobs := []Job{
+	expectedJobs := []job.Job{
 		{
 			InternalId:    2,
 			RepoId:        repoId,
 			Commit:        commit,
 			CommitVersion: commitV,
-			Status:        JobStatusPosted,
+			Status:        job.JobStatusPosted,
 			CreatedTime:   "",
 			Path:          "file/path-2",
 			Name:          "jobname2",
@@ -324,7 +325,7 @@ func TestGetCommitJobs(t *testing.T) {
 			RepoId:        repoId,
 			Commit:        commit,
 			CommitVersion: commitV,
-			Status:        JobStatusQueued,
+			Status:        job.JobStatusQueued,
 			CreatedTime:   "",
 			Path:          "file/path-1",
 			Name:          "jobname1",
@@ -348,7 +349,7 @@ func TestGetCommitJobs(t *testing.T) {
 		t.Fatalf("unexpected jobs: %d", len(jobs))
 	}
 	jobs[0].CreatedTime = ""
-	expectedJobsAfter1 := []Job{expectedJobs[1]}
+	expectedJobsAfter1 := []job.Job{expectedJobs[1]}
 	if !reflect.DeepEqual(jobs, expectedJobsAfter1) {
 		t.Fatalf("jobs = %#v, want %#v", jobs, expectedJobsAfter1)
 	}
@@ -382,12 +383,12 @@ func TestGetRepoJobs(t *testing.T) {
 	commitV2 := uint64(1)
 
 	// Jobs that must be return (right repo)
-	j1, _ := s.CreateNewJob(w, repoId, commit1, commitV1, "file/path-1", "jobname1", 1, JobStatusQueued)
+	j1, _ := s.CreateNewJob(w, repoId, commit1, commitV1, "file/path-1", "jobname1", 1, job.JobStatusQueued)
 
-	j2, _ := s.CreateNewJob(w, repoId, commit2, commitV2, "file/path-2", "jobname2", 2, JobStatusQueued)
+	j2, _ := s.CreateNewJob(w, repoId, commit2, commitV2, "file/path-2", "jobname2", 2, job.JobStatusQueued)
 
 	// Noise
-	s.CreateNewJob(w, otherRepoId, commit1, commitV1, "file/other-1", "jobname3", 3, JobStatusQueued)
+	s.CreateNewJob(w, otherRepoId, commit1, commitV1, "file/other-1", "jobname3", 3, job.JobStatusQueued)
 
 	it, _ := s.GetRepoJobs(w, repoId /*afterInternalJobId*/, 0)
 	got, err := iterator.GetFirstN(100, it)
@@ -397,7 +398,7 @@ func TestGetRepoJobs(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("expected 2 jobs, got %d", len(got))
 	}
-	expected := []Job{j2, j1}
+	expected := []job.Job{j2, j1}
 	if !reflect.DeepEqual(got, expected) {
 		t.Fatalf("GetRepoJobs mismatch.\n got: %#v\n want: %#v", got, expected)
 	}
@@ -411,7 +412,7 @@ func TestGetRepoJobs(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("expected jobs, got %d", len(got))
 	}
-	expected = []Job{j1}
+	expected = []job.Job{j1}
 	if !reflect.DeepEqual(got, expected) {
 		t.Fatalf("GetRepoJobs mismatch.\n got: %#v\n want: %#v", got, expected)
 	}
@@ -441,16 +442,16 @@ func TestCantReuseRunNumber(t *testing.T) {
 	path := "file/path"
 	name := "job1"
 
-	_, err = s.CreateNewJob(w, repoId, commit, commitV, path, name, 99, JobStatusQueued)
+	_, err = s.CreateNewJob(w, repoId, commit, commitV, path, name, 99, job.JobStatusQueued)
 	if err != nil {
 		t.Fatalf("CreateJob returned error: %v", err)
 	}
-	_, err = s.CreateNewJob(w, repoId, commit, commitV, path, name, 100, JobStatusQueued)
+	_, err = s.CreateNewJob(w, repoId, commit, commitV, path, name, 100, job.JobStatusQueued)
 	if err != nil {
 		t.Fatalf("CreateJob returned error with different runNumber: %v", err)
 	}
 	_, err = s.CreateNewJob(w, repoId, commit, commitV,
-		path, name, 99, JobStatusQueued)
+		path, name, 99, job.JobStatusQueued)
 	if err == nil {
 		t.Fatalf("Got no error when reusing run number")
 	}
@@ -493,7 +494,7 @@ func TestCreateNewPipeline(t *testing.T) {
 		t.Fatal("got empty crated time")
 	}
 	jp.CreatedTime = ""
-	expected := Pipeline{
+	expected := job.Pipeline{
 		InternalId:      1,
 		RepoId:          repoId,
 		Commit:          commitId,
@@ -502,7 +503,7 @@ func TestCreateNewPipeline(t *testing.T) {
 		Name:            jobName,
 		RunNumber:       runNumber,
 		NumberOfStages:  1,
-		Status:          PipelineStatusRunning,
+		Status:          job.PipelineStatusRunning,
 		CreatedTime:     "",
 		IsCreatedByUser: isCreatedByUser,
 		CreatedByUserId: createdByUserId,
@@ -522,11 +523,11 @@ func TestCreateNewPipeline(t *testing.T) {
 		t.Fatalf("unexpexted num of stages %d", len(stages))
 	}
 	stages[0].CreatedTime = ""
-	expectedStage := PipelineStage{
+	expectedStage := job.PipelineStage{
 		PipelineId:      jp.Id(),
 		Stage:           0,
 		Name:            "stage0",
-		Status:          JobStatusWaiting,
+		Status:          job.JobStatusWaiting,
 		IsResumedByUser: false,
 		ResumedByUserId: 0,
 		CreatedTime:     "",
@@ -659,7 +660,7 @@ func TestGetPipelineById(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	id := PipelineId(
+	id := job.PipelineId(
 		repoId, commitId, commitV,
 		filePath, jobName, runNumber)
 	got, err := s.GetPipelineById(tx, id)
@@ -672,7 +673,7 @@ func TestGetPipelineById(t *testing.T) {
 		t.Fatalf("expected %#v got %#v", jp, got)
 	}
 
-	nonExistingId := PipelineId(
+	nonExistingId := job.PipelineId(
 		repoId+1, commitId, commitV,
 		filePath, jobName, runNumber)
 	_, err = s.GetPipelineById(tx, nonExistingId)
@@ -700,7 +701,7 @@ func TestSetStatusOfPipelineStageAndGetPipelineStagesById(t *testing.T) {
 	}
 	tx := w
 
-	nonExistingId := PipelineId(
+	nonExistingId := job.PipelineId(
 		0, 0, 0,
 		"", "", 0)
 	emptyIt, err := s.GetPipelineStagesById(tx, nonExistingId)
@@ -737,11 +738,11 @@ func TestSetStatusOfPipelineStageAndGetPipelineStagesById(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = s.SetStatusOfPipelineStage(tx, pipe.Id(), 0, JobStatusRunning)
+	err = s.SetStatusOfPipelineStage(tx, pipe.Id(), 0, job.JobStatusRunning)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = s.SetStatusOfPipelineStage(tx, pipe.Id(), 1, JobStatusQueued)
+	err = s.SetStatusOfPipelineStage(tx, pipe.Id(), 1, job.JobStatusQueued)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -758,14 +759,14 @@ func TestSetStatusOfPipelineStageAndGetPipelineStagesById(t *testing.T) {
 	for i := range stages {
 		stages[i].CreatedTime = ""
 	}
-	expected := []PipelineStage{
+	expected := []job.PipelineStage{
 		{
 			PipelineId:      pipe.Id(),
 			Stage:           stage1,
 			Name:            stage1Name,
 			IsResumedByUser: false,
 			ResumedByUserId: 0,
-			Status:          JobStatusRunning,
+			Status:          job.JobStatusRunning,
 		},
 		{
 			PipelineId:      pipe.Id(),
@@ -773,7 +774,7 @@ func TestSetStatusOfPipelineStageAndGetPipelineStagesById(t *testing.T) {
 			Name:            stage2Name,
 			IsResumedByUser: false,
 			ResumedByUserId: 0,
-			Status:          JobStatusQueued,
+			Status:          job.JobStatusQueued,
 		},
 	}
 	if !reflect.DeepEqual(stages, expected) {
@@ -805,7 +806,7 @@ func TesLastStageOfPipelineToSuccess(t *testing.T) {
 		jobName   = "job"
 		runNumber = 4
 	)
-	checkPipelineStatus := func(pipelineId string, expected PipelineStatus) {
+	checkPipelineStatus := func(pipelineId string, expected job.PipelineStatus) {
 		pipeline, err := s.GetPipelineById(tx, pipelineId)
 		if err != nil {
 			t.Fatal(err)
@@ -826,18 +827,18 @@ func TesLastStageOfPipelineToSuccess(t *testing.T) {
 
 	// Update the first stage to completed - pipeline should still be running
 	err = s.SetStatusOfPipelineStage(tx, pipeline.Id(),
-		0, JobStatusSuccess)
+		0, job.JobStatusSuccess)
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkPipelineStatus(pipeline.Id(), PipelineStatusRunning)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusRunning)
 	// Update second stage - pipeline should be marked as succeeded
 	err = s.SetStatusOfPipelineStage(tx, pipeline.Id(),
-		1, JobStatusSuccess)
+		1, job.JobStatusSuccess)
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkPipelineStatus(pipeline.Id(), PipelineStatusSuccess)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusSuccess)
 }
 
 func TestSetIntermediaryStageToFailure(t *testing.T) {
@@ -864,7 +865,7 @@ func TestSetIntermediaryStageToFailure(t *testing.T) {
 		jobName   = "job"
 		runNumber = 4
 	)
-	checkPipelineStatus := func(pipelineId string, expected PipelineStatus) {
+	checkPipelineStatus := func(pipelineId string, expected job.PipelineStatus) {
 		pipeline, err := s.GetPipelineById(tx, pipelineId)
 		if err != nil {
 			t.Fatal(err)
@@ -883,22 +884,22 @@ func TestSetIntermediaryStageToFailure(t *testing.T) {
 		[]string{"stage0", "stage1", "stage2"},
 		false, 0,
 	)
-	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 0, JobStatusRunning)
+	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 0, job.JobStatusRunning)
 
 	// Update the first stage to completed -> pipeline should still be running
 	err = s.SetStatusOfPipelineStage(tx, pipeline.Id(),
-		0, JobStatusSuccess)
+		0, job.JobStatusSuccess)
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkPipelineStatus(pipeline.Id(), PipelineStatusRunning)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusRunning)
 	// Update second stage to "failed" -> status should update
 	err = s.SetStatusOfPipelineStage(tx, pipeline.Id(),
-		1, JobStatusFail)
+		1, job.JobStatusFail)
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkPipelineStatus(pipeline.Id(), PipelineStatusFail)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusFail)
 }
 
 func TestManualStartStageProgression(t *testing.T) {
@@ -925,7 +926,7 @@ func TestManualStartStageProgression(t *testing.T) {
 		jobName   = "job"
 		runNumber = 4
 	)
-	checkPipelineStatus := func(pipelineId string, expected PipelineStatus) {
+	checkPipelineStatus := func(pipelineId string, expected job.PipelineStatus) {
 		pipeline, err := s.GetPipelineById(tx, pipelineId)
 		if err != nil {
 			t.Fatal(err)
@@ -942,34 +943,34 @@ func TestManualStartStageProgression(t *testing.T) {
 		[]string{"stage0", "stage1", "stage2"},
 		false, 0,
 	)
-	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 0, JobStatusRunning)
+	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 0, job.JobStatusRunning)
 
 	// Set first to success and next to WaitingForManual
-	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 0, JobStatusSuccess)
-	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 1, JobStatusWaitingManualStart)
-	checkPipelineStatus(pipeline.Id(), PipelineStatusWaitingManualStart)
+	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 0, job.JobStatusSuccess)
+	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 1, job.JobStatusWaitingManualStart)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusWaitingManualStart)
 
 	// Enqueue and finish stage 1
-	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 1, JobStatusQueued)
-	checkPipelineStatus(pipeline.Id(), PipelineStatusRunning)
-	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 1, JobStatusPosted)
-	checkPipelineStatus(pipeline.Id(), PipelineStatusRunning)
-	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 1, JobStatusRunning)
-	checkPipelineStatus(pipeline.Id(), PipelineStatusRunning)
-	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 1, JobStatusSuccess)
-	checkPipelineStatus(pipeline.Id(), PipelineStatusRunning)
+	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 1, job.JobStatusQueued)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusRunning)
+	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 1, job.JobStatusPosted)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusRunning)
+	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 1, job.JobStatusRunning)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusRunning)
+	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 1, job.JobStatusSuccess)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusRunning)
 
 	// Start stage 2
-	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 2, JobStatusQueued)
-	checkPipelineStatus(pipeline.Id(), PipelineStatusRunning)
-	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 2, JobStatusPosted)
-	checkPipelineStatus(pipeline.Id(), PipelineStatusRunning)
+	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 2, job.JobStatusQueued)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusRunning)
+	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 2, job.JobStatusPosted)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusRunning)
 
 	// Finish stage 2
-	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 2, JobStatusRunning)
-	checkPipelineStatus(pipeline.Id(), PipelineStatusRunning)
-	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 2, JobStatusSuccess)
-	checkPipelineStatus(pipeline.Id(), PipelineStatusSuccess)
+	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 2, job.JobStatusRunning)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusRunning)
+	s.SetStatusOfPipelineStage(tx, pipeline.Id(), 2, job.JobStatusSuccess)
+	checkPipelineStatus(pipeline.Id(), job.PipelineStatusSuccess)
 }
 
 func TestGetRepoPipelineNamesAndGetRepoPipelinesByName(t *testing.T) {
@@ -1038,7 +1039,7 @@ func TestGetRepoPipelineNamesAndGetRepoPipelinesByName(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		expected := PipelineRef{RepoId: 1, Path: "a/put/path", Name: "put-name"}
+		expected := job.PipelineRef{RepoId: 1, Path: "a/put/path", Name: "put-name"}
 		if ref != expected {
 			t.Fatalf("unexpected ref %#v", ref)
 		}
@@ -1046,7 +1047,7 @@ func TestGetRepoPipelineNamesAndGetRepoPipelinesByName(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		expected = PipelineRef{RepoId: 2, Path: "a/put/path", Name: "put-name"}
+		expected = job.PipelineRef{RepoId: 2, Path: "a/put/path", Name: "put-name"}
 		if ref != expected {
 			t.Fatalf("unexpected ref %#v", ref)
 		}
@@ -1062,7 +1063,7 @@ func TestGetRepoPipelineNamesAndGetRepoPipelinesByName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedNames := []PipelineRef{
+	expectedNames := []job.PipelineRef{
 		{RepoId: 1, Path: "a/put/path", Name: "put-name"},
 		{RepoId: 1, Path: "path/to/file1", Name: "name1"},
 		{RepoId: 1, Path: "path/to/file1", Name: "name2"},
@@ -1081,7 +1082,7 @@ func TestGetRepoPipelineNamesAndGetRepoPipelinesByName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedNames = []PipelineRef{
+	expectedNames = []job.PipelineRef{
 		{RepoId: 1, Path: "path/to/file1", Name: "name2"},
 		{RepoId: 1, Path: "path/to/file2", Name: "name1"},
 		{RepoId: 1, Path: "path/to/file2", Name: "name2"},
@@ -1105,9 +1106,9 @@ func TestGetRepoPipelineNamesAndGetRepoPipelinesByName(t *testing.T) {
 		}
 		pipelines[i].CreatedTime = ""
 	}
-	expectedPipelines := []Pipeline{
+	expectedPipelines := []job.Pipeline{
 		{
-			InternalId:      pipelineIdToInternalId[PipelineId(1, 91, 92, "path/to/file1", "name1", 1)],
+			InternalId:      pipelineIdToInternalId[job.PipelineId(1, 91, 92, "path/to/file1", "name1", 1)],
 			RepoId:          1,
 			Commit:          91,
 			CommitVersion:   92,
@@ -1115,13 +1116,13 @@ func TestGetRepoPipelineNamesAndGetRepoPipelinesByName(t *testing.T) {
 			Name:            "name1",
 			RunNumber:       1,
 			NumberOfStages:  3,
-			Status:          PipelineStatusRunning,
+			Status:          job.PipelineStatusRunning,
 			CreatedTime:     "",
 			IsCreatedByUser: true,
 			CreatedByUserId: 78,
 		},
 		{
-			InternalId:      pipelineIdToInternalId[PipelineId(1, 91, 92, "path/to/file1", "name1", 0)],
+			InternalId:      pipelineIdToInternalId[job.PipelineId(1, 91, 92, "path/to/file1", "name1", 0)],
 			RepoId:          1,
 			Commit:          91,
 			CommitVersion:   92,
@@ -1129,7 +1130,7 @@ func TestGetRepoPipelineNamesAndGetRepoPipelinesByName(t *testing.T) {
 			Name:            "name1",
 			RunNumber:       0,
 			NumberOfStages:  3,
-			Status:          PipelineStatusRunning,
+			Status:          job.PipelineStatusRunning,
 			CreatedTime:     "",
 			IsCreatedByUser: true,
 			CreatedByUserId: 78,
@@ -1153,7 +1154,7 @@ func TestGetRepoPipelineNamesAndGetRepoPipelinesByName(t *testing.T) {
 		// Strip the CreatedTime for testing
 		pipelines[i].CreatedTime = ""
 	}
-	expectedPipelinesAfter := []Pipeline{
+	expectedPipelinesAfter := []job.Pipeline{
 		expectedPipelines[1],
 	}
 	if !reflect.DeepEqual(pipelines, expectedPipelinesAfter) {
@@ -1190,7 +1191,7 @@ func TestSetToPosted(t *testing.T) {
 
 	// Set a job to "posted"
 	j, err := s.CreateNewJob(w, repoId, commitId, commitV, filePath, jobName,
-		runNumber, JobStatusQueued)
+		runNumber, job.JobStatusQueued)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1202,11 +1203,11 @@ func TestSetToPosted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if j.Status != JobStatusPosted {
+	if j.Status != job.JobStatusPosted {
 		t.Fatalf("unexpected job status %s", j.Status)
 	}
 
-	// Set a PipelineStage to "posted"
+	// Set a job.PipelineStage to "posted"
 	pipeline, _ := s.CreateNewPipeline(tx, repoId, commitId, commitV, filePath,
 		jobName, runNumber, []string{"stage0"}, false, 0)
 	stage, err := s.GetPipelineStage(tx, pipeline.Id(), 0)
@@ -1228,7 +1229,7 @@ func TestSetToPosted(t *testing.T) {
 	if len(stages) != 1 {
 		t.Fatalf("unexpected num of stages %d", len(stages))
 	}
-	if stages[0].Status != JobStatusPosted {
+	if stages[0].Status != job.JobStatusPosted {
 		t.Fatalf("unexpected status %s", stages[0].Status)
 	}
 }
@@ -1267,12 +1268,12 @@ func TestGetPipelineStage(t *testing.T) {
 		t.Fatal(err)
 	}
 	gotStage0.CreatedTime = ""
-	expectedStage0 := PipelineStage{
+	expectedStage0 := job.PipelineStage{
 		PipelineId:  pipeline.Id(),
 		Name:        "stage0",
 		Stage:       0,
 		CreatedTime: "",
-		Status:      JobStatusWaiting,
+		Status:      job.JobStatusWaiting,
 	}
 	if gotStage0 != expectedStage0 {
 		t.Fatalf("bad stage0: %#v", gotStage0)
@@ -1282,12 +1283,12 @@ func TestGetPipelineStage(t *testing.T) {
 		t.Fatal(err)
 	}
 	gotStage1.CreatedTime = ""
-	expectedStage1 := PipelineStage{
+	expectedStage1 := job.PipelineStage{
 		PipelineId:  pipeline.Id(),
 		Name:        "stage1",
 		Stage:       1,
 		CreatedTime: "",
-		Status:      JobStatusWaiting,
+		Status:      job.JobStatusWaiting,
 	}
 	if gotStage1 != expectedStage1 {
 		t.Fatalf("bad stage1: %#v", gotStage1)
@@ -1328,7 +1329,7 @@ func TestCanPutResumePipelineToStage(t *testing.T) {
 	// Create a pipeline with two stages; one at "posted" and the other at "waiting" stage
 	pl, _ := s.CreateNewPipeline(tx, repoId, commitId, commitV, filePath,
 		jobName, runNumber, []string{"stage0", "stage1"}, false, 0)
-	err = s.SetStatusOfPipelineStage(tx, pl.Id(), 0, JobStatusPosted)
+	err = s.SetStatusOfPipelineStage(tx, pl.Id(), 0, job.JobStatusPosted)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1348,7 +1349,7 @@ func TestCanPutResumePipelineToStage(t *testing.T) {
 	}
 
 	// Set 0 to "success" -> this should allow pipeline to resume
-	err = s.SetStatusOfPipelineStage(tx, pl.Id(), 0, JobStatusSuccess)
+	err = s.SetStatusOfPipelineStage(tx, pl.Id(), 0, job.JobStatusSuccess)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1364,7 +1365,7 @@ func TestCanPutResumePipelineToStage(t *testing.T) {
 	// returns true, because the "Put" suggests that we can perform an
 	// idempotent resume that would just do nothing if the pipeline is already
 	// at that stage
-	err = s.SetStatusOfPipelineStage(tx, pl.Id(), 1, JobStatusSuccess)
+	err = s.SetStatusOfPipelineStage(tx, pl.Id(), 1, job.JobStatusSuccess)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1456,7 +1457,7 @@ func TestSetResumerOfPipelineStage(t *testing.T) {
 }
 
 func TestParsing(t *testing.T) {
-	p := Pipeline{
+	p := job.Pipeline{
 		InternalId:     1,
 		RepoId:         1,
 		Commit:         91,
@@ -1465,11 +1466,11 @@ func TestParsing(t *testing.T) {
 		Name:           "name1",
 		RunNumber:      1,
 		NumberOfStages: 93,
-		Status:         PipelineStatusRunning,
+		Status:         job.PipelineStatusRunning,
 		CreatedTime:    "",
 	}
 	RepoId, Commit, CommitVersion,
-		Path, Name, RunNumber, ok := ParsePipelineId(p.Id())
+		Path, Name, RunNumber, ok := job.ParsePipelineId(p.Id())
 	if !ok {
 		t.Fatal("parsing failed")
 	}
@@ -1493,7 +1494,7 @@ func TestParsing(t *testing.T) {
 	}
 	stageId := p.IdOfStage(8)
 	RepoId, Commit, CommitVersion,
-		Path, Name, RunNumber, Stage, ok := ParsePipelineStageId(stageId)
+		Path, Name, RunNumber, Stage, ok := job.ParsePipelineStageId(stageId)
 	if !ok {
 		t.Fatal("parsing failed")
 	}
