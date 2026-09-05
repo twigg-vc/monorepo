@@ -775,3 +775,9 @@ func (db WebDb) GetStripeSubscriptionIsActive(ctx context.Context,
 func (db WebDb) UserQuotaOwnerName(userId int64) string {
 	return db.db.UserQuotaOwnerName(userId)
 }
+
+// Returns only the username of the user. Returns ErrNotFound if there is none.
+func (db WebDb) GetUsername(ctx context.Context,
+	userId int64) (username string, isNotFoundErr bool, err error) {
+	return db.db.GetUsername(ctx, userId)
+}

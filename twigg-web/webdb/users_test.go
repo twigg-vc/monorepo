@@ -286,3 +286,44 @@ func TestCountAndGetAllUsers(t *testing.T) {
 		}
 	}
 }
+
+func TestGetUsername(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stored, err := b.UpsertUser(w, user.User{
+		Email:    "someone@twigg.vc",
+		State:    user.UserState_NoSubscription,
+		Username: "someone",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	username, isNotFoundErr, err := b.GetUsername(w, stored.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isNotFoundErr {
+		t.Fatal("user was not found")
+	}
+	if username != "someone" {
+		t.Fatalf("got username %q, want %q", username, "someone")
+	}
+
+	_, isNotFoundErr, err = b.GetUsername(w, 404)
+	if !isNotFoundErr {
+		t.Fatalf("expected isNotFoundErr, got err %v", err)
+	}
+	if !errors.Is(err, webdb.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}

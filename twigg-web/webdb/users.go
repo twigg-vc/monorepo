@@ -139,6 +139,24 @@ func (db webDb) GetUserByCliKeyHash(ctx context.Context,
 	return db.getUserWhere(ctx, "cliKeyHash = ?", cliKeyHash)
 }
 
+// Reads only the username, so the callers that just label a user id don't pay
+// for the rest of the row.
+func (db webDb) GetUsername(ctx context.Context,
+	userId int64) (username string, isNotFoundErr bool, err error) {
+	err = db.s.QueryRow(ctx, `
+		SELECT username
+		FROM users2
+		WHERE id = ?;
+	`, userId).Scan(&username)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", true, ErrNotFound
+	}
+	if err != nil {
+		return "", false, fmt.Errorf("failed to query username: %w", err)
+	}
+	return username, false, nil
+}
+
 func (db webDb) getUserWhere(ctx context.Context, whereClause string,
 	arg any) (u user.User, isNotFoundErr bool, err error) {
 	u, err = scanUser(db.s.QueryRow(ctx, fmt.Sprintf(`
