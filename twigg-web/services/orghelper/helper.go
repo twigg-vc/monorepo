@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/permissions"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 )
 
 type helper struct {
@@ -252,10 +253,10 @@ func (h helper) orgCanAddOwnerOrMember(u user.User, numberOfOwners int64, number
 	}
 	totalNumberOfContributors := numberOfMembers + numberOfOwners
 	if u.SelfPaidSubscription == user.Subscription_Trial {
-		return totalNumberOfContributors < user.MaxUsersInTrialPlan, nil
+		return totalNumberOfContributors < userservice.MaxUsersInTrialPlan, nil
 	}
 	if u.SelfPaidSubscription == user.Subscription_Solo {
-		return totalNumberOfContributors < user.MaxUsersInSoloPlan, nil
+		return totalNumberOfContributors < userservice.MaxUsersInSoloPlan, nil
 	}
 	return totalNumberOfContributors < u.SelfPaidSubscriptionQuantity, nil
 }

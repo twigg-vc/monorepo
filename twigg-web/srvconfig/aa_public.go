@@ -6,7 +6,7 @@ import (
 	"monorepo/base/serverutils"
 	"monorepo/twigg-web/server/seed"
 	"monorepo/twigg-web/services/secrets"
-	"monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"os"
 	"time"
 )

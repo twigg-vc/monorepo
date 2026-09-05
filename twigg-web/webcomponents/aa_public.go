@@ -8,7 +8,7 @@ import (
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/secrets"
-	"monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
 	"net/http"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/permissions"
-	"monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 )
 
 type Helper struct {
