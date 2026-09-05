@@ -90,10 +90,16 @@ type CliKeyAuthMuxRequest struct {
 
 // ##########
 
+type UserMuxDb interface {
+	BeginRead() (readCtx context.Context, closeTx func(), err error)
+	BeginWrite() (writeCtx context.Context, closeTx func(), commitTx func() error, err error)
+	HasPermission(ctx context.Context, userId int64, p perm.Permission, assetId string) (bool, error)
+}
+
 // ########## Creates a mux for request that expect a user
 func NewUserMux(authMux AuthMux,
 	stripeClient stripeclient.StripeClient,
-	db webdb.WebDb,
+	db UserMuxDb,
 	userService userservice.Service,
 ) UserMux {
 	return userMux{authMux, stripeClient, db, userService}

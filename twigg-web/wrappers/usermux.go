@@ -8,14 +8,13 @@ import (
 	"monorepo/twigg-web/services/stripeclient"
 	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/user"
-	"monorepo/twigg-web/webdb"
 	"net/http"
 )
 
 type userMux struct {
 	authMux      AuthMux
 	stripeClient stripeclient.StripeClient
-	db           webdb.WebDb
+	db           UserMuxDb
 	userService  userservice.Service
 }
 
