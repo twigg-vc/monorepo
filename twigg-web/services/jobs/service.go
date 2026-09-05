@@ -69,65 +69,34 @@ func (s service) CreateNewJob(wl context.Context,
 }
 
 func (s service) GetJobById(rl context.Context, id string) (j job.Job, err error) {
-	var idIsOk bool
-	j.RepoId, j.Commit, j.CommitVersion,
-		j.Path, j.Name, j.RunNumber, idIsOk = job.ParseJobId(id)
+	repoId, commit, commitV, path, name, runNumber, idIsOk := job.ParseJobId(id)
 	if !idIsOk {
 		err = fmt.Errorf("bad job id %s", id)
 		return
 	}
-	err = s.db.Bind(rl).QueryRow(`
-		SELECT
-			internalJobId,
-			status,
-			createdTime
-		FROM jobs3
-		WHERE repoId = ? AND commitId = ? AND commitVersion = ? AND
-			path = ? AND name = ? AND runNumber = ?;
-	`, j.RepoId,
-		j.Commit,
-		j.CommitVersion,
-		j.Path,
-		j.Name,
-		j.RunNumber).Scan(
-		&j.InternalId,
-		&j.Status,
-		&j.CreatedTime,
-	)
+	j, isNotFoundErr, err := s.db.GetJob(rl, repoId, commit, commitV, path, name, runNumber)
+	if isNotFoundErr {
+		return j, fmt.Errorf("GetJobById: job %s not found: %w", id, err)
+	}
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return j, fmt.Errorf("GetJobById: job %s not found: %w", id, err)
-		}
 		return j, fmt.Errorf("GetJobById: failed to scan row: %w", err)
 	}
 	return j, nil
 }
 func (s service) SetJobStatus(wl context.Context, id string, status job.JobStatus) (err error) {
-	RepoId, Commit, CommitVersion,
-		Path, Name, RunNumber, idIsOk := job.ParseJobId(id)
+	repoId, commit, commitV, path, name, runNumber, idIsOk := job.ParseJobId(id)
 	if !idIsOk {
 		err = fmt.Errorf("bad job id %s", id)
 		return
 	}
-	res, err := s.db.Bind(wl).Exec(`
-		UPDATE jobs3
-		SET status = ?
-		WHERE repoId = ? AND commitId = ? AND commitVersion = ? AND
-			path = ? AND name = ? AND runNumber = ?;
-	`, status, RepoId, Commit, CommitVersion, Path, Name, RunNumber)
+	isNotFoundErr, err := s.db.SetJobStatus(wl, repoId, commit, commitV, path, name,
+		runNumber, status)
+	if isNotFoundErr {
+		return fmt.Errorf("SetJobStatus: job %s not found", id)
+	}
 	if err != nil {
 		return fmt.Errorf("SetJobStatus: failed to update job status: %w", err)
 	}
-
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("SetJobStatus: failed to get rows affected: %w", err)
-	}
-
-	if rows == 0 {
-		return fmt.Errorf("SetJobStatus: job %s not found", id)
-	}
-
 	return nil
 }
 func (s service) GetCommitJobs(

@@ -61,3 +61,63 @@ func (db webDb) InsertJob(writeCtx context.Context, j job.Job) (internalJobId in
 	}
 	return internalJobId, nil
 }
+
+// Returns the job with that key. If there is none, isNotFoundErr is true and
+// err is ErrNotFound.
+func (db webDb) GetJob(ctx context.Context, repoId, commitId, commitVersion uint64,
+	path, name string, runNumber int64) (j job.Job, isNotFoundErr bool, err error) {
+	j = job.Job{
+		RepoId:        repoId,
+		Commit:        commitId,
+		CommitVersion: commitVersion,
+		Path:          path,
+		Name:          name,
+		RunNumber:     runNumber,
+	}
+	err = db.s.QueryRow(ctx, `
+		SELECT
+			internalJobId,
+			status,
+			createdTime
+		FROM jobs3
+		WHERE repoId = ? AND commitId = ? AND commitVersion = ? AND
+			path = ? AND name = ? AND runNumber = ?;
+	`, repoId, commitId, commitVersion, path, name, runNumber).Scan(
+		&j.InternalId,
+		&j.Status,
+		&j.CreatedTime,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return job.Job{}, true, ErrNotFound
+	}
+	if err != nil {
+		return job.Job{}, false, fmt.Errorf("failed to query job: %w", err)
+	}
+	return j, false, nil
+}
+
+// Sets the status of the job with that key. If there is none, isNotFoundErr is
+// true and err is ErrNotFound.
+func (db webDb) SetJobStatus(writeCtx context.Context, repoId, commitId, commitVersion uint64,
+	path, name string, runNumber int64, status job.JobStatus) (isNotFoundErr bool, err error) {
+	if status == "" {
+		return false, fmt.Errorf("missing status")
+	}
+	res, err := db.s.Exec(writeCtx, `
+		UPDATE jobs3
+		SET status = ?
+		WHERE repoId = ? AND commitId = ? AND commitVersion = ? AND
+			path = ? AND name = ? AND runNumber = ?;
+	`, status, repoId, commitId, commitVersion, path, name, runNumber)
+	if err != nil {
+		return false, fmt.Errorf("failed to update job status: %w", err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if affected == 0 {
+		return true, ErrNotFound
+	}
+	return false, nil
+}

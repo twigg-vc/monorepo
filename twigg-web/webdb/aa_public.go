@@ -552,6 +552,21 @@ func (db WebDb) InsertJob(writeCtx context.Context, j job.Job) (internalJobId in
 	return db.db.InsertJob(writeCtx, j)
 }
 
+// Returns the job with that key. If there is none, isNotFoundErr is true and
+// err is ErrNotFound.
+func (db WebDb) GetJob(ctx context.Context, repoId, commitId, commitVersion uint64,
+	path, name string, runNumber int64) (j job.Job, isNotFoundErr bool, err error) {
+	return db.db.GetJob(ctx, repoId, commitId, commitVersion, path, name, runNumber)
+}
+
+// Sets the status of the job with that key. If there is none, isNotFoundErr is
+// true and err is ErrNotFound.
+func (db WebDb) SetJobStatus(writeCtx context.Context, repoId, commitId, commitVersion uint64,
+	path, name string, runNumber int64, status job.JobStatus) (isNotFoundErr bool, err error) {
+	return db.db.SetJobStatus(writeCtx, repoId, commitId, commitVersion, path, name,
+		runNumber, status)
+}
+
 // Adapts the read context to the twigg server read interface.
 func (db WebDb) GetServerRead(ctx context.Context) server.Read {
 	return db.Bind(ctx)
