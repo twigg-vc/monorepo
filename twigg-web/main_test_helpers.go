@@ -10,9 +10,9 @@ import (
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-track/trackclient"
 	"monorepo/twigg-track/trackserver"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/server"
-	"monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/services/oauthclient"
 	"monorepo/twigg-web/services/stripeclient"
 	"monorepo/twigg-web/srvconfig"
@@ -652,7 +652,7 @@ func (obs *trackObserver) WaitForWebhooksForPipelineStage(pipelineStage int32, s
 	start := time.Now()
 	for {
 		for i := range obs.Jobs {
-			_, _, _, _, _, _, stage, ok := jobs.ParsePipelineStageId(obs.Jobs[i].Id)
+			_, _, _, _, _, _, stage, ok := job.ParsePipelineStageId(obs.Jobs[i].Id)
 			if ok && stage == pipelineStage && obs.Jobs[i].Status == st {
 				return
 			}

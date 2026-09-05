@@ -13,12 +13,12 @@ import (
 	"monorepo/twigg-web/handlers/jobshandler"
 	"monorepo/twigg-web/handlers/notifications"
 	"monorepo/twigg-web/handlers/usereducation"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/metrics"
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/server"
 	"monorepo/twigg-web/services/cicdpublisher"
-	"monorepo/twigg-web/services/jobs"
 	reposervice "monorepo/twigg-web/services/repo"
 	"monorepo/twigg-web/services/sign"
 	"monorepo/twigg-web/services/twiggtoken"
@@ -1976,7 +1976,7 @@ func TestCI_IntegrationTest(t *testing.T) {
 
 	// Now we should be able to get the jobs
 	b.Get("/aang/BookOne/c/1/jobs")
-	var j []jobs.Job
+	var j []job.Job
 	err = json.Unmarshal(b.lastResponse, &j)
 	if err != nil {
 		t.Fatal(err)
@@ -2081,7 +2081,7 @@ func TestCI_BadFileFormat(t *testing.T) {
 
 	// Since the job had a bad format, we expect to see a message explaining it.
 	// Lets just wait for the job to be processed
-	var j []jobs.Job
+	var j []job.Job
 	start := time.Now()
 	for len(j) < 1 {
 		b.Get("/aang/BookOne/c/1/jobs")
@@ -2155,7 +2155,7 @@ func TestCI_TooLargeTimeout(t *testing.T) {
 
 	// Since the job had a too big combined timeout, we expect one job to be
 	// created showiung that
-	var j []jobs.Job
+	var j []job.Job
 	start := time.Now()
 	for len(j) < 1 {
 		b.Get("/aang/BookOne/c/1/jobs")
@@ -2354,9 +2354,9 @@ func TestCDIntegrationTest(t *testing.T) {
 	hooks.WaitForWebhooksForPipelineStage(0, trackclient.TrackJobStatusSuccess)
 
 	// Get the job refs
-	getPipelineRefs := func() []jobs.PipelineRef {
+	getPipelineRefs := func() []job.PipelineRef {
 		b.Get("/aang/BookOne/cd-refs")
-		var refs []jobs.PipelineRef
+		var refs []job.PipelineRef
 		err := json.Unmarshal(b.lastResponse, &refs)
 		if err != nil {
 			t.Fatal(err)
@@ -2390,7 +2390,7 @@ func TestCDIntegrationTest(t *testing.T) {
 	if pipelines[0].NumberOfStages != 3 {
 		t.Fatalf("unexpected num of stages %d", pipelines[0].NumberOfStages)
 	}
-	if pipelines[0].Status != jobs.PipelineStatusRunning {
+	if pipelines[0].Status != job.PipelineStatusRunning {
 		t.Fatalf("pipeline should be running, got %s", pipelines[0].Status)
 	}
 	if pipelines[0].IsCreatedByUser {
@@ -2416,21 +2416,21 @@ func TestCDIntegrationTest(t *testing.T) {
 		}
 	}
 	// First stage should have succeeded
-	if stages[0].Status != jobs.JobStatusSuccess {
+	if stages[0].Status != job.JobStatusSuccess {
 		t.Fatalf("pipeline stage 0 should have succedded, got %s", stages[0].Status)
 	}
 	// The second stage should be waiting, queued, running or already have succeeded
-	if stages[1].Status != jobs.JobStatusWaiting &&
-		stages[1].Status != jobs.JobStatusQueued &&
-		stages[1].Status != jobs.JobStatusPosted &&
-		stages[1].Status != jobs.JobStatusRunning &&
-		stages[1].Status != jobs.JobStatusSuccess {
+	if stages[1].Status != job.JobStatusWaiting &&
+		stages[1].Status != job.JobStatusQueued &&
+		stages[1].Status != job.JobStatusPosted &&
+		stages[1].Status != job.JobStatusRunning &&
+		stages[1].Status != job.JobStatusSuccess {
 		t.Fatalf("pipeline stage 1 should be waiting, queued, posted, running or succeded, got %s", stages[1].Status)
 	}
 	// The last stage should be waiting (if stage 1 didn't finish yet)
 	// or waiting-for-manual-start (if stage 1 finished)
-	if stages[2].Status != jobs.JobStatusWaiting &&
-		stages[2].Status != jobs.JobStatusWaitingManualStart {
+	if stages[2].Status != job.JobStatusWaiting &&
+		stages[2].Status != job.JobStatusWaitingManualStart {
 		t.Fatalf("pipeline stage 2 should be waiting/waiting-manual-start, got %s", stages[2].Status)
 	}
 
@@ -2440,21 +2440,21 @@ func TestCDIntegrationTest(t *testing.T) {
 	hooks.WaitForWebhooksForPipelineStage(1, trackclient.TrackJobStatusSuccess)
 	stages = getStages()
 	// First stage should have succeeded
-	if stages[0].Status != jobs.JobStatusSuccess {
+	if stages[0].Status != job.JobStatusSuccess {
 		t.Fatalf("pipeline stage 0 should have succedded, got %s", stages[0].Status)
 	}
 	// The second stage should have succeeded
-	if stages[1].Status != jobs.JobStatusSuccess {
+	if stages[1].Status != job.JobStatusSuccess {
 		t.Fatalf("pipeline stage 1 should have succedded, got %s", stages[1].Status)
 	}
 	// The last stage should be waiting or waiting manual start
-	if stages[2].Status != jobs.JobStatusWaiting &&
-		stages[2].Status != jobs.JobStatusWaitingManualStart {
+	if stages[2].Status != job.JobStatusWaiting &&
+		stages[2].Status != job.JobStatusWaitingManualStart {
 		t.Fatalf("pipeline stage 2 should be waiting-manual-start, got %s", stages[2].Status)
 	}
 
 	// Eventually, stage2 should have the waiting-manual-start status
-	stage2IsWaitingManualStart := stages[2].Status == jobs.JobStatusWaitingManualStart
+	stage2IsWaitingManualStart := stages[2].Status == job.JobStatusWaitingManualStart
 	start := time.Now()
 	for !stage2IsWaitingManualStart {
 		time.Sleep(10 * time.Millisecond)
@@ -2462,7 +2462,7 @@ func TestCDIntegrationTest(t *testing.T) {
 			t.Fatalf("waited too long for stage 2 to become waiting-manual-start")
 		}
 		stages = getStages()
-		stage2IsWaitingManualStart = stages[2].Status == jobs.JobStatusWaitingManualStart
+		stage2IsWaitingManualStart = stages[2].Status == job.JobStatusWaitingManualStart
 	}
 
 	// Manually resume the stage2
