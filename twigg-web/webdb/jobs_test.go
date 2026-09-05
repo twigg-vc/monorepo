@@ -1,8 +1,10 @@
 package webdb_test
 
 import (
+	"monorepo/base/iterator"
 	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/webdb"
+	"slices"
 	"testing"
 )
 
@@ -178,5 +180,95 @@ func TestSetJobStatusWithoutStatus(t *testing.T) {
 	_, err = b.SetJobStatus(w, 1, 2, 3, "file/path", "jobname", 4, "")
 	if err == nil {
 		t.Fatal("expected an error when the status is missing")
+	}
+}
+
+func TestGetCommitAndRepoJobs(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const repoId = uint64(1)
+	insert := func(commitId uint64, name string) job.Job {
+		t.Helper()
+		j := job.Job{
+			RepoId:        repoId,
+			Commit:        commitId,
+			CommitVersion: 3,
+			Path:          "file/path",
+			Name:          name,
+			RunNumber:     4,
+			Status:        job.JobStatusQueued,
+			CreatedTime:   "2026-09-05T00:00:00Z",
+		}
+		j.InternalId, err = b.InsertJob(w, j)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return j
+	}
+	first := insert(2, "first")
+	second := insert(2, "second")
+	otherCommit := insert(7, "other-commit")
+
+	const readAll = 10
+
+	// The commit jobs come newest first, and exclude other commits
+	iter, err := b.GetCommitJobs(w, repoId, 2, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := iterator.GetFirstN(readAll, iter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(got, []job.Job{second, first}) {
+		t.Fatalf("expected the commit jobs newest first, got %+v", got)
+	}
+
+	// afterInternalJobId reads the ones after a previously read job
+	iter, err = b.GetCommitJobs(w, repoId, 2, second.InternalId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err = iterator.GetFirstN(readAll, iter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(got, []job.Job{first}) {
+		t.Fatalf("expected only the jobs after %d, got %+v", second.InternalId, got)
+	}
+
+	// The repo jobs include every commit
+	iter, err = b.GetRepoJobs(w, repoId, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err = iterator.GetFirstN(readAll, iter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(got, []job.Job{otherCommit, second, first}) {
+		t.Fatalf("expected every commit of the repo, got %+v", got)
+	}
+
+	// Another repo has none
+	iter, err = b.GetRepoJobs(w, repoId+1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err = iterator.GetFirstN(readAll, iter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("expected no jobs of another repo, got %+v", got)
 	}
 }
