@@ -4,7 +4,6 @@ import (
 	"context"
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/keys"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 	"time"
@@ -13,7 +12,7 @@ import (
 func AddHandlers(
 	userS UserService,
 	repoS RepoService,
-	keyService keys.Service,
+	keyService KeysService,
 	trackQueue TrackQueue,
 	userMux wrappers.UserMux,
 	userWithSubMux wrappers.UserWithSubMux) {
@@ -35,6 +34,10 @@ func AddHandlers(
 		h.handleGenerateCliKey)
 	userWithSubMux.HandleFuncW("DELETE "+routes.DeleteCLIKey,
 		h.handleDeleteCliKey)
+}
+
+type KeysService interface {
+	NewRandomCliKey() string
 }
 
 type TrackQueue interface {

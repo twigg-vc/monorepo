@@ -5,7 +5,6 @@ import (
 	"log"
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/keys"
 	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/user"
 	twiggwc "monorepo/twigg-web/webcomponents"
@@ -17,7 +16,7 @@ import (
 type handler struct {
 	userS       UserService
 	repoS       RepoService
-	keysService keys.Service
+	keysService KeysService
 	trackQueue  TrackQueue
 }
 

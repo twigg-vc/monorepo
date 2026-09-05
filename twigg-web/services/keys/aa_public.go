@@ -1,19 +1,30 @@
 package keys
 
-type Service interface {
-	NewRandomCliKey() string
+type Service struct {
+	s service
+}
+
+func (s Service) NewRandomCliKey() string {
+	return s.s.NewRandomCliKey()
 }
 
 func New() Service {
-	return newService()
+	return Service{service{}}
 }
 
-type MockService interface {
-	Service
-	// Returns the last generated key.
-	GetLastRandomCliKey() string
+type MockService struct {
+	s *serviceMock
+}
+
+func (s MockService) NewRandomCliKey() string {
+	return s.s.NewRandomCliKey()
+}
+
+// Returns the last generated key.
+func (s MockService) GetLastRandomCliKey() string {
+	return s.s.GetLastRandomCliKey()
 }
 
 func NewMock() MockService {
-	return newMock()
+	return MockService{newMock()}
 }

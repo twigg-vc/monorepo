@@ -215,7 +215,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 
 	flagsHelper := featureflags.NewFlagsHelper(s.C.Name, userSrv)
 
-	var keysService keys.Service
+	var keysService usersettings.KeysService
 	if s.C.UseKeysMock {
 		s.KeysMock = keys.NewMock()
 		keysService = s.KeysMock

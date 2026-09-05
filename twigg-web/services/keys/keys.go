@@ -9,10 +9,6 @@ import (
 
 type service struct{}
 
-func newService() Service {
-	return service{}
-}
-
 func (s service) NewRandomCliKey() string {
 	const numberOfBytesOfCliKey = 32
 	b := make([]byte, numberOfBytesOfCliKey)
