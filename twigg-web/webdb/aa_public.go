@@ -12,6 +12,7 @@ import (
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/secrets"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg/commit"
 	"monorepo/twigg/server"
 	"monorepo/twigg/treev"
@@ -706,4 +707,18 @@ func (c Ctx) QueryRow(query string, args ...any) *sql.Row {
 // DEPRECATED
 func (c Ctx) Query(query string, args ...any) (*sql.Rows, error) {
 	return c.db.Query(c.ctx, query, args...)
+}
+
+// Writes every column of the user row and returns the stored user. A zero id
+// inserts a new row. The quota fields are not written: they live in the quota
+// db, so they are read back into the returned user.
+func (db WebDb) UpsertUser(writeCtx context.Context,
+	u user.User) (stored user.User, err error) {
+	return db.db.UpsertUser(writeCtx, u)
+}
+
+// Returns the user by its id. Returns ErrNotFound if there is none.
+func (db WebDb) GetUser(ctx context.Context,
+	userId int64) (u user.User, isNotFoundErr bool, err error) {
+	return db.db.GetUser(ctx, userId)
 }
