@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"monorepo/base/iterator"
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-track/trackclient"
 	"monorepo/twigg-web/webdb"
@@ -267,21 +268,12 @@ func (q *trackQueue) tryCleanup() {
 
 	// Pick some published jobs and check track server if they already finished
 	const cleanupBatchSize = 50
-	cleanupJobIdCandidates := make([]string, 0, cleanupBatchSize)
 	jobIds, err := q.db.GetTrackQueueJobIdsByStatus(readTx, statusPublished)
 	if err != nil {
 		log.Printf("%sfailed to get jobs to cleanup: %s", logPrefix, err)
 		return
 	}
-	for jobIds.Next() {
-		jobId, err := jobIds.Get()
-		if err != nil {
-			log.Printf("%sfailed to scan cleanup jobs: %s", logPrefix, err)
-			return
-		}
-		cleanupJobIdCandidates = append(cleanupJobIdCandidates, jobId)
-	}
-	err = jobIds.Err()
+	cleanupJobIdCandidates, err := iterator.GetFirstN(cleanupBatchSize, jobIds)
 	if err != nil {
 		log.Printf("%sfailed to iterate on cleanup jobs: %s", logPrefix, err)
 		return
