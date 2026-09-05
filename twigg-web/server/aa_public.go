@@ -38,7 +38,7 @@ import (
 	"monorepo/twigg-web/services/cansubcache"
 	"monorepo/twigg-web/services/cicdparser"
 	"monorepo/twigg-web/services/cicdpublisher"
-	"monorepo/twigg-web/services/jobs"
+	jobsservice "monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/services/keys"
 	"monorepo/twigg-web/services/memlogger"
 	"monorepo/twigg-web/services/mirror"
@@ -205,7 +205,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 	default:
 		panic("invalid stripe mode")
 	}
-	jobsService, err := jobs.NewService(sDb, setupW)
+	jobsService, err := jobsservice.NewService(sDb, setupW)
 	if err != nil {
 		log.Fatalf("failed to setup jobs service: %s", err)
 		return
