@@ -3,7 +3,7 @@ package home
 import (
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/repo"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 )
@@ -14,7 +14,7 @@ func AddHandlers(
 	db webdb.WebDb,
 	rt routes.Router,
 	rSrv repo.Service,
-	uSrv user.Service,
+	uSrv userservice.Service,
 	userWithSubMux wrappers.UserWithSubMux) {
 	h := newHandler(db, rSrv, rt, uSrv)
 

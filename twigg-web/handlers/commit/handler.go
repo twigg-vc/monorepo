@@ -17,7 +17,7 @@ import (
 	"monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/services/repo"
 	reviewservice "monorepo/twigg-web/services/review"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
 	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
@@ -37,7 +37,7 @@ type handler struct {
 	rSrv        repo.Service
 	revSrv      reviewservice.Service
 	rt          routes.Router
-	userS       user.Service
+	userS       userservice.Service
 	jobsS       jobs.Service
 	ciq         CiCdQueue
 	parser      Parser

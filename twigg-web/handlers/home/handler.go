@@ -5,7 +5,7 @@ import (
 	perm "monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/repo"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
@@ -16,13 +16,13 @@ type handler struct {
 	db   webdb.WebDb
 	rSrv repo.Service
 	rt   routes.Router
-	uSrv user.Service
+	uSrv userservice.Service
 }
 
 func newHandler(db webdb.WebDb,
 	rSrv repo.Service,
 	rt routes.Router,
-	uSrv user.Service) handler {
+	uSrv userservice.Service) handler {
 	return handler{
 		db:   db,
 		rSrv: rSrv,

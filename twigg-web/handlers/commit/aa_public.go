@@ -3,16 +3,16 @@ package commit
 import (
 	"context"
 	"io"
-	"time"
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-web/cicdqueue"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/services/repo"
 	reviewservice "monorepo/twigg-web/services/review"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/server"
+	"time"
 )
 
 // Registers the handlers required for viewing the commit pages.
@@ -22,7 +22,7 @@ func AddHandlers(
 	db Db,
 	rSrv repo.Service,
 	revSrv reviewservice.Service,
-	userS user.Service,
+	userS userservice.Service,
 	jobsS jobs.Service,
 	ciq CiCdQueue,
 	parser Parser,

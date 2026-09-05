@@ -9,7 +9,8 @@ import (
 	"monorepo/squeue"
 	"monorepo/twigg-web/metrics"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
@@ -21,7 +22,7 @@ import (
 
 type handler struct {
 	m            metrics.Service
-	userService  user.Service
+	userService  userservice.Service
 	queueStorage squeue.SqliteStorage
 	queueRunner  squeue.Runner
 }

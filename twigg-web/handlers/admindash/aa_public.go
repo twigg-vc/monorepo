@@ -5,7 +5,7 @@ import (
 	"monorepo/squeue"
 	"monorepo/twigg-web/metrics"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
 	"net/http/pprof"
@@ -13,7 +13,7 @@ import (
 
 func AddHandlers(
 	m metrics.Service,
-	userService user.Service,
+	userService userservice.Service,
 	queueStorage squeue.SqliteStorage,
 	queueRunner squeue.Runner,
 	adminMux wrappers.AdminUserMux) {
