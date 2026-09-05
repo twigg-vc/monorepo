@@ -4,15 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/webdb"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -196,7 +193,7 @@ func (s service) CreateNewJob(wl context.Context,
 func (s service) GetJobById(rl context.Context, id string) (job Job, err error) {
 	var idIsOk bool
 	job.RepoId, job.Commit, job.CommitVersion,
-		job.Path, job.Name, job.RunNumber, idIsOk = parseJobId(id)
+		job.Path, job.Name, job.RunNumber, idIsOk = ParseJobId(id)
 	if !idIsOk {
 		err = fmt.Errorf("bad job id %s", id)
 		return
@@ -229,7 +226,7 @@ func (s service) GetJobById(rl context.Context, id string) (job Job, err error) 
 }
 func (s service) SetJobStatus(wl context.Context, id string, status JobStatus) (err error) {
 	RepoId, Commit, CommitVersion,
-		Path, Name, RunNumber, idIsOk := parseJobId(id)
+		Path, Name, RunNumber, idIsOk := ParseJobId(id)
 	if !idIsOk {
 		err = fmt.Errorf("bad job id %s", id)
 		return
@@ -347,38 +344,6 @@ func (s service) GetRepoJobs(
 		return nil, fmt.Errorf("GetRepoJobs: query failed: %w", err)
 	}
 	return commitJobs{rows}, nil
-}
-
-func parseJobId(id string) (repoId uint64, commit uint64, commitVersion uint64,
-	path string, name string, runNumber int64, ok bool) {
-	parts := strings.Split(id, ".")
-	if len(parts) != 6 {
-		return
-	}
-	var err error
-	if repoId, err = strconv.ParseUint(parts[0], 10, 64); err != nil {
-		return
-	}
-	if commit, err = strconv.ParseUint(parts[1], 10, 64); err != nil {
-		return
-	}
-	if commitVersion, err = strconv.ParseUint(parts[2], 10, 64); err != nil {
-		return
-	}
-	var b []byte
-	if b, err = base64.RawURLEncoding.DecodeString(parts[3]); err != nil {
-		return
-	}
-	path = string(b)
-	if b, err = base64.RawURLEncoding.DecodeString(parts[4]); err != nil {
-		return
-	}
-	name = string(b)
-	if runNumber, err = strconv.ParseInt(parts[5], 10, 64); err != nil {
-		return
-	}
-	ok = true
-	return
 }
 
 func (s service) CreateNewPipeline(tx context.Context,

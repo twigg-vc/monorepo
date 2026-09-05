@@ -2,47 +2,19 @@ package jobs
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"monorepo/base/iterator"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/webdb"
 	"strconv"
 	"strings"
 )
 
-type Job struct {
-	InternalId    int64
-	RepoId        uint64
-	Commit        uint64
-	CommitVersion uint64
-	Path          string // Path to file that defines job
-	Name          string // Name of the job in the file
-	RunNumber     int64  // n-th time that the job was run
-	Status        JobStatus
-	CreatedTime   string
-}
+type Job = job.Job
+type JobStatus = job.JobStatus
 
-// Returns a url-safe string that uniquely identifies a job run
-func JobId(RepoId uint64, Commit uint64, CommitVersion uint64,
-	Path string, Name string, RunNumber int64) string {
-	parts := []string{
-		strconv.FormatUint(RepoId, 10),
-		strconv.FormatUint(Commit, 10),
-		strconv.FormatUint(CommitVersion, 10),
-		base64.RawURLEncoding.EncodeToString([]byte(Path)),
-		base64.RawURLEncoding.EncodeToString([]byte(Name)),
-		strconv.FormatInt(RunNumber, 10),
-	}
-	return strings.Join(parts, ".")
-}
-func (j Job) Id() string {
-	return JobId(j.RepoId, j.Commit, j.CommitVersion, j.Path,
-		j.Name, j.RunNumber)
-}
-func ParseJobId(id string) (RepoId uint64, Commit uint64, CommitVersion uint64,
-	Path string, Name string, RunNumber int64, ok bool) {
-	return parseJobId(id)
-}
+var JobId = job.JobId
+var ParseJobId = job.ParseJobId
 
 // "Reference" to pipelines of a repo with that are defined at a
 // specific path and name
@@ -88,7 +60,7 @@ func PipelineStageId(pipelineId string, stage int32) string {
 }
 func ParsePipelineId(id string) (RepoId uint64, Commit uint64, CommitVersion uint64,
 	Path string, Name string, RunNumber int64, ok bool) {
-	return parseJobId(strings.TrimPrefix(id, pipelineIdPrefix))
+	return ParseJobId(strings.TrimPrefix(id, pipelineIdPrefix))
 }
 func ParsePipelineStageId(id string) (RepoId uint64, Commit uint64, CommitVersion uint64,
 	Path string, Name string, RunNumber int64, Stage int32, ok bool) {
@@ -205,35 +177,20 @@ func NewService(db webdb.WebDb, wl context.Context) (Service, error) {
 	return newService(db, wl)
 }
 
-type JobStatus string
-
 const (
-	// Job is waiting for an user input to start
-	JobStatusWaitingManualStart JobStatus = "waiting-manual-start"
-	// Job is waiting for a previous job to finish
-	JobStatusWaiting JobStatus = "waiting"
-	// Job is queued to be posted
-	JobStatusQueued JobStatus = "queued"
-	// Job was posted to the runner
-	JobStatusPosted JobStatus = "posted"
-	// Job is running
-	JobStatusRunning JobStatus = "running"
-	// Job finished running and succeeded
-	JobStatusSuccess JobStatus = "success"
-	// Job finished running and failed
-	JobStatusFail JobStatus = "fail"
-	// Job exectution was canceled due to timeout
-	JobStatusTimeout JobStatus = "timeout"
-	// Job exectution was canceled "manually"
-	JobStatusCanceled JobStatus = "cancel"
-	// Job exectution was canceled because the max number of jobs per commit was reached
-	JobStatusTooManyJobs JobStatus = "too-many-jobs"
-	// Bad job file format
-	JobStatusBadFileFormat JobStatus = "bad-file-format"
-	// Bad job file size
-	JobStatusBadFileSize JobStatus = "bad-file-size"
-	// Bad job file size
-	JobStatusExceedsPlanLimits JobStatus = "exceeds-plan-limits"
+	JobStatusWaitingManualStart = job.JobStatusWaitingManualStart
+	JobStatusWaiting            = job.JobStatusWaiting
+	JobStatusQueued             = job.JobStatusQueued
+	JobStatusPosted             = job.JobStatusPosted
+	JobStatusRunning            = job.JobStatusRunning
+	JobStatusSuccess            = job.JobStatusSuccess
+	JobStatusFail               = job.JobStatusFail
+	JobStatusTimeout            = job.JobStatusTimeout
+	JobStatusCanceled           = job.JobStatusCanceled
+	JobStatusTooManyJobs        = job.JobStatusTooManyJobs
+	JobStatusBadFileFormat      = job.JobStatusBadFileFormat
+	JobStatusBadFileSize        = job.JobStatusBadFileSize
+	JobStatusExceedsPlanLimits  = job.JobStatusExceedsPlanLimits
 )
 
 type PipelineStatus string
