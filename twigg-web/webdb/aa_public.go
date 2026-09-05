@@ -870,3 +870,9 @@ func (db WebDb) SetTrackQueueJobStatus(writeCtx context.Context, jobId string,
 	status string) error {
 	return db.db.SetTrackQueueJobStatus(writeCtx, jobId, status)
 }
+
+// Returns the ids of the jobs with the status, oldest first.
+func (db WebDb) GetTrackQueueJobIdsByStatus(ctx context.Context,
+	status string) (iterator.I[string], error) {
+	return db.db.GetTrackQueueJobIdsByStatus(ctx, status)
+}

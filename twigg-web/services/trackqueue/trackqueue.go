@@ -268,26 +268,20 @@ func (q *trackQueue) tryCleanup() {
 	// Pick some published jobs and check track server if they already finished
 	const cleanupBatchSize = 50
 	cleanupJobIdCandidates := make([]string, 0, cleanupBatchSize)
-	rows, err := q.db.Bind(readTx).Query(`
-		SELECT job_id
-		FROM track_queue
-		WHERE status = 'published'
-		ORDER BY created_at_ns ASC
-	`)
+	jobIds, err := q.db.GetTrackQueueJobIdsByStatus(readTx, statusPublished)
 	if err != nil {
 		log.Printf("%sfailed to get jobs to cleanup: %s", logPrefix, err)
 		return
 	}
-	for rows.Next() {
-		var jobId string
-		err = rows.Scan(&jobId)
+	for jobIds.Next() {
+		jobId, err := jobIds.Get()
 		if err != nil {
 			log.Printf("%sfailed to scan cleanup jobs: %s", logPrefix, err)
 			return
 		}
 		cleanupJobIdCandidates = append(cleanupJobIdCandidates, jobId)
 	}
-	err = rows.Err()
+	err = jobIds.Err()
 	if err != nil {
 		log.Printf("%sfailed to iterate on cleanup jobs: %s", logPrefix, err)
 		return

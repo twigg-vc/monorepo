@@ -3,6 +3,7 @@ package webdb_test
 import (
 	"bytes"
 	"errors"
+	"monorepo/base/iterator"
 	"monorepo/twigg-web/webdb"
 	"testing"
 )
@@ -254,5 +255,47 @@ func TestGetOldestTrackQueueJobWithinOwnerLimits(t *testing.T) {
 	}
 	if jobId != "newer" {
 		t.Fatalf("got job %q, want %q", jobId, "newer")
+	}
+}
+
+func TestGetTrackQueueJobIdsByStatus(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Inserted newest first, so the order can only come from created_at_ns.
+	if err := b.InsertTrackQueueJobIfNotExists(w, "newer", 7, []byte("b"), "published", 2000); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.InsertTrackQueueJobIfNotExists(w, "older", 7, []byte("a"), "published", 1000); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.InsertTrackQueueJobIfNotExists(w, "waiting", 7, []byte("c"), "queued", 1500); err != nil {
+		t.Fatal(err)
+	}
+
+	it, err := b.GetTrackQueueJobIdsByStatus(w, "published")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := iterator.GetFirstN(10, it)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"older", "newer"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("got %v, want %v", got, want)
+		}
 	}
 }

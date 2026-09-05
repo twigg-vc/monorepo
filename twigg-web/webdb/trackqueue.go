@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"monorepo/base/iterator"
 )
 
 // Adds a job to the track queue. Does nothing if the job is already queued.
@@ -187,6 +188,39 @@ func (db webDb) SetTrackQueueJobStatus(writeCtx context.Context, jobId string,
 	}
 	return nil
 }
+
+// Returns the ids of the jobs with the status, oldest first.
+func (db webDb) GetTrackQueueJobIdsByStatus(ctx context.Context,
+	status string) (iterator.I[string], error) {
+	if status == "" {
+		return nil, fmt.Errorf("missing status")
+	}
+	rows, err := db.s.Query(ctx, `
+		SELECT job_id
+		FROM track_queue
+		WHERE status = ?
+		ORDER BY created_at_ns ASC;
+	`, status)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query track queue job ids: %w", err)
+	}
+	return jobIdIterWrapper{rows}, nil
+}
+
+type jobIdIterWrapper struct {
+	rows *sql.Rows
+}
+
+func (it jobIdIterWrapper) Get() (string, error) {
+	var jobId string
+	err := it.rows.Scan(&jobId)
+	if err != nil {
+		return "", fmt.Errorf("failed to get track queue job id from iter: %w", err)
+	}
+	return jobId, nil
+}
+func (it jobIdIterWrapper) Next() bool { return it.rows.Next() }
+func (it jobIdIterWrapper) Err() error { return it.rows.Err() }
 
 // Returns how many jobs are in the track queue.
 func (db webDb) CountTrackQueueJobs(ctx context.Context) (int64, error) {
