@@ -27,7 +27,7 @@ func TestInsertAndGetPipelineStages(t *testing.T) {
 	)
 	const readAll = 10
 
-	got, err := iterator.GetFirstN(readAll, mustGetStages(t, b, w, pipelineId))
+	got, err := iterator.GetFirstN(readAll, getStagesOrDie(t, b, w, pipelineId))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestInsertAndGetPipelineStages(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err = iterator.GetFirstN(readAll, mustGetStages(t, b, w, pipelineId))
+	got, err = iterator.GetFirstN(readAll, getStagesOrDie(t, b, w, pipelineId))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestInsertPipelineStageMissingFields(t *testing.T) {
 	}
 }
 
-func mustGetStages(t *testing.T, b webdb.WebDb, ctx context.Context,
+func getStagesOrDie(t *testing.T, b webdb.WebDb, ctx context.Context,
 	pipelineId string) iterator.I[job.PipelineStage] {
 	t.Helper()
 	iter, err := b.GetPipelineStages(ctx, pipelineId)
