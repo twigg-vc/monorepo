@@ -39,63 +39,48 @@ func (db webDb) CreateUser(writeCtx context.Context, email string,
 	return userId, nil
 }
 
-// Writes every column of the user row and returns the stored user. A zero id
-// inserts a new row. The quota fields are not written: they live in the quota
-// db, so they are read back into the returned user.
-func (db webDb) UpsertUser(writeCtx context.Context,
-	u user.User) (stored user.User, err error) {
-	// The column is NOT NULL in the table but no longer used.
-	const deprecatedSeatsInUse = 0
-	err = db.s.QueryRow(writeCtx, `
-		INSERT INTO users2 (
-			id,
-			email,
-			state,
-			isOrganization,
-			stripeId,
-			cliKeyHash,
-			username,
-			passwordHash,
-			selfPaidSubscription,
-			selfPaidSubscriptionQuantity,
-			selfPaidSubscriptionSeatsInUse,
-			stripeSessionId,
-			stripeSessionUrl,
-			stripeSessionPriceId,
-			stripeSessionQuantity,
-			stripeSubscriptionID
-		) VALUES (NULLIF(?, 0), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT (id) DO UPDATE SET
-			email = excluded.email,
-			state = excluded.state,
-			isOrganization = excluded.isOrganization,
-			stripeId = excluded.stripeId,
-			cliKeyHash = excluded.cliKeyHash,
-			username = excluded.username,
-			passwordHash = excluded.passwordHash,
-			selfPaidSubscription = excluded.selfPaidSubscription,
-			selfPaidSubscriptionQuantity = excluded.selfPaidSubscriptionQuantity,
-			stripeSessionId = excluded.stripeSessionId,
-			stripeSessionUrl = excluded.stripeSessionUrl,
-			stripeSessionPriceId = excluded.stripeSessionPriceId,
-			stripeSessionQuantity = excluded.stripeSessionQuantity,
-			stripeSubscriptionID = excluded.stripeSubscriptionID
-		RETURNING id;
+// Writes the mutable columns of the user row. The
+// quota fields are not written: they live in the quota db.
+func (db webDb) UpdateUser(writeCtx context.Context, u user.User) error {
+	_, err := db.s.Exec(writeCtx, `
+		UPDATE users2
+		SET
+			email = ?,
+			state = ?,
+			isOrganization = ?,
+			stripeId = ?,
+			cliKeyHash = ?,
+			username = ?,
+			passwordHash = ?,
+			selfPaidSubscription = ?,
+			selfPaidSubscriptionQuantity = ?,
+			stripeSessionId = ?,
+			stripeSessionUrl = ?,
+			stripeSessionPriceId = ?,
+			stripeSessionQuantity = ?,
+			stripeSubscriptionID = ?
+		WHERE id = ?;
 	`,
-		u.Id, u.Email, u.State, u.IsOrganization, u.StripeId, u.CliKeyHash,
-		u.Username, u.PasswordHash, u.SelfPaidSubscription,
-		u.SelfPaidSubscriptionQuantity, deprecatedSeatsInUse,
-		u.StripeSessionId, u.StripeSessionUrl, u.StripeSessionPriceId,
-		u.StripeSessionQuantity, u.StripeSubscriptionID,
-	).Scan(&u.Id)
+		u.Email,
+		u.State,
+		u.IsOrganization,
+		u.StripeId,
+		u.CliKeyHash,
+		u.Username,
+		u.PasswordHash,
+		u.SelfPaidSubscription,
+		u.SelfPaidSubscriptionQuantity,
+		u.StripeSessionId,
+		u.StripeSessionUrl,
+		u.StripeSessionPriceId,
+		u.StripeSessionQuantity,
+		u.StripeSubscriptionID,
+		u.Id,
+	)
 	if err != nil {
-		return user.User{}, fmt.Errorf("failed to upsert user: %w", err)
+		return fmt.Errorf("failed to update user: %w", err)
 	}
-	err = db.readUserQuota(&u)
-	if err != nil {
-		return user.User{}, err
-	}
-	return u, nil
+	return nil
 }
 
 const selectUserColumns = `

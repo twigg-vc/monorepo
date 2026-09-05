@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestUpsertAndGetUser(t *testing.T) {
+func TestUpdateUser(t *testing.T) {
 	b, cl, err := webdb.NewMem()
 	if err != nil {
 		t.Fatal(err)
@@ -20,33 +20,39 @@ func TestUpsertAndGetUser(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	inserted := user.User{
-		Email:                        "someone@twigg.vc",
-		State:                        user.UserState_StripeSubscription,
-		IsOrganization:               false,
-		StripeId:                     "cus_1",
-		CliKeyHash:                   "cli-key-hash",
-		Username:                     "someone",
-		PasswordHash:                 "password-hash",
-		SelfPaidSubscription:         user.Subscription_Solo,
-		SelfPaidSubscriptionQuantity: 1,
-		StripeSessionId:              "session-1",
-		StripeSessionUrl:             "https://stripe.test/session-1",
-		StripeSessionPriceId:         "price-1",
-		StripeSessionQuantity:        1,
-		StripeSubscriptionID:         "sub-1",
-	}
-	stored, err := b.UpsertUser(w, inserted)
+	userId, err := b.CreateUser(w, "someone@twigg.vc",
+		user.UserState_NoSubscription, false, "someone", "password-hash",
+		user.Subscription_None, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stored.Id != 1 {
-		t.Fatalf("expected first user id 1, got %d", stored.Id)
+	const quota = 4096
+	if err := b.SetQuota(b.UserQuotaOwnerName(userId), quota); err != nil {
+		t.Fatal(err)
 	}
-	userId := stored.Id
-	inserted.Id = userId
-	if stored != inserted {
-		t.Fatalf("upsert returned %+v, want %+v", stored, inserted)
+	created, _, err := b.GetUser(w, userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Every mutable column gets a new value.
+	updated := created
+	updated.Email = "renamed@twigg.vc"
+	updated.State = user.UserState_StripeSubscription
+	updated.IsOrganization = true
+	updated.StripeId = "cus_1"
+	updated.CliKeyHash = "cli-key-hash"
+	updated.Username = "renamed"
+	updated.PasswordHash = "new-password-hash"
+	updated.SelfPaidSubscription = user.Subscription_Solo
+	updated.SelfPaidSubscriptionQuantity = 1
+	updated.StripeSessionId = "session-1"
+	updated.StripeSessionUrl = "https://stripe.test/session-1"
+	updated.StripeSessionPriceId = "price-1"
+	updated.StripeSessionQuantity = 1
+	updated.StripeSubscriptionID = "sub-1"
+	if err := b.UpdateUser(w, updated); err != nil {
+		t.Fatal(err)
 	}
 
 	got, isNotFoundErr, err := b.GetUser(w, userId)
@@ -54,37 +60,13 @@ func TestUpsertAndGetUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	if isNotFoundErr {
-		t.Fatal("upserted user was not found")
-	}
-	if got != inserted {
-		t.Fatalf("after insert got %+v, want %+v", got, inserted)
-	}
-
-	updated := inserted
-	updated.Email = "renamed@twigg.vc"
-	updated.Username = "renamed"
-	updated.State = user.UserState_NoSubscription
-	updated.SelfPaidSubscription = user.Subscription_None
-	updated.SelfPaidSubscriptionQuantity = 0
-	updated.StripeSessionId = ""
-	updated.StripeSessionUrl = ""
-	updated.StripeSessionPriceId = ""
-	updated.StripeSessionQuantity = 0
-	updated.StripeSubscriptionID = ""
-	stored, err = b.UpsertUser(w, updated)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if stored.Id != userId {
-		t.Fatalf("upsert created id %d instead of updating %d", stored.Id, userId)
-	}
-
-	got, _, err = b.GetUser(w, userId)
-	if err != nil {
-		t.Fatal(err)
+		t.Fatal("updated user was not found")
 	}
 	if got != updated {
-		t.Fatalf("after update got %+v, want %+v", got, updated)
+		t.Fatalf("got %+v, want %+v", got, updated)
+	}
+	if got.TotalQuota != quota {
+		t.Fatalf("update lost the quota: got %d, want %d", got.TotalQuota, quota)
 	}
 }
 
@@ -173,7 +155,10 @@ func TestGetUserByField(t *testing.T) {
 	}
 	created.StripeId = "cus_1"
 	created.CliKeyHash = "cli-key-hash"
-	stored, err := b.UpsertUser(w, created)
+	if err := b.UpdateUser(w, created); err != nil {
+		t.Fatal(err)
+	}
+	stored, _, err := b.GetUser(w, userId)
 	if err != nil {
 		t.Fatal(err)
 	}
