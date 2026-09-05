@@ -11,7 +11,8 @@ import (
 	"monorepo/twigg-web/services/session"
 	"monorepo/twigg-web/services/stripeclient"
 	"monorepo/twigg-web/services/twiggtoken"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 	"net/http"
 )
@@ -55,7 +56,7 @@ type AuthMuxRequest struct {
 // repo owner or has write permission in the repo (same checks as the
 // session-based repo muxes).
 func NewCliKeyAuthMux(configName string, db webdb.WebDb,
-	repoSrv reposervice.Service, userSrv user.Service,
+	repoSrv reposervice.Service, userSrv userservice.Service,
 	mux RlMux) CliKeyAuthMux {
 	return cliKeyAuthMux{configName, db, repoSrv, userSrv, mux}
 }
@@ -87,7 +88,7 @@ type CliKeyAuthMuxRequest struct {
 func NewUserMux(authMux AuthMux,
 	stripeClient stripeclient.StripeClient,
 	db webdb.WebDb,
-	userService user.Service,
+	userService userservice.Service,
 ) UserMux {
 	return userMux{authMux, stripeClient, db, userService}
 }
@@ -170,7 +171,7 @@ type UserWithSubMuxRequest struct {
 func NewUserRepoMux(configName string, userWithSubMux UserWithSubMux,
 	permSrv webdb.WebDb,
 	repoSrv reposervice.Service,
-	userSrv user.Service) UserRepoMux {
+	userSrv userservice.Service) UserRepoMux {
 	return userRepoMux{configName, userWithSubMux, permSrv, repoSrv, userSrv}
 }
 
@@ -205,7 +206,7 @@ func NewUserWithReadPermissionMux(configName string, mux RlMux,
 	sessionService session.Service,
 	db webdb.WebDb,
 	repoSrv reposervice.Service,
-	userSrv user.Service) UserWithReadPermissionMux {
+	userSrv userservice.Service) UserWithReadPermissionMux {
 	return UserWithReadPermissionMux{
 		userWithReadPermissionMux{configName, mux, sessionService, db, repoSrv, userSrv}}
 }
@@ -307,7 +308,7 @@ type ServerKeyAndTokenAuthTrackMuxRequest struct {
 // ########## Creates a mux for users that have owner permission in organization
 func NewOrgOwnerMux(configName string, userWithSubMux UserWithSubMux,
 	permSrv webdb.WebDb,
-	userSrv user.Service) OrgOwnerMux {
+	userSrv userservice.Service) OrgOwnerMux {
 	return orgOwnerMux{configName, userWithSubMux, permSrv, userSrv}
 }
 
@@ -336,7 +337,7 @@ type OrgOwnerMuxRequest struct {
 // ########## Creates a mux for users that have member permission in organization
 func NewOrgMemberMux(configName string, userWithSubMux UserWithSubMux,
 	permSrv webdb.WebDb,
-	userSrv user.Service) OrgMemberMux {
+	userSrv userservice.Service) OrgMemberMux {
 	return orgMemberMux{configName, userWithSubMux, permSrv, userSrv}
 }
 
@@ -365,7 +366,7 @@ type OrgMemberMuxRequest struct {
 // ########## Creates a mux for users that have owner or member permission in organization
 func NewOrgOwnerOrMemberMux(configName string, userWithSubMux UserWithSubMux,
 	permSrv webdb.WebDb,
-	userSrv user.Service) OrgOwnerOrMemberMux {
+	userSrv userservice.Service) OrgOwnerOrMemberMux {
 	return orgOwnerOrMemberMux{configName, userWithSubMux, permSrv, userSrv}
 }
 

@@ -7,7 +7,8 @@ import (
 	webrepo "monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/repo"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 	"net/http"
 )
@@ -17,7 +18,7 @@ type userRepoMux struct {
 	userWithSubMux UserWithSubMux
 	permSrv        webdb.WebDb
 	repoSrv        repo.Service
-	userSrv        user.Service
+	userSrv        userservice.Service
 }
 
 func (m userRepoMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,
@@ -67,7 +68,7 @@ func (m userRepoMux) HandleFuncW(pattern string, handler func(w http.ResponseWri
 // caller must return immediately without writing anything else.
 func resolveRepoAndValidateWritePerm(w http.ResponseWriter, r *http.Request,
 	dbRead context.Context, userId int64, permSrv webdb.WebDb,
-	repoSrv repo.Service, userSrv user.Service) (
+	repoSrv repo.Service, userSrv userservice.Service) (
 	ownerUsr user.User, repo webrepo.Repo, ok bool) {
 
 	// Get owner

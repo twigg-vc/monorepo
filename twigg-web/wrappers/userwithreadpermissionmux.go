@@ -8,7 +8,8 @@ import (
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/repo"
 	"monorepo/twigg-web/services/session"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 	"net/http"
 )
@@ -19,7 +20,7 @@ type userWithReadPermissionMux struct {
 	sessionService session.Service
 	db             webdb.WebDb
 	repoSrv        repo.Service
-	userSrv        user.Service
+	userSrv        userservice.Service
 }
 
 func (m userWithReadPermissionMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,

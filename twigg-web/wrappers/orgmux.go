@@ -4,7 +4,7 @@ import (
 	"context"
 	"monorepo/twigg-web/featureflags"
 	perm "monorepo/twigg-web/permissions"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/webdb"
 	"net/http"
 )
@@ -13,7 +13,7 @@ type orgOwnerMux struct {
 	configName     string
 	userWithSubMux UserWithSubMux
 	permSrv        webdb.WebDb
-	userSrv        user.Service
+	userSrv        userservice.Service
 }
 
 func (m orgOwnerMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,
@@ -67,7 +67,7 @@ type orgMemberMux struct {
 	configName     string
 	userWithSubMux UserWithSubMux
 	permSrv        webdb.WebDb
-	userSrv        user.Service
+	userSrv        userservice.Service
 }
 
 func (m orgMemberMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,
@@ -121,7 +121,7 @@ type orgOwnerOrMemberMux struct {
 	configName     string
 	userWithSubMux UserWithSubMux
 	permSrv        webdb.WebDb
-	userSrv        user.Service
+	userSrv        userservice.Service
 }
 
 func (m orgOwnerOrMemberMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,

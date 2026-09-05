@@ -310,7 +310,7 @@ func (m userMux) getOrgAndUserPermissionInOrgIfNeeded(
 	dbRead context.Context,
 	haveOrgParamInRequest bool,
 	orgId int64,
-) (org userservice.User, userPermissionInOrg permissions.Permission, ok bool) {
+) (org user.User, userPermissionInOrg permissions.Permission, ok bool) {
 	if !haveOrgParamInRequest {
 		ok = true
 		return
