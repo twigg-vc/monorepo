@@ -13,14 +13,7 @@ type JobStatus = job.JobStatus
 var JobId = job.JobId
 var ParseJobId = job.ParseJobId
 
-// "Reference" to pipelines of a repo with that are defined at a
-// specific path and name
-type PipelineRef struct {
-	RepoId uint64
-	Path   string
-	Name   string
-}
-
+type PipelineRef = job.PipelineRef
 type Pipeline = job.Pipeline
 type PipelineStatus = job.PipelineStatus
 
@@ -38,19 +31,7 @@ const (
 	PipelineStatusCancel             = job.PipelineStatusCancel
 )
 
-type PipelineStage struct {
-	PipelineId      string
-	Name            string
-	Stage           int32
-	IsResumedByUser bool  // Indicates a user manually resumed this stage
-	ResumedByUserId int64 // Indicates the id of the user who resumed the stage
-	CreatedTime     string
-	Status          JobStatus
-}
-
-func (stage PipelineStage) Id() string {
-	return PipelineStageId(stage.PipelineId, stage.Stage)
-}
+type PipelineStage = job.PipelineStage
 
 type Service interface {
 	// Returns true if SetCiCdToPublished was ever called with the provided params

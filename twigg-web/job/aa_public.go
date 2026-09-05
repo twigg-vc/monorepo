@@ -41,6 +41,14 @@ func ParseJobId(id string) (RepoId uint64, Commit uint64, CommitVersion uint64,
 	return parseJobId(id)
 }
 
+// "Reference" to pipelines of a repo with that are defined at a
+// specific path and name
+type PipelineRef struct {
+	RepoId uint64
+	Path   string
+	Name   string
+}
+
 type Pipeline struct {
 	InternalId      int64
 	RepoId          uint64
@@ -82,6 +90,20 @@ func ParsePipelineId(id string) (RepoId uint64, Commit uint64, CommitVersion uin
 func ParsePipelineStageId(id string) (RepoId uint64, Commit uint64, CommitVersion uint64,
 	Path string, Name string, RunNumber int64, Stage int32, ok bool) {
 	return parsePipelineStageId(id)
+}
+
+type PipelineStage struct {
+	PipelineId      string
+	Name            string
+	Stage           int32
+	IsResumedByUser bool  // Indicates a user manually resumed this stage
+	ResumedByUserId int64 // Indicates the id of the user who resumed the stage
+	CreatedTime     string
+	Status          JobStatus
+}
+
+func (stage PipelineStage) Id() string {
+	return PipelineStageId(stage.PipelineId, stage.Stage)
 }
 
 type JobStatus string
