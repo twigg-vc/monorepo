@@ -9,9 +9,9 @@ import (
 	"io"
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/featureflags"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
 	"net/http/httptest"
@@ -23,7 +23,7 @@ import (
 
 func TestHandleGetPipelineRefs(t *testing.T) {
 	js := newFakeJobService()
-	js.repoIdToRefs[76] = []jobs.PipelineRef{
+	js.repoIdToRefs[76] = []job.PipelineRef{
 		{RepoId: 76, Path: "path/to/file1", Name: "job1"},
 		{RepoId: 76, Path: "path/to/file1", Name: "job2"},
 		{RepoId: 76, Path: "path/to/file2", Name: "job1"},
@@ -44,7 +44,7 @@ func TestHandleGetPipelineRefs(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status ok got %d", w.Code)
 	}
-	expectedRefs := []jobs.PipelineRef{
+	expectedRefs := []job.PipelineRef{
 		{RepoId: 76, Path: "path/to/file2", Name: "job1"},
 		{RepoId: 76, Path: "path/to/file2", Name: "job2"},
 	}
@@ -53,13 +53,13 @@ func TestHandleGetPipelineRefs(t *testing.T) {
 
 func TestHandleGetRefPipelines(t *testing.T) {
 	js := newFakeJobService()
-	ref0 := jobs.PipelineRef{RepoId: 54, Path: "ref0/path", Name: "ref0/name"}
-	ref1 := jobs.PipelineRef{RepoId: 54, Path: "ref1/path", Name: "ref1/name"}
-	js.refToPipelines[ref0] = []jobs.Pipeline{
+	ref0 := job.PipelineRef{RepoId: 54, Path: "ref0/path", Name: "ref0/name"}
+	ref1 := job.PipelineRef{RepoId: 54, Path: "ref1/path", Name: "ref1/name"}
+	js.refToPipelines[ref0] = []job.Pipeline{
 		{InternalId: 1, Name: "mock running pipeline 1", IsCreatedByUser: true, CreatedByUserId: 1},
 		{InternalId: 2, Name: "mock running pipeline 2", IsCreatedByUser: true, CreatedByUserId: 2},
 	}
-	js.refToPipelines[ref1] = []jobs.Pipeline{
+	js.refToPipelines[ref1] = []job.Pipeline{
 		{InternalId: 3, Name: "mock running pipeline 3"},
 		{InternalId: 4, Name: "mock running pipeline 4"},
 		{InternalId: 5, Name: "mock running pipeline 5"},
@@ -98,13 +98,13 @@ func TestHandleGetRefPipelines(t *testing.T) {
 	}
 	expectedPipelines := []FrontendPipeline{
 		{
-			Id:                jobs.Pipeline{InternalId: 2, Name: "mock running pipeline 2"}.Id(),
-			Pipeline:          jobs.Pipeline{InternalId: 2, Name: "mock running pipeline 2", IsCreatedByUser: true, CreatedByUserId: 2},
+			Id:                job.Pipeline{InternalId: 2, Name: "mock running pipeline 2"}.Id(),
+			Pipeline:          job.Pipeline{InternalId: 2, Name: "mock running pipeline 2", IsCreatedByUser: true, CreatedByUserId: 2},
 			CreatedByUsername: "user-2",
 		},
 		{
-			Id:                jobs.Pipeline{InternalId: 1, Name: "mock running pipeline 1"}.Id(),
-			Pipeline:          jobs.Pipeline{InternalId: 1, Name: "mock running pipeline 1", IsCreatedByUser: true, CreatedByUserId: 1},
+			Id:                job.Pipeline{InternalId: 1, Name: "mock running pipeline 1"}.Id(),
+			Pipeline:          job.Pipeline{InternalId: 1, Name: "mock running pipeline 1", IsCreatedByUser: true, CreatedByUserId: 1},
 			CreatedByUsername: "user-1",
 		},
 	}
@@ -125,12 +125,12 @@ func TestHandleGetRefPipelines(t *testing.T) {
 	}
 	expectedPipelines = []FrontendPipeline{
 		{
-			Id:       jobs.Pipeline{InternalId: 4, Name: "mock running pipeline 4"}.Id(),
-			Pipeline: jobs.Pipeline{InternalId: 4, Name: "mock running pipeline 4"},
+			Id:       job.Pipeline{InternalId: 4, Name: "mock running pipeline 4"}.Id(),
+			Pipeline: job.Pipeline{InternalId: 4, Name: "mock running pipeline 4"},
 		},
 		{
-			Id:       jobs.Pipeline{InternalId: 3, Name: "mock running pipeline 3"}.Id(),
-			Pipeline: jobs.Pipeline{InternalId: 3, Name: "mock running pipeline 3"},
+			Id:       job.Pipeline{InternalId: 3, Name: "mock running pipeline 3"}.Id(),
+			Pipeline: job.Pipeline{InternalId: 3, Name: "mock running pipeline 3"},
 		},
 	}
 	checkPipelinesResponse(w, expectedPipelines, t)
@@ -138,9 +138,9 @@ func TestHandleGetRefPipelines(t *testing.T) {
 
 func TestHandleGetPipelineWithoutUser(t *testing.T) {
 	js := newFakeJobService()
-	ref := jobs.PipelineRef{RepoId: 54, Path: "ref/path", Name: "ref/name"}
-	pipeline := jobs.Pipeline{InternalId: 1, Name: "mock running pipeline 1"}
-	js.refToPipelines[ref] = []jobs.Pipeline{
+	ref := job.PipelineRef{RepoId: 54, Path: "ref/path", Name: "ref/name"}
+	pipeline := job.Pipeline{InternalId: 1, Name: "mock running pipeline 1"}
+	js.refToPipelines[ref] = []job.Pipeline{
 		pipeline,
 	}
 	tc := newMockTrackClient()
@@ -163,9 +163,9 @@ func TestHandleGetPipelineWithoutUser(t *testing.T) {
 
 func TestHandleGetPipelineWithUser(t *testing.T) {
 	js := newFakeJobService()
-	ref := jobs.PipelineRef{RepoId: 54, Path: "ref/path", Name: "ref/name"}
-	pipeline := jobs.Pipeline{InternalId: 1, Name: "mock running pipeline 1", IsCreatedByUser: true, CreatedByUserId: 99}
-	js.refToPipelines[ref] = []jobs.Pipeline{
+	ref := job.PipelineRef{RepoId: 54, Path: "ref/path", Name: "ref/name"}
+	pipeline := job.Pipeline{InternalId: 1, Name: "mock running pipeline 1", IsCreatedByUser: true, CreatedByUserId: 99}
+	js.refToPipelines[ref] = []job.Pipeline{
 		pipeline,
 	}
 	tc := newMockTrackClient()
@@ -194,8 +194,8 @@ func TestHandleGetPipelineWithUser(t *testing.T) {
 
 func TestHandleGetPipelineStages(t *testing.T) {
 	js := newFakeJobService()
-	pipeline := jobs.Pipeline{InternalId: 1, Name: "mock running pipeline 1"}
-	stages := []jobs.PipelineStage{
+	pipeline := job.Pipeline{InternalId: 1, Name: "mock running pipeline 1"}
+	stages := []job.PipelineStage{
 		{Name: "stage-0", Stage: 0},
 		{Name: "stage-1", Stage: 1, IsResumedByUser: true, ResumedByUserId: 76},
 	}
@@ -229,10 +229,10 @@ func TestHandleGetPipelineStages(t *testing.T) {
 
 func TestHandleGetStageCombinedOut(t *testing.T) {
 	js := newFakeJobService()
-	pipeline := jobs.Pipeline{InternalId: 1, Name: "mock running pipeline 1"}
-	stages := []jobs.PipelineStage{
-		{Name: "stage-0", Stage: 0, Status: jobs.JobStatusSuccess},
-		{Name: "stage-1", Stage: 1, Status: jobs.JobStatusQueued},
+	pipeline := job.Pipeline{InternalId: 1, Name: "mock running pipeline 1"}
+	stages := []job.PipelineStage{
+		{Name: "stage-0", Stage: 0, Status: job.JobStatusSuccess},
+		{Name: "stage-1", Stage: 1, Status: job.JobStatusQueued},
 	}
 	js.pipelineIdToStages[pipeline.Id()] = stages
 	tc := newMockTrackClient()
@@ -275,7 +275,7 @@ func TestHandleManualResume(t *testing.T) {
 	p := newMockPipelineResumer()
 	ug := newMockUsernameGetter()
 	h := NewHandler(ug, js, tc, p)
-	mockPipe := jobs.Pipeline{RepoId: 1, Commit: 2, CommitVersion: 3, Path: "path", Name: "name", RunNumber: 4}
+	mockPipe := job.Pipeline{RepoId: 1, Commit: 2, CommitVersion: 3, Path: "path", Name: "name", RunNumber: 4}
 
 	// Allow only pilepile with id=mockPipe.Id() to resume at stage 3
 	const userId = 64
@@ -297,7 +297,7 @@ func TestHandleManualResume(t *testing.T) {
 	p.checkResumed(mockPipe.Id(), 3, userId, t)
 
 	// Try resuming a non resumable pipeline
-	nonResumablePipe := jobs.Pipeline{RepoId: 1, Commit: 2, CommitVersion: 3, Path: "path", Name: "other-name", RunNumber: 5}
+	nonResumablePipe := job.Pipeline{RepoId: 1, Commit: 2, CommitVersion: 3, Path: "path", Name: "other-name", RunNumber: 5}
 	w = httptest.NewRecorder()
 	q = url.Values{}
 	pathValues = map[string]string{
@@ -346,10 +346,10 @@ func TestCancelPostedPipelineStage(t *testing.T) {
 	// Create two stages of a pipeline
 	// Stage0: success
 	// Stage1: posted
-	pipeline0 := jobs.Pipeline{Name: "mock pipeline 0"}
-	pipeline0Stages := []jobs.PipelineStage{
-		{Stage: 0, Status: jobs.JobStatusSuccess},
-		{Stage: 1, Status: jobs.JobStatusPosted},
+	pipeline0 := job.Pipeline{Name: "mock pipeline 0"}
+	pipeline0Stages := []job.PipelineStage{
+		{Stage: 0, Status: job.JobStatusSuccess},
+		{Stage: 1, Status: job.JobStatusPosted},
 	}
 	pipeline0Id := pipeline0.Id()
 	js.pipelineIdToStages[pipeline0Id] = pipeline0Stages
@@ -370,10 +370,10 @@ func TestCancelPostedPipelineStage(t *testing.T) {
 	tc.checkJobWasCanceled(trackJobIdOfPipeline0Stage1, t)
 
 	// Create another pipeline that was still not posted
-	pipeline1 := jobs.Pipeline{Name: "mock pipeline 1"}
-	pipeline1Stages := []jobs.PipelineStage{
-		{Stage: 0, Status: jobs.JobStatusQueued},
-		{Stage: 1, Status: jobs.JobStatusWaiting},
+	pipeline1 := job.Pipeline{Name: "mock pipeline 1"}
+	pipeline1Stages := []job.PipelineStage{
+		{Stage: 0, Status: job.JobStatusQueued},
+		{Stage: 1, Status: job.JobStatusWaiting},
 	}
 	pipeline1Id := pipeline1.Id()
 	js.pipelineIdToStages[pipeline1Id] = pipeline1Stages
@@ -402,10 +402,10 @@ func TestGetStageIsCanceled(t *testing.T) {
 	// Create two stages of a pipeline
 	// Stage0: success
 	// Stage1: canceled
-	pipeline0 := jobs.Pipeline{Name: "mock pipeline 0"}
-	pipeline0Stages := []jobs.PipelineStage{
-		{Stage: 0, Status: jobs.JobStatusSuccess},
-		{Stage: 1, Status: jobs.JobStatusCanceled},
+	pipeline0 := job.Pipeline{Name: "mock pipeline 0"}
+	pipeline0Stages := []job.PipelineStage{
+		{Stage: 0, Status: job.JobStatusSuccess},
+		{Stage: 1, Status: job.JobStatusCanceled},
 	}
 	pipeline0Id := pipeline0.Id()
 	js.pipelineIdToStages[pipeline0Id] = pipeline0Stages
@@ -453,7 +453,7 @@ func newUserRepoMuxReq(repoId uint64, pathValues map[string]string, q url.Values
 }
 
 // Helper to create a request
-func newUserRepoPipelineMuxReq(p jobs.Pipeline, pathValues map[string]string, q url.Values) wrappers.UserRepoPipelineMuxRequest {
+func newUserRepoPipelineMuxReq(p job.Pipeline, pathValues map[string]string, q url.Values) wrappers.UserRepoPipelineMuxRequest {
 	httpReq := httptest.NewRequest("GET", "/?"+q.Encode(), nil)
 	for key, val := range pathValues {
 		httpReq.SetPathValue(key, val)
@@ -469,8 +469,8 @@ func newUserRepoPipelineMuxReq(p jobs.Pipeline, pathValues map[string]string, q 
 }
 
 // Helper to decode and check the refs response
-func checkRefsResponse(w *httptest.ResponseRecorder, expectedRefs []jobs.PipelineRef, t *testing.T) {
-	var refs []jobs.PipelineRef
+func checkRefsResponse(w *httptest.ResponseRecorder, expectedRefs []job.PipelineRef, t *testing.T) {
+	var refs []job.PipelineRef
 	err := json.NewDecoder(w.Body).Decode(&refs)
 	if err != nil {
 		t.Fatalf("failed to decode resp: %s", err)
@@ -530,26 +530,26 @@ func checkStringResponse(w *httptest.ResponseRecorder, expectedResp string, t *t
 
 func newFakeJobService() fakeJobService {
 	return fakeJobService{
-		repoIdToRefs:       map[uint64][]jobs.PipelineRef{},
-		refToPipelines:     map[jobs.PipelineRef][]jobs.Pipeline{},
-		pipelineIdToStages: map[string][]jobs.PipelineStage{},
+		repoIdToRefs:       map[uint64][]job.PipelineRef{},
+		refToPipelines:     map[job.PipelineRef][]job.Pipeline{},
+		pipelineIdToStages: map[string][]job.PipelineStage{},
 	}
 }
 
 type fakeJobService struct {
-	repoIdToRefs       map[uint64][]jobs.PipelineRef
-	refToPipelines     map[jobs.PipelineRef][]jobs.Pipeline
-	pipelineIdToStages map[string][]jobs.PipelineStage
+	repoIdToRefs       map[uint64][]job.PipelineRef
+	refToPipelines     map[job.PipelineRef][]job.Pipeline
+	pipelineIdToStages map[string][]job.PipelineStage
 }
 
 func (f fakeJobService) GetRepoPipelineRefs(tx context.Context,
-	repoId uint64, afterPath string, afterJobName string) (iterator.I[jobs.PipelineRef], error) {
+	repoId uint64, afterPath string, afterJobName string) (iterator.I[job.PipelineRef], error) {
 	refs, ok := f.repoIdToRefs[repoId]
 	if !ok {
 		return nil, errors.New("not found")
 	}
 	// Make a sorted copy
-	sorted := make([]jobs.PipelineRef, len(refs))
+	sorted := make([]job.PipelineRef, len(refs))
 	copy(sorted, refs)
 	sort.Slice(sorted, func(i, j int) bool {
 		if sorted[i].Path == sorted[j].Path {
@@ -571,18 +571,18 @@ func (f fakeJobService) GetRepoPipelineRefs(tx context.Context,
 }
 
 func (f fakeJobService) GetRepoPipelinesByRef(tx context.Context,
-	repoId uint64, filePath string, jobName string, afterInternalJobId int64) (iterator.I[jobs.Pipeline], error) {
-	ref := jobs.PipelineRef{
+	repoId uint64, filePath string, jobName string, afterInternalJobId int64) (iterator.I[job.Pipeline], error) {
+	ref := job.PipelineRef{
 		RepoId: repoId,
 		Path:   filePath,
 		Name:   jobName,
 	}
 	pipelines, ok := f.refToPipelines[ref]
 	if !ok {
-		return iterator.NewIterFromSlice[jobs.Pipeline](nil), nil
+		return iterator.NewIterFromSlice[job.Pipeline](nil), nil
 	}
 	// Make sorted copy
-	sorted := make([]jobs.Pipeline, len(pipelines))
+	sorted := make([]job.Pipeline, len(pipelines))
 	copy(sorted, pipelines)
 	sort.Slice(sorted, func(i, j int) bool {
 		return sorted[i].InternalId > sorted[j].InternalId // DESC order
@@ -599,7 +599,7 @@ func (f fakeJobService) GetRepoPipelinesByRef(tx context.Context,
 	return iterator.NewIterFromSlice(filtered), nil
 }
 
-func (f fakeJobService) GetPipelineById(tx context.Context, id string) (jobs.Pipeline, error) {
+func (f fakeJobService) GetPipelineById(tx context.Context, id string) (job.Pipeline, error) {
 	for _, pipelines := range f.refToPipelines {
 		for _, pipeline := range pipelines {
 			if pipeline.Id() == id {
@@ -607,26 +607,26 @@ func (f fakeJobService) GetPipelineById(tx context.Context, id string) (jobs.Pip
 			}
 		}
 	}
-	return jobs.Pipeline{}, fmt.Errorf("pipeline with id=%s not found", id)
+	return job.Pipeline{}, fmt.Errorf("pipeline with id=%s not found", id)
 }
-func (f fakeJobService) GetPipelineStagesById(tx context.Context, id string) (iterator.I[jobs.PipelineStage], error) {
+func (f fakeJobService) GetPipelineStagesById(tx context.Context, id string) (iterator.I[job.PipelineStage], error) {
 	stages := f.pipelineIdToStages[id]
-	sortedStages := make([]jobs.PipelineStage, len(stages))
+	sortedStages := make([]job.PipelineStage, len(stages))
 	copy(sortedStages, stages)
 	sort.Slice(sortedStages, func(i, j int) bool {
 		return sortedStages[i].Stage < sortedStages[j].Stage
 	})
 	return iterator.NewIterFromSlice(sortedStages), nil
 }
-func (f fakeJobService) GetPipelineStage(tx context.Context, pipelineId string, stage int32) (jobs.PipelineStage, error) {
+func (f fakeJobService) GetPipelineStage(tx context.Context, pipelineId string, stage int32) (job.PipelineStage, error) {
 	stagesIter, err := f.GetPipelineStagesById(tx, pipelineId)
 	if err != nil {
-		return jobs.PipelineStage{}, err
+		return job.PipelineStage{}, err
 	}
 	for stagesIter.Next() {
 		stg, err := stagesIter.Get()
 		if err != nil {
-			return jobs.PipelineStage{}, err
+			return job.PipelineStage{}, err
 		}
 		if stg.Stage == stage {
 			return stg, nil
@@ -634,9 +634,9 @@ func (f fakeJobService) GetPipelineStage(tx context.Context, pipelineId string, 
 	}
 	err = stagesIter.Err()
 	if err != nil {
-		return jobs.PipelineStage{}, err
+		return job.PipelineStage{}, err
 	}
-	return jobs.PipelineStage{}, errors.New("not found")
+	return job.PipelineStage{}, errors.New("not found")
 }
 
 type mockTrackClient struct {
