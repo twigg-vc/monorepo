@@ -6,7 +6,6 @@ import (
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/keys"
 	"monorepo/twigg-web/user"
-	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 	"time"
 )
@@ -16,7 +15,6 @@ func AddHandlers(
 	repoS RepoService,
 	keyService keys.Service,
 	trackQueue TrackQueue,
-	db webdb.WebDb,
 	userMux wrappers.UserMux,
 	userWithSubMux wrappers.UserWithSubMux) {
 	h := handler{
@@ -24,7 +22,6 @@ func AddHandlers(
 		repoS:       repoS,
 		keysService: keyService,
 		trackQueue:  trackQueue,
-		db:          db,
 	}
 	userMux.HandleFuncR("GET "+routes.SetUsernamePath,
 		h.handleGetSetUsernamePage)

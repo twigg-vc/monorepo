@@ -9,7 +9,6 @@ import (
 	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/user"
 	twiggwc "monorepo/twigg-web/webcomponents"
-	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
 	"strings"
@@ -20,7 +19,6 @@ type handler struct {
 	repoS       RepoService
 	keysService keys.Service
 	trackQueue  TrackQueue
-	db          webdb.WebDb
 }
 
 func (hl handler) handleGetSetUsernamePage(w http.ResponseWriter,

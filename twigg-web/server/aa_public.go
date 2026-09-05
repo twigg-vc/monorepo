@@ -326,7 +326,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 		orgHelper, s.mux, userMux, userWithSubMux)
 	plans.AddHandlers(userMux, stripeClient, userSrv)
 	usersettings.AddHandlers(userSrv, rSrv, keysService, trackQueue,
-		sDb, userMux, userWithSubMux)
+		userMux, userWithSubMux)
 	usereducation.AddHandlers(sDb, userMux)
 	welcome.AddHandlers(authMux)
 	needupgrade.AddHandlers(authMux)
