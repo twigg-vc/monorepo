@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -352,11 +351,7 @@ func (s service) HandleStripeCheckoutSessionSuccess(w context.Context,
 		panic("invalid quantity for solo plan")
 	}
 
-	_, err = s.db.Bind(w).Exec(`
-		INSERT INTO stripe_subscriptions2 (
-			stripeSubscriptionId, userId, isActive
-		) VALUES (?, ?, TRUE) ;
-	`, stripeSubscriptionID, u.Id)
+	err = s.db.UpsertStripeSubscription(w, stripeSubscriptionID, u.Id, true)
 	if err != nil {
 		return user.User{}, fmt.Errorf("failed to insert stripe sub: %s", err)
 	}
@@ -404,16 +399,8 @@ func (s service) HandlesSubscriptionDeleted(
 	// If the user has sub, it must mean we're deleting again (
 	// replaying the subscription deleted msg). Let's just verify that.
 	if !u.HasSub() {
-		var isActive bool
-		err = s.db.Bind(w).QueryRow(`
-			SELECT
-				isActive
-			FROM
-				stripe_subscriptions2
-			WHERE
-				stripeSubscriptionId = ?
-		`, subscriptionId).Scan(&isActive)
-		if errors.Is(err, sql.ErrNoRows) {
+		isActive, isNotFoundErr, err := s.db.GetStripeSubscriptionIsActive(w, subscriptionId)
+		if isNotFoundErr {
 			return user.User{}, fmt.Errorf("stripe sub not found")
 		}
 		if err != nil {
@@ -429,13 +416,7 @@ func (s service) HandlesSubscriptionDeleted(
 	if u.StripeSubscriptionID != subscriptionId {
 		return user.User{}, fmt.Errorf("user with id %s and subId %s not found", stripeId, subscriptionId)
 	}
-	_, err = s.db.Bind(w).Exec(`
-		UPDATE stripe_subscriptions2
-		SET
-			isActive = FALSE
-		WHERE
-			stripeSubscriptionId = ?
-	`, subscriptionId)
+	err = s.db.UpsertStripeSubscription(w, subscriptionId, u.Id, false)
 	if err != nil {
 		return user.User{}, fmt.Errorf("failed to inactivate stripe sub: %s", err)
 	}
@@ -602,13 +583,7 @@ func (s service) ManualReset(w context.Context, userId int64) error {
 		}
 	}
 	if u.StripeSubscriptionID != "" {
-		_, err = s.db.Bind(w).Exec(`
-		UPDATE stripe_subscriptions2
-		SET
-			isActive = FALSE
-		WHERE
-			stripeSubscriptionId = ?
-	`, u.StripeSubscriptionID)
+		err = s.db.UpsertStripeSubscription(w, u.StripeSubscriptionID, u.Id, false)
 		if err != nil {
 			return fmt.Errorf("failed to inactivate stripe sub: %s", err)
 		}
