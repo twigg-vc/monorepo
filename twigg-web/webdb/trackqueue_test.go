@@ -195,3 +195,64 @@ func TestGetAndDeleteTrackQueueJob(t *testing.T) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
+
+func TestGetOldestTrackQueueJobWithinOwnerLimits(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The owner takes the default limits: one job at a time.
+	if err := b.InsertZeroTrackOwnerUsageIfNotExists(w, 7); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.InsertTrackQueueJobIfNotExists(w, "newer", 7, []byte("b"), "queued", 2000); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.InsertTrackQueueJobIfNotExists(w, "older", 7, []byte("a"), "queued", 1000); err != nil {
+		t.Fatal(err)
+	}
+
+	// The oldest queued job comes first, not the one inserted first.
+	jobId, ownerId, payload, isNotFoundErr, err := b.GetOldestTrackQueueJobWithinOwnerLimits(w, "queued")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isNotFoundErr {
+		t.Fatal("no job was within the limits")
+	}
+	if jobId != "older" || ownerId != 7 || !bytes.Equal(payload, []byte("a")) {
+		t.Fatalf("got job %q owner %d payload %q", jobId, ownerId, payload)
+	}
+
+	// Publishing it takes the owner to its limit of one running job, so the
+	// job left is not within the limits any more.
+	if err := b.SetTrackQueueJobStatus(w, "older", "published"); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.AddTrackOwnerUsage(w, 7, 1, 0); err != nil {
+		t.Fatal(err)
+	}
+	_, _, _, isNotFoundErr, err = b.GetOldestTrackQueueJobWithinOwnerLimits(w, "queued")
+	if !isNotFoundErr {
+		t.Fatalf("expected the owner to be at its limit, got err %v", err)
+	}
+
+	// Once the published job finishes, the one left is picked.
+	if err := b.AddTrackOwnerUsage(w, 7, -1, 0); err != nil {
+		t.Fatal(err)
+	}
+	jobId, _, _, _, err = b.GetOldestTrackQueueJobWithinOwnerLimits(w, "queued")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if jobId != "newer" {
+		t.Fatalf("got job %q, want %q", jobId, "newer")
+	}
+}

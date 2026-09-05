@@ -856,3 +856,17 @@ func (db WebDb) AddTrackOwnerUsage(writeCtx context.Context, ownerId int64,
 	return db.db.AddTrackOwnerUsage(writeCtx, ownerId, runningJobsDelta,
 		runningTimeoutMsDelta)
 }
+
+// Returns the oldest job with the status whose owner is running less than the
+// limits set for it. Returns ErrNotFound when no job is within the limits.
+func (db WebDb) GetOldestTrackQueueJobWithinOwnerLimits(ctx context.Context,
+	status string) (jobId string, ownerId int64, payload []byte,
+	isNotFoundErr bool, err error) {
+	return db.db.GetOldestTrackQueueJobWithinOwnerLimits(ctx, status)
+}
+
+// Sets the status of the queued job.
+func (db WebDb) SetTrackQueueJobStatus(writeCtx context.Context, jobId string,
+	status string) error {
+	return db.db.SetTrackQueueJobStatus(writeCtx, jobId, status)
+}

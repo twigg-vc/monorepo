@@ -140,6 +140,54 @@ func (db webDb) AddTrackOwnerUsage(writeCtx context.Context, ownerId int64,
 	return nil
 }
 
+// Returns the oldest job with the status whose owner is running less than the
+// limits set for it. Returns ErrNotFound when no job is within the limits.
+func (db webDb) GetOldestTrackQueueJobWithinOwnerLimits(ctx context.Context,
+	status string) (jobId string, ownerId int64, payload []byte,
+	isNotFoundErr bool, err error) {
+	if status == "" {
+		return "", 0, nil, false, fmt.Errorf("missing status")
+	}
+	err = db.s.QueryRow(ctx, `
+		SELECT q.job_id, q.owner_id, q.payload
+		FROM track_queue q
+		JOIN owner_usage2 u ON u.owner_id = q.owner_id
+		WHERE q.status = ?
+		  AND u.running_jobs < u.max_running_jobs
+		  AND u.running_timeout_ms < u.max_running_timeout_ms
+		ORDER BY q.created_at_ns
+		LIMIT 1;
+	`, status).Scan(&jobId, &ownerId, &payload)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", 0, nil, true, ErrNotFound
+	}
+	if err != nil {
+		return "", 0, nil, false,
+			fmt.Errorf("failed to query next track queue job: %w", err)
+	}
+	return jobId, ownerId, payload, false, nil
+}
+
+// Sets the status of the queued job.
+func (db webDb) SetTrackQueueJobStatus(writeCtx context.Context, jobId string,
+	status string) error {
+	if jobId == "" {
+		return fmt.Errorf("missing jobId")
+	}
+	if status == "" {
+		return fmt.Errorf("missing status")
+	}
+	_, err := db.s.Exec(writeCtx, `
+		UPDATE track_queue
+		SET status = ?
+		WHERE job_id = ?;
+	`, status, jobId)
+	if err != nil {
+		return fmt.Errorf("failed to set track queue job status: %w", err)
+	}
+	return nil
+}
+
 // Returns how many jobs are in the track queue.
 func (db webDb) CountTrackQueueJobs(ctx context.Context) (int64, error) {
 	var count int64

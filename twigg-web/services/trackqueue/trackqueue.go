@@ -2,9 +2,7 @@ package trackqueue
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"monorepo/twigg-runner/runnerlib"
@@ -31,7 +29,8 @@ type trackQueue struct {
 }
 
 const (
-	statusQueued = "queued"
+	statusQueued    = "queued"
+	statusPublished = "published"
 
 	defaultMaxRunningJobs      = 1
 	defaultMaxRunningTimeoutMs = 60_000
@@ -218,24 +217,12 @@ func (q *trackQueue) tryPublishOne() {
 	defer close()
 
 	// Pick the oldest job which has an elligible owner
-	var jobId string
-	var ownerId int64
-	var payloadBytes []byte
-	err = q.db.Bind(tx).QueryRow(`
-		SELECT q.job_id, q.owner_id, q.payload
-		FROM track_queue q
-		JOIN owner_usage2 u ON u.owner_id = q.owner_id
-		WHERE q.status = 'queued'
-		  AND u.running_jobs < u.max_running_jobs
-		  AND u.running_timeout_ms < u.max_running_timeout_ms
-		ORDER BY q.created_at_ns
-		LIMIT 1
-	`,
-	).Scan(&jobId, &ownerId, &payloadBytes)
-	if errors.Is(err, sql.ErrNoRows) {
+	jobId, ownerId, payloadBytes, isNotFoundErr, err :=
+		q.db.GetOldestTrackQueueJobWithinOwnerLimits(tx, statusQueued)
+	if isNotFoundErr {
 		return
 	}
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		log.Printf("%sfailed to get next job: %s", logPrefix, err)
 		return
 	}
@@ -245,26 +232,13 @@ func (q *trackQueue) tryPublishOne() {
 		panic(fmt.Sprintf("failed to unmarshal payload: %s", err))
 	}
 	// Reserve the usage
-	_, err = q.db.Bind(tx).Exec(`
-		UPDATE owner_usage2
-		SET
-			running_jobs = running_jobs + 1,
-			running_timeout_ms = running_timeout_ms + ?
-		WHERE owner_id = ?
-	`,
-		pl.TimeoutMilliSeconds,
-		ownerId,
-	)
+	err = q.db.AddTrackOwnerUsage(tx, ownerId, 1, pl.TimeoutMilliSeconds)
 	if err != nil {
 		log.Printf("%sfailed to reserve usage: %s", logPrefix, err)
 		return
 	}
 	// Mark the job as published
-	_, err = q.db.Bind(tx).Exec(`
-		UPDATE track_queue
-		SET status = 'published'
-		WHERE job_id = ?
-	`, jobId)
+	err = q.db.SetTrackQueueJobStatus(tx, jobId, statusPublished)
 	if err != nil {
 		log.Printf("%sfailed to mark publish: %s", logPrefix, err)
 		return
