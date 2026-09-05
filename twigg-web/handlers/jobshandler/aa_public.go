@@ -4,8 +4,8 @@ import (
 	"context"
 	"io"
 	"monorepo/base/iterator"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/wrappers"
 )
 
@@ -39,7 +39,7 @@ func NewHandler(ug UsernameGetter, js JobsService, tc TrackClient, pr PipelineRe
 
 type FrontendPipeline struct {
 	Id string
-	jobs.Pipeline
+	job.Pipeline
 	CreatedByUsername string
 }
 
@@ -50,17 +50,17 @@ type FrontendPipelineStage struct {
 	IsResumedByUser   bool
 	ResumedByUsername string
 	CreatedTime       string
-	Status            jobs.JobStatus
+	Status            job.JobStatus
 }
 
 type JobsService interface {
 	GetRepoPipelineRefs(tx context.Context,
-		repoId uint64, filePath string, jobName string) (iterator.I[jobs.PipelineRef], error)
+		repoId uint64, filePath string, jobName string) (iterator.I[job.PipelineRef], error)
 	GetRepoPipelinesByRef(tx context.Context,
-		repoId uint64, filePath string, jobName string, afterInternalJobId int64) (iterator.I[jobs.Pipeline], error)
-	GetPipelineById(tx context.Context, id string) (jobs.Pipeline, error)
-	GetPipelineStagesById(tx context.Context, id string) (iterator.I[jobs.PipelineStage], error)
-	GetPipelineStage(tx context.Context, pipelineId string, stage int32) (jobs.PipelineStage, error)
+		repoId uint64, filePath string, jobName string, afterInternalJobId int64) (iterator.I[job.Pipeline], error)
+	GetPipelineById(tx context.Context, id string) (job.Pipeline, error)
+	GetPipelineStagesById(tx context.Context, id string) (iterator.I[job.PipelineStage], error)
+	GetPipelineStage(tx context.Context, pipelineId string, stage int32) (job.PipelineStage, error)
 }
 
 type TrackClient interface {

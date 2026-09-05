@@ -8,8 +8,8 @@ import (
 	"log"
 	"math"
 	"monorepo/base/iterator"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
 	"strconv"
@@ -245,33 +245,33 @@ func (hl handler) HandleGetStageCombinedOut(w http.ResponseWriter,
 	}
 
 	switch stg.Status {
-	case jobs.JobStatusWaitingManualStart:
+	case job.JobStatusWaitingManualStart:
 		_, _ = w.Write([]byte(stageHasntStartedMsg))
 		return
-	case jobs.JobStatusWaiting:
+	case job.JobStatusWaiting:
 		_, _ = w.Write([]byte(stageHasntStartedMsg))
 		return
-	case jobs.JobStatusQueued:
+	case job.JobStatusQueued:
 		_, _ = w.Write([]byte(stageHasntStartedMsg))
 		return
-	case jobs.JobStatusPosted:
+	case job.JobStatusPosted:
 		_, _ = w.Write([]byte(stageHasntStartedMsg))
 		return
-	case jobs.JobStatusRunning:
-	case jobs.JobStatusSuccess:
-	case jobs.JobStatusFail:
-	case jobs.JobStatusTimeout:
-	case jobs.JobStatusCanceled:
-	case jobs.JobStatusTooManyJobs:
+	case job.JobStatusRunning:
+	case job.JobStatusSuccess:
+	case job.JobStatusFail:
+	case job.JobStatusTimeout:
+	case job.JobStatusCanceled:
+	case job.JobStatusTooManyJobs:
 		_, _ = w.Write([]byte("failed to start: too many jobs"))
 		return
-	case jobs.JobStatusBadFileFormat:
+	case job.JobStatusBadFileFormat:
 		_, _ = w.Write([]byte("failed to start: bad file format"))
 		return
-	case jobs.JobStatusBadFileSize:
+	case job.JobStatusBadFileSize:
 		_, _ = w.Write([]byte("failed to start: bad file size"))
 		return
-	case jobs.JobStatusExceedsPlanLimits:
+	case job.JobStatusExceedsPlanLimits:
 		_, _ = w.Write([]byte("failed to start: exceeded plan limits"))
 		return
 	default:
@@ -279,7 +279,7 @@ func (hl handler) HandleGetStageCombinedOut(w http.ResponseWriter,
 		http.Error(w, "unexpected status", http.StatusInternalServerError)
 		return
 	}
-	stageId := jobs.PipelineStageId(pipelineId, stage)
+	stageId := job.PipelineStageId(pipelineId, stage)
 	combinedOut, err := hl.tc.GetCombinedOutput(stageId)
 	if err != nil {
 		log.Printf("failed to get combinedOut stageId %s: %s", stageId, err)
@@ -331,7 +331,7 @@ func (hl handler) HandleCancelPipelineStage(w http.ResponseWriter,
 		return
 	}
 	switch stage.Status {
-	case jobs.JobStatusPosted, jobs.JobStatusRunning:
+	case job.JobStatusPosted, job.JobStatusRunning:
 		err = hl.tc.Cancel(stage.Id())
 		if err != nil {
 			log.Printf("failed to cancel pipelineId=%q stage %d: %s", pipelineId, stageN, err)
@@ -358,7 +358,7 @@ func (hl handler) HandleGetPipelineStageIsCanceled(w http.ResponseWriter,
 		http.Error(w, "failed to get stage", http.StatusInternalServerError)
 		return
 	}
-	if stage.Status == jobs.JobStatusCanceled {
+	if stage.Status == job.JobStatusCanceled {
 		_, err = w.Write([]byte("1"))
 	} else {
 		_, err = w.Write([]byte("0"))
