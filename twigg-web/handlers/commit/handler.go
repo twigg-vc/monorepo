@@ -11,10 +11,11 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-web/handlers/reposettings"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/cicdpublisher"
-	"monorepo/twigg-web/services/jobs"
+	jobsservice "monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/services/repo"
 	reviewservice "monorepo/twigg-web/services/review"
 	userservice "monorepo/twigg-web/services/user"
@@ -38,7 +39,7 @@ type handler struct {
 	revSrv      reviewservice.Service
 	rt          routes.Router
 	userS       userservice.Service
-	jobsS       jobs.Service
+	jobsS       jobsservice.Service
 	ciq         CiCdQueue
 	parser      Parser
 	trackClient TrackClient
@@ -1160,7 +1161,7 @@ func (hl handler) handleGetCommitJobs(w http.ResponseWriter,
 		Path          string
 		Name          string
 		RunNumber     int64
-		Status        jobs.JobStatus
+		Status        job.JobStatus
 		CreatedTime   string
 		Id            string
 	}
@@ -1229,19 +1230,19 @@ func (hl handler) handleGetJobCombinedOut(w http.ResponseWriter,
 		return
 	}
 
-	if j.Status == jobs.JobStatusBadFileSize {
+	if j.Status == job.JobStatusBadFileSize {
 		_, _ = w.Write([]byte("file is too large"))
 		return
 	}
-	if j.Status == jobs.JobStatusTooManyJobs {
+	if j.Status == job.JobStatusTooManyJobs {
 		_, _ = w.Write([]byte("too many jobs were triggered"))
 		return
 	}
-	if j.Status == jobs.JobStatusExceedsPlanLimits {
+	if j.Status == job.JobStatusExceedsPlanLimits {
 		_, _ = w.Write([]byte("job requires more execution time or resources than allowed by your current plan"))
 		return
 	}
-	if j.Status == jobs.JobStatusBadFileFormat {
+	if j.Status == job.JobStatusBadFileFormat {
 		serverRead := hl.rSrv.GetServerRead(dbRead)
 		s, err := hl.rSrv.GetServerByRepoId(dbRead, r.Repo.Id)
 		if err != nil {

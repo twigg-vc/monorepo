@@ -6,7 +6,7 @@ import (
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-web/cicdqueue"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/jobs"
+	jobsservice "monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/services/repo"
 	reviewservice "monorepo/twigg-web/services/review"
 	userservice "monorepo/twigg-web/services/user"
@@ -23,7 +23,7 @@ func AddHandlers(
 	rSrv repo.Service,
 	revSrv reviewservice.Service,
 	userS userservice.Service,
-	jobsS jobs.Service,
+	jobsS jobsservice.Service,
 	ciq CiCdQueue,
 	parser Parser,
 	trackClient TrackClient,
