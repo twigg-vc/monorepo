@@ -567,6 +567,20 @@ func (db WebDb) SetJobStatus(writeCtx context.Context, repoId, commitId, commitV
 		runNumber, status)
 }
 
+// Returns the jobs of a repo's commit, newest first. Use afterInternalJobId to
+// read the jobs after a previously read one; zero reads from the newest.
+func (db WebDb) GetCommitJobs(ctx context.Context, repoId, commitId uint64,
+	afterInternalJobId int64) (iterator.I[job.Job], error) {
+	return db.db.GetCommitJobs(ctx, repoId, commitId, afterInternalJobId)
+}
+
+// Returns the jobs of a repo, newest first. Use afterInternalJobId to read the
+// jobs after a previously read one; zero reads from the newest.
+func (db WebDb) GetRepoJobs(ctx context.Context, repoId uint64,
+	afterInternalJobId int64) (iterator.I[job.Job], error) {
+	return db.db.GetRepoJobs(ctx, repoId, afterInternalJobId)
+}
+
 // Adapts the read context to the twigg server read interface.
 func (db WebDb) GetServerRead(ctx context.Context) server.Read {
 	return db.Bind(ctx)

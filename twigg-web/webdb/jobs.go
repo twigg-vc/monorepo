@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
+	"monorepo/base/iterator"
 	"monorepo/twigg-web/job"
 )
 
@@ -121,3 +123,86 @@ func (db webDb) SetJobStatus(writeCtx context.Context, repoId, commitId, commitV
 	}
 	return false, nil
 }
+
+// Returns the jobs of a repo's commit, newest first. Use afterInternalJobId to
+// read the jobs after a previously read one; zero reads from the newest.
+func (db webDb) GetCommitJobs(ctx context.Context, repoId, commitId uint64,
+	afterInternalJobId int64) (iterator.I[job.Job], error) {
+	if afterInternalJobId == 0 {
+		afterInternalJobId = math.MaxInt64
+	}
+	rows, err := db.s.Query(ctx, `
+		SELECT
+			internalJobId,
+			repoId,
+			commitId,
+			commitVersion,
+			path,
+			name,
+			runNumber,
+			status,
+			createdTime
+		FROM jobs3
+		WHERE repoId = ?
+		  AND commitId = ?
+		  AND internalJobId < ?
+		ORDER BY internalJobId DESC;
+	`, repoId, commitId, afterInternalJobId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query commit jobs: %w", err)
+	}
+	return jobIterWrapper{rows}, nil
+}
+
+// Returns the jobs of a repo, newest first. Use afterInternalJobId to read the
+// jobs after a previously read one; zero reads from the newest.
+func (db webDb) GetRepoJobs(ctx context.Context, repoId uint64,
+	afterInternalJobId int64) (iterator.I[job.Job], error) {
+	if afterInternalJobId == 0 {
+		afterInternalJobId = math.MaxInt64
+	}
+	rows, err := db.s.Query(ctx, `
+		SELECT
+			internalJobId,
+			repoId,
+			commitId,
+			commitVersion,
+			path,
+			name,
+			runNumber,
+			status,
+			createdTime
+		FROM jobs3
+		WHERE repoId = ? AND internalJobId < ?
+		ORDER BY internalJobId DESC;
+	`, repoId, afterInternalJobId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query repo jobs: %w", err)
+	}
+	return jobIterWrapper{rows}, nil
+}
+
+type jobIterWrapper struct {
+	rows *sql.Rows
+}
+
+func (it jobIterWrapper) Get() (job.Job, error) {
+	var j job.Job
+	err := it.rows.Scan(
+		&j.InternalId,
+		&j.RepoId,
+		&j.Commit,
+		&j.CommitVersion,
+		&j.Path,
+		&j.Name,
+		&j.RunNumber,
+		&j.Status,
+		&j.CreatedTime,
+	)
+	if err != nil {
+		return job.Job{}, fmt.Errorf("failed to get job from iter: %w", err)
+	}
+	return j, nil
+}
+func (it jobIterWrapper) Next() bool { return it.rows.Next() }
+func (it jobIterWrapper) Err() error { return it.rows.Err() }

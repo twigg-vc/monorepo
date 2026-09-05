@@ -105,92 +105,14 @@ func (s service) GetCommitJobs(
 	commit uint64,
 	afterInternalJobId int64,
 ) (iterator.I[job.Job], error) {
-	tx := s.db.Bind(rl)
-	if afterInternalJobId == 0 {
-		afterInternalJobId = math.MaxInt64
-	}
-	rows, err := tx.Query(`
-		SELECT
-			internalJobId,
-			repoId,
-			commitId,
-			commitVersion,
-			path,
-			name,
-			runNumber,
-			status,
-			createdTime
-		FROM jobs3
-		WHERE repoId = ?
-		  AND commitId = ?
-		  AND internalJobId < ?
-		ORDER BY internalJobId DESC;
-	`, repoId, commit, afterInternalJobId)
-	if err != nil {
-		return nil, fmt.Errorf("GetCommitJobs: query failed: %w", err)
-	}
-	return commitJobs{rows}, nil
-}
-
-type commitJobs struct {
-	rows *sql.Rows
-}
-
-func (it commitJobs) Get() (job.Job, error) {
-	var j job.Job
-	var commitInt, commitVersion int64
-	if err := it.rows.Scan(
-		&j.InternalId,
-		&j.RepoId,
-		&commitInt,
-		&commitVersion,
-		&j.Path,
-		&j.Name,
-		&j.RunNumber,
-		&j.Status,
-		&j.CreatedTime,
-	); err != nil {
-		return job.Job{}, fmt.Errorf("commitJobs.Get: failed to scan job: %w", err)
-	}
-	j.Commit = uint64(commitInt)
-	j.CommitVersion = uint64(commitVersion)
-	return j, nil
-}
-
-func (it commitJobs) Next() bool {
-	return it.rows.Next()
-}
-
-func (it commitJobs) Err() error {
-	return it.rows.Err()
+	return s.db.GetCommitJobs(rl, repoId, commit, afterInternalJobId)
 }
 func (s service) GetRepoJobs(
 	rl context.Context,
 	repoId uint64,
 	afterInternalJobId int64,
 ) (iterator.I[job.Job], error) {
-	if afterInternalJobId == 0 {
-		afterInternalJobId = math.MaxInt64
-	}
-	rows, err := s.db.Bind(rl).Query(`
-		SELECT
-			internalJobId,
-			repoId,
-			commitId,
-			commitVersion,
-			path,
-			name,
-			runNumber,
-			status,
-			createdTime
-		FROM jobs3
-		WHERE repoId = ? AND internalJobId < ?
-		ORDER BY internalJobId DESC;
-	`, repoId, afterInternalJobId)
-	if err != nil {
-		return nil, fmt.Errorf("GetRepoJobs: query failed: %w", err)
-	}
-	return commitJobs{rows}, nil
+	return s.db.GetRepoJobs(rl, repoId, afterInternalJobId)
 }
 
 func (s service) CreateNewPipeline(tx context.Context,
