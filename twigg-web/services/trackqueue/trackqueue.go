@@ -31,6 +31,8 @@ type trackQueue struct {
 }
 
 const (
+	statusQueued = "queued"
+
 	defaultMaxRunningJobs      = 1
 	defaultMaxRunningTimeoutMs = 60_000
 )
@@ -134,12 +136,8 @@ func (q *trackQueue) Put(ownerId int64, jobId string, pl runnerlib.JobPayload, t
 		return err
 	}
 	now := time.Now().UnixNano()
-	_, err = q.db.Bind(tx).Exec(`
-		INSERT INTO track_queue
-			(job_id, owner_id, payload, status, created_at_ns)
-		VALUES (?, ?, ?, 'queued', ?)
-		ON CONFLICT (job_id) DO NOTHING
-	`, jobId, ownerId, payloadBytes, now)
+	err = q.db.InsertTrackQueueJob(tx, jobId, ownerId, payloadBytes,
+		statusQueued, now)
 	if err != nil {
 		return err
 	}

@@ -802,3 +802,15 @@ func (db WebDb) SetUserStripeId(writeCtx context.Context, userId int64,
 	stripeId string) error {
 	return db.db.SetUserStripeId(writeCtx, userId, stripeId)
 }
+
+// Adds a job to the track queue. Does nothing if the job is already queued.
+func (db WebDb) InsertTrackQueueJob(writeCtx context.Context, jobId string,
+	ownerId int64, payload []byte, status string, createdAtNs int64) error {
+	return db.db.InsertTrackQueueJob(writeCtx, jobId, ownerId, payload, status,
+		createdAtNs)
+}
+
+// Returns how many jobs are in the track queue.
+func (db WebDb) CountTrackQueueJobs(ctx context.Context) (int64, error) {
+	return db.db.CountTrackQueueJobs(ctx)
+}
