@@ -7,19 +7,18 @@ import (
 	"monorepo/twigg-web/services/repo"
 	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/webcomponents"
-	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
 )
 
 type handler struct {
-	db   webdb.WebDb
+	db   Db
 	rSrv repo.Service
 	rt   routes.Router
 	uSrv userservice.Service
 }
 
-func newHandler(db webdb.WebDb,
+func newHandler(db Db,
 	rSrv repo.Service,
 	rt routes.Router,
 	uSrv userservice.Service) handler {
