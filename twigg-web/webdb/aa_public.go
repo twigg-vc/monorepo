@@ -7,6 +7,7 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/data/blobdb"
 	"monorepo/twigg-web/education"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/notification"
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/repo"
@@ -538,6 +539,17 @@ func (db WebDb) InsertCiCdRun(writeCtx context.Context,
 	repoId, commitId, commitVersion uint64, runNumber int64, nonce string) error {
 	return db.db.InsertCiCdRun(writeCtx, repoId, commitId, commitVersion,
 		runNumber, nonce)
+}
+
+// Reports whether a job row with that key exists.
+func (db WebDb) JobExists(ctx context.Context, repoId, commitId, commitVersion uint64,
+	path, name string, runNumber int64) (bool, error) {
+	return db.db.JobExists(ctx, repoId, commitId, commitVersion, path, name, runNumber)
+}
+
+// Creates a job row and returns the internal id assigned to it.
+func (db WebDb) InsertJob(writeCtx context.Context, j job.Job) (internalJobId int64, err error) {
+	return db.db.InsertJob(writeCtx, j)
 }
 
 // Adapts the read context to the twigg server read interface.

@@ -54,40 +54,14 @@ func (s service) CreateNewJob(wl context.Context,
 		Status:        initialStatus,
 		CreatedTime:   time.Now().UTC().Format(time.RFC3339),
 	}
-	var dummyVar int64
-	err := s.db.Bind(wl).QueryRow(
-		`SELECT 1 FROM jobs3 WHERE
-		repoId = ? AND commitId = ? AND commitVersion = ? AND
-		path = ? AND name = ? AND runNumber = ?`,
-		repoId, commit, commitV, filePath, jobName, runNumber).Scan(&dummyVar)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	taken, err := s.db.JobExists(wl, repoId, commit, commitV, filePath, jobName, runNumber)
+	if err != nil {
 		return job.Job{}, err
 	}
-	if !errors.Is(err, sql.ErrNoRows) {
+	if taken {
 		return job.Job{}, errors.New("runNumber already taken")
 	}
-	err = s.db.Bind(wl).QueryRow(`
-		INSERT INTO jobs3 (
-			repoId,
-			commitId,
-			commitVersion,
-			path,
-			name,
-			runNumber,
-			status,
-			createdTime
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		RETURNING internalJobId;
-	`,
-		j.RepoId,
-		j.Commit,
-		j.CommitVersion,
-		j.Path,
-		j.Name,
-		j.RunNumber,
-		j.Status,
-		j.CreatedTime,
-	).Scan(&j.InternalId)
+	j.InternalId, err = s.db.InsertJob(wl, j)
 	if err != nil {
 		return job.Job{}, fmt.Errorf("failed to CreateJob: %s", err)
 	}
