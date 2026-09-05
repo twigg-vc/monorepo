@@ -2,6 +2,7 @@ package webdb_test
 
 import (
 	"errors"
+	"monorepo/base/iterator"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 	"strconv"
@@ -222,6 +223,67 @@ func TestGetUserByFieldNotFound(t *testing.T) {
 		}
 		if !errors.Is(err, webdb.ErrNotFound) {
 			t.Fatalf("by %s: expected ErrNotFound, got %v", field, err)
+		}
+	}
+}
+
+func TestCountAndGetAllUsers(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := b.CountUsers(w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("expected no users, got %d", count)
+	}
+
+	first, err := b.UpsertUser(w, user.User{
+		Email: "first@twigg.vc", State: user.UserState_NoSubscription,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := b.UpsertUser(w, user.User{
+		Email: "second@twigg.vc", State: user.UserState_NoSubscription,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err = b.CountUsers(w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Fatalf("expected 2 users, got %d", count)
+	}
+
+	it, err := b.GetAllUsers(w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := iterator.GetFirstN(10, it)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Newest first.
+	want := []user.User{second, first}
+	if len(got) != len(want) {
+		t.Fatalf("got %d users, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("user %d got %+v, want %+v", i, got[i], want[i])
 		}
 	}
 }

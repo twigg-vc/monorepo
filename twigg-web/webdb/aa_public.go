@@ -746,3 +746,13 @@ func (db WebDb) GetUserByCliKeyHash(ctx context.Context,
 	cliKeyHash string) (u user.User, isNotFoundErr bool, err error) {
 	return db.db.GetUserByCliKeyHash(ctx, cliKeyHash)
 }
+
+// Returns the total number of users.
+func (db WebDb) CountUsers(ctx context.Context) (int64, error) {
+	return db.db.CountUsers(ctx)
+}
+
+// Returns every user, newest first.
+func (db WebDb) GetAllUsers(ctx context.Context) (iterator.I[user.User], error) {
+	return db.db.GetAllUsers(ctx)
+}

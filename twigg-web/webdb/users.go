@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"monorepo/base/iterator"
 	"monorepo/twigg-web/user"
 	"strconv"
 )
@@ -68,6 +69,51 @@ func (db webDb) UpsertUser(writeCtx context.Context,
 	return u, nil
 }
 
+const selectUserColumns = `
+	SELECT
+		id,
+		email,
+		state,
+		isOrganization,
+		stripeId,
+		cliKeyHash,
+		username,
+		passwordHash,
+		selfPaidSubscription,
+		selfPaidSubscriptionQuantity,
+		stripeSessionId,
+		stripeSessionUrl,
+		stripeSessionPriceId,
+		stripeSessionQuantity,
+		stripeSubscriptionID
+	FROM users2`
+
+// Satisfied by both *sql.Row and *sql.Rows.
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanUser(row rowScanner) (u user.User, err error) {
+	err = row.Scan(
+		&u.Id,
+		&u.Email,
+		&u.State,
+		&u.IsOrganization,
+		&u.StripeId,
+		&u.CliKeyHash,
+		&u.Username,
+		&u.PasswordHash,
+		&u.SelfPaidSubscription,
+		&u.SelfPaidSubscriptionQuantity,
+		&u.StripeSessionId,
+		&u.StripeSessionUrl,
+		&u.StripeSessionPriceId,
+		&u.StripeSessionQuantity,
+		&u.StripeSubscriptionID,
+	)
+	return u, err
+}
+
 func (db webDb) GetUser(ctx context.Context,
 	userId int64) (u user.User, isNotFoundErr bool, err error) {
 	return db.getUserWhere(ctx, "id = ?", userId)
@@ -95,32 +141,10 @@ func (db webDb) GetUserByCliKeyHash(ctx context.Context,
 
 func (db webDb) getUserWhere(ctx context.Context, whereClause string,
 	arg any) (u user.User, isNotFoundErr bool, err error) {
-	err = db.s.QueryRow(ctx, fmt.Sprintf(`
-		SELECT
-			id,
-			email,
-			state,
-			isOrganization,
-			stripeId,
-			cliKeyHash,
-			username,
-			passwordHash,
-			selfPaidSubscription,
-			selfPaidSubscriptionQuantity,
-			stripeSessionId,
-			stripeSessionUrl,
-			stripeSessionPriceId,
-			stripeSessionQuantity,
-			stripeSubscriptionID
-		FROM users2
+	u, err = scanUser(db.s.QueryRow(ctx, fmt.Sprintf(`
+		%s
 		WHERE %s;
-	`, whereClause), arg).Scan(
-		&u.Id, &u.Email, &u.State, &u.IsOrganization, &u.StripeId,
-		&u.CliKeyHash, &u.Username, &u.PasswordHash, &u.SelfPaidSubscription,
-		&u.SelfPaidSubscriptionQuantity, &u.StripeSessionId,
-		&u.StripeSessionUrl, &u.StripeSessionPriceId, &u.StripeSessionQuantity,
-		&u.StripeSubscriptionID,
-	)
+	`, selectUserColumns, whereClause), arg))
 	if errors.Is(err, sql.ErrNoRows) {
 		return user.User{}, true, ErrNotFound
 	}
@@ -154,3 +178,44 @@ func (db webDb) readUserQuota(u *user.User) error {
 func userQuotaOwner(userId int64) string {
 	return strconv.FormatInt(userId, 10)
 }
+
+func (db webDb) CountUsers(ctx context.Context) (int64, error) {
+	var count int64
+	err := db.s.QueryRow(ctx, `
+		SELECT COUNT(*) FROM users2;
+	`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count users: %w", err)
+	}
+	return count, nil
+}
+
+func (db webDb) GetAllUsers(ctx context.Context) (iterator.I[user.User], error) {
+	rows, err := db.s.Query(ctx, fmt.Sprintf(`
+		%s
+		ORDER BY id DESC;
+	`, selectUserColumns))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all users: %w", err)
+	}
+	return userIterWrapper{db, rows}, nil
+}
+
+type userIterWrapper struct {
+	db   webDb
+	rows *sql.Rows
+}
+
+func (it userIterWrapper) Get() (user.User, error) {
+	u, err := scanUser(it.rows)
+	if err != nil {
+		return user.User{}, fmt.Errorf("failed to get user from iter: %w", err)
+	}
+	err = it.db.readUserQuota(&u)
+	if err != nil {
+		return user.User{}, err
+	}
+	return u, nil
+}
+func (it userIterWrapper) Next() bool { return it.rows.Next() }
+func (it userIterWrapper) Err() error { return it.rows.Err() }
