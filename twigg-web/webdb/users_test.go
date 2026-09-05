@@ -121,36 +121,31 @@ func TestGetUserReadsQuotaFields(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stored, err := b.UpsertUser(w, user.User{
-		Email: "someone@twigg.vc",
-		State: user.UserState_NoSubscription,
-	})
+	userId, err := b.CreateUser(w, "someone@twigg.vc",
+		user.UserState_NoSubscription, false, "", "", user.Subscription_None, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stored.TotalQuota != 0 {
-		t.Fatalf("expected no quota before it is set, got %d", stored.TotalQuota)
+
+	got, _, err := b.GetUser(w, userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.TotalQuota != 0 {
+		t.Fatalf("expected no quota before it is set, got %d", got.TotalQuota)
 	}
 
 	const quota = 4096
-	if err := b.SetQuota(b.UserQuotaOwnerName(stored.Id), quota); err != nil {
+	if err := b.SetQuota(b.UserQuotaOwnerName(userId), quota); err != nil {
 		t.Fatal(err)
 	}
 
-	got, _, err := b.GetUser(w, stored.Id)
+	got, _, err = b.GetUser(w, userId)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got.TotalQuota != quota {
 		t.Fatalf("GetUser got TotalQuota %d, want %d", got.TotalQuota, quota)
-	}
-
-	reUpserted, err := b.UpsertUser(w, got)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reUpserted.TotalQuota != quota {
-		t.Fatalf("UpsertUser got TotalQuota %d, want %d", reUpserted.TotalQuota, quota)
 	}
 }
 
@@ -166,13 +161,19 @@ func TestGetUserByField(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stored, err := b.UpsertUser(w, user.User{
-		Email:      "someone@twigg.vc",
-		State:      user.UserState_NoSubscription,
-		Username:   "someone",
-		StripeId:   "cus_1",
-		CliKeyHash: "cli-key-hash",
-	})
+	userId, err := b.CreateUser(w, "someone@twigg.vc",
+		user.UserState_NoSubscription, false, "someone", "",
+		user.Subscription_None, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created, _, err := b.GetUser(w, userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created.StripeId = "cus_1"
+	created.CliKeyHash = "cli-key-hash"
+	stored, err := b.UpsertUser(w, created)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,15 +247,21 @@ func TestCountAndGetAllUsers(t *testing.T) {
 		t.Fatalf("expected no users, got %d", count)
 	}
 
-	first, err := b.UpsertUser(w, user.User{
-		Email: "first@twigg.vc", State: user.UserState_NoSubscription,
-	})
+	firstId, err := b.CreateUser(w, "first@twigg.vc",
+		user.UserState_NoSubscription, false, "", "", user.Subscription_None, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := b.UpsertUser(w, user.User{
-		Email: "second@twigg.vc", State: user.UserState_NoSubscription,
-	})
+	secondId, err := b.CreateUser(w, "second@twigg.vc",
+		user.UserState_NoSubscription, false, "", "", user.Subscription_None, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, _, err := b.GetUser(w, firstId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, _, err := b.GetUser(w, secondId)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,16 +306,14 @@ func TestGetUsername(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stored, err := b.UpsertUser(w, user.User{
-		Email:    "someone@twigg.vc",
-		State:    user.UserState_NoSubscription,
-		Username: "someone",
-	})
+	userId, err := b.CreateUser(w, "someone@twigg.vc",
+		user.UserState_NoSubscription, false, "someone", "",
+		user.Subscription_None, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	username, isNotFoundErr, err := b.GetUsername(w, stored.Id)
+	username, isNotFoundErr, err := b.GetUsername(w, userId)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -340,23 +345,19 @@ func TestGetUserIsOrganization(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	person, err := b.UpsertUser(w, user.User{
-		Email: "someone@twigg.vc",
-		State: user.UserState_NoSubscription,
-	})
+	personId, err := b.CreateUser(w, "someone@twigg.vc",
+		user.UserState_NoSubscription, false, "", "", user.Subscription_None, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	organization, err := b.UpsertUser(w, user.User{
-		Username:       "acme",
-		IsOrganization: true,
-		State:          user.UserState_NoSubscription,
-	})
+	organizationId, err := b.CreateUser(w, "",
+		user.UserState_NoSubscription, true, "acme", "",
+		user.Subscription_None, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	isOrganization, isNotFoundErr, err := b.GetUserIsOrganization(w, person.Id)
+	isOrganization, isNotFoundErr, err := b.GetUserIsOrganization(w, personId)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -367,7 +368,7 @@ func TestGetUserIsOrganization(t *testing.T) {
 		t.Fatal("expected the user to not be an organization")
 	}
 
-	isOrganization, _, err = b.GetUserIsOrganization(w, organization.Id)
+	isOrganization, _, err = b.GetUserIsOrganization(w, organizationId)
 	if err != nil {
 		t.Fatal(err)
 	}
