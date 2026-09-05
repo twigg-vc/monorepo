@@ -581,6 +581,25 @@ func (db WebDb) GetRepoJobs(ctx context.Context, repoId uint64,
 	return db.db.GetRepoJobs(ctx, repoId, afterInternalJobId)
 }
 
+// Creates a pipeline ref row. Un-archives it if it already exists.
+func (db WebDb) PutPipelineRef(writeCtx context.Context,
+	repoId uint64, path, name string) error {
+	return db.db.PutPipelineRef(writeCtx, repoId, path, name)
+}
+
+// Archives the pipeline ref row. No-op if there is none.
+func (db WebDb) ArchivePipelineRef(writeCtx context.Context,
+	repoId uint64, path, name string) error {
+	return db.db.ArchivePipelineRef(writeCtx, repoId, path, name)
+}
+
+// Returns the non-archived pipeline refs of a repo, ordered by path and name.
+// Use afterPath and afterName to start after a ref.
+func (db WebDb) GetRepoPipelineRefs(ctx context.Context,
+	repoId uint64, afterPath, afterName string) (iterator.I[job.PipelineRef], error) {
+	return db.db.GetRepoPipelineRefs(ctx, repoId, afterPath, afterName)
+}
+
 // Adapts the read context to the twigg server read interface.
 func (db WebDb) GetServerRead(ctx context.Context) server.Read {
 	return db.Bind(ctx)

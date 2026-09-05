@@ -445,21 +445,7 @@ func (s service) updatePipelineStatus(tx context.Context, pipe job.Pipeline) err
 
 func (s service) PutPipelineRef(tx context.Context,
 	repoId uint64, filePath string, jobName string) (job.PipelineRef, error) {
-	_, err := s.db.Bind(tx).Exec(`
-		INSERT INTO jobPipelineRefs (
-			repoId,
-			path,
-			name,
-			isArchived
-		) VALUES (?, ?, ?, ?)
-		ON CONFLICT (repoId, path, name) DO UPDATE
-		SET isArchived = FALSE;
-	`,
-		repoId,
-		filePath,
-		jobName,
-		false,
-	)
+	err := s.db.PutPipelineRef(tx, repoId, filePath, jobName)
 	if err != nil {
 		return job.PipelineRef{}, fmt.Errorf("failed to PutPipelineRef : %s", err)
 	}
@@ -472,65 +458,12 @@ func (s service) PutPipelineRef(tx context.Context,
 
 func (s service) ArchivePipelineRefIfExists(tx context.Context,
 	repoId uint64, filePath string, jobName string) error {
-	_, err := s.db.Bind(tx).Exec(`
-        UPDATE jobPipelineRefs
-        SET isArchived = TRUE
-        WHERE repoId = ? AND path = ? AND name = ?;
-    `,
-		repoId, filePath, jobName,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to archive pipeline ref: %w", err)
-	}
-	return nil
+	return s.db.ArchivePipelineRef(tx, repoId, filePath, jobName)
 }
 
 func (s service) GetRepoPipelineRefs(tx context.Context,
 	repoId uint64, afterPath string, afterJobName string) (iterator.I[job.PipelineRef], error) {
-	args := []any{repoId}
-	querySuffix := ""
-	if afterPath != "" || afterJobName == "" {
-		querySuffix = "AND (path, name) > (?, ?)"
-		args = append(args, afterPath, afterJobName)
-	}
-	rows, err := s.db.Bind(tx).Query(fmt.Sprintf(`
-		SELECT
-			path,
-			name
-		FROM jobPipelineRefs
-		WHERE
-			repoId = ?
-			%s
-			AND NOT isArchived
-		ORDER BY path, name
-	`, querySuffix), args...)
-	if err != nil {
-		return nil, err
-	}
-	return pipelineNames{repoId, rows}, nil
-}
-
-type pipelineNames struct {
-	repoId uint64
-	rows   *sql.Rows
-}
-
-func (it pipelineNames) Get() (job.PipelineRef, error) {
-	var j job.PipelineRef
-	j.RepoId = it.repoId
-	if err := it.rows.Scan(
-		&j.Path,
-		&j.Name,
-	); err != nil {
-		return job.PipelineRef{}, fmt.Errorf("pipelineNames.Get: failed to scan job: %w", err)
-	}
-	return j, nil
-}
-func (it pipelineNames) Next() bool {
-	return it.rows.Next()
-}
-func (it pipelineNames) Err() error {
-	return it.rows.Err()
+	return s.db.GetRepoPipelineRefs(tx, repoId, afterPath, afterJobName)
 }
 
 func (s service) GetRepoPipelinesByRef(tx context.Context,
