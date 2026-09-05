@@ -47,7 +47,7 @@ func (db webDb) GetRepoPipelineRefs(ctx context.Context,
 	repoId uint64, afterPath, afterName string) (iterator.I[job.PipelineRef], error) {
 	args := []any{repoId}
 	querySuffix := ""
-	if afterPath != "" || afterName == "" {
+	if afterPath != "" || afterName != "" {
 		querySuffix = "AND (path, name) > (?, ?)"
 		args = append(args, afterPath, afterName)
 	}
