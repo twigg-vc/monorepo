@@ -836,3 +836,23 @@ func (db WebDb) SetTrackOwnerLimits(writeCtx context.Context, ownerId int64,
 	maxJobs int64, maxTimeoutMs int64) error {
 	return db.db.SetTrackOwnerLimits(writeCtx, ownerId, maxJobs, maxTimeoutMs)
 }
+
+// Returns the owner and the payload of the queued job. Returns ErrNotFound if
+// the job is not queued.
+func (db WebDb) GetTrackQueueJobOwnerAndPayload(ctx context.Context,
+	jobId string) (ownerId int64, payload []byte, isNotFoundErr bool, err error) {
+	return db.db.GetTrackQueueJobOwnerAndPayload(ctx, jobId)
+}
+
+// Removes the job from the track queue.
+func (db WebDb) DeleteTrackQueueJob(writeCtx context.Context, jobId string) error {
+	return db.db.DeleteTrackQueueJob(writeCtx, jobId)
+}
+
+// Adds the deltas to the usage the owner is currently running. The deltas are
+// negative when a job stops running.
+func (db WebDb) AddTrackOwnerUsage(writeCtx context.Context, ownerId int64,
+	runningJobsDelta int64, runningTimeoutMsDelta int64) error {
+	return db.db.AddTrackOwnerUsage(writeCtx, ownerId, runningJobsDelta,
+		runningTimeoutMsDelta)
+}

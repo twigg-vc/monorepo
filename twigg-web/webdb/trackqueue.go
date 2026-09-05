@@ -85,6 +85,61 @@ func (db webDb) GetTrackOwnerLimits(ctx context.Context,
 	return maxJobs, maxTimeoutMs, false, nil
 }
 
+// Returns the owner and the payload of the queued job. Returns ErrNotFound if
+// the job is not queued.
+func (db webDb) GetTrackQueueJobOwnerAndPayload(ctx context.Context,
+	jobId string) (ownerId int64, payload []byte, isNotFoundErr bool, err error) {
+	if jobId == "" {
+		return 0, nil, false, fmt.Errorf("missing jobId")
+	}
+	err = db.s.QueryRow(ctx, `
+		SELECT owner_id, payload
+		FROM track_queue
+		WHERE job_id = ?;
+	`, jobId).Scan(&ownerId, &payload)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil, true, ErrNotFound
+	}
+	if err != nil {
+		return 0, nil, false,
+			fmt.Errorf("failed to query track queue job: %w", err)
+	}
+	return ownerId, payload, false, nil
+}
+
+// Removes the job from the track queue.
+func (db webDb) DeleteTrackQueueJob(writeCtx context.Context,
+	jobId string) error {
+	if jobId == "" {
+		return fmt.Errorf("missing jobId")
+	}
+	_, err := db.s.Exec(writeCtx, `
+		DELETE FROM track_queue
+		WHERE job_id = ?;
+	`, jobId)
+	if err != nil {
+		return fmt.Errorf("failed to delete track queue job: %w", err)
+	}
+	return nil
+}
+
+// Adds the deltas to the usage the owner is currently running. The deltas are
+// negative when a job stops running.
+func (db webDb) AddTrackOwnerUsage(writeCtx context.Context, ownerId int64,
+	runningJobsDelta int64, runningTimeoutMsDelta int64) error {
+	_, err := db.s.Exec(writeCtx, `
+		UPDATE owner_usage2
+		SET
+			running_jobs = running_jobs + ?,
+			running_timeout_ms = running_timeout_ms + ?
+		WHERE owner_id = ?;
+	`, runningJobsDelta, runningTimeoutMsDelta, ownerId)
+	if err != nil {
+		return fmt.Errorf("failed to add track owner usage: %w", err)
+	}
+	return nil
+}
+
 // Returns how many jobs are in the track queue.
 func (db webDb) CountTrackQueueJobs(ctx context.Context) (int64, error) {
 	var count int64

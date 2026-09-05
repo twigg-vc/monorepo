@@ -1,6 +1,8 @@
 package webdb_test
 
 import (
+	"bytes"
+	"errors"
 	"monorepo/twigg-web/webdb"
 	"testing"
 )
@@ -139,5 +141,57 @@ func TestSetTrackOwnerLimits(t *testing.T) {
 	}
 	if maxJobs != 5 || maxTimeoutMs != 120_000 {
 		t.Fatalf("got limits %d/%d, want 5/120000", maxJobs, maxTimeoutMs)
+	}
+}
+
+func TestGetAndDeleteTrackQueueJob(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	payload := []byte(`{"Name":"a-job"}`)
+	if err := b.InsertTrackQueueJobIfNotExists(w, "job-1", 7, payload, "queued", 1234); err != nil {
+		t.Fatal(err)
+	}
+
+	ownerId, gotPayload, isNotFoundErr, err := b.GetTrackQueueJobOwnerAndPayload(w, "job-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isNotFoundErr {
+		t.Fatal("the queued job was not found")
+	}
+	if ownerId != 7 {
+		t.Fatalf("got ownerId %d, want 7", ownerId)
+	}
+	if !bytes.Equal(gotPayload, payload) {
+		t.Fatalf("got payload %q, want %q", gotPayload, payload)
+	}
+
+	if err := b.DeleteTrackQueueJob(w, "job-1"); err != nil {
+		t.Fatal(err)
+	}
+	count, err := b.CountTrackQueueJobs(w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("the job was not deleted: %d jobs left", count)
+	}
+
+	// A finished job that is no longer queued is not an error.
+	_, _, isNotFoundErr, err = b.GetTrackQueueJobOwnerAndPayload(w, "job-1")
+	if !isNotFoundErr {
+		t.Fatalf("expected isNotFoundErr, got err %v", err)
+	}
+	if !errors.Is(err, webdb.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }

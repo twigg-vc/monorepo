@@ -156,14 +156,8 @@ func (q *trackQueue) Put(ownerId int64, jobId string, pl runnerlib.JobPayload, t
 }
 
 func (q *trackQueue) PutJobFinished(jobId string, tx context.Context) error {
-	var ownerId int64
-	var payloadBytes []byte
-	err := q.db.Bind(tx).QueryRow(`
-		SELECT owner_id, payload
-		FROM track_queue
-		WHERE job_id = ?
-	`, jobId).Scan(&ownerId, &payloadBytes)
-	if errors.Is(err, sql.ErrNoRows) {
+	ownerId, payloadBytes, isNotFoundErr, err := q.db.GetTrackQueueJobOwnerAndPayload(tx, jobId)
+	if isNotFoundErr {
 		// No work to do
 		return nil
 	}
@@ -175,20 +169,11 @@ func (q *trackQueue) PutJobFinished(jobId string, tx context.Context) error {
 		return err
 	}
 	timeoutMs := pl.TimeoutMilliSeconds
-	if _, err := q.db.Bind(tx).Exec(`
-		UPDATE owner_usage2
-		SET
-			running_jobs = running_jobs - 1,
-			running_timeout_ms = running_timeout_ms - ?
-		WHERE owner_id = ?
-	`, timeoutMs, ownerId); err != nil {
+	err = q.db.AddTrackOwnerUsage(tx, ownerId, -1, -timeoutMs)
+	if err != nil {
 		return err
 	}
-	_, err = q.db.Bind(tx).Exec(`
-		DELETE FROM track_queue
-		WHERE job_id = ?
-	`, jobId)
-	return err
+	return q.db.DeleteTrackQueueJob(tx, jobId)
 }
 
 func (q *trackQueue) PutLimits(ownerId int64, maxJobs int,
