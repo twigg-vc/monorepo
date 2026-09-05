@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 	"monorepo/twigg-runner/runnerlib"
-	"monorepo/twigg-web/services/jobs"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg/commit"
 	"slices"
 )
@@ -17,7 +17,7 @@ func (s publisher) PutResumePipelineWaitingStage(pipelineId string, atStage int3
 		return err
 	}
 	// If not, just return (idempotent skip)
-	if stage.Status != jobs.JobStatusWaiting {
+	if stage.Status != job.JobStatusWaiting {
 		return nil
 	}
 
@@ -30,7 +30,7 @@ func (s publisher) ManualResumePipeline(pipelineId string, currentStage int32, u
 	if err != nil {
 		return false, err
 	}
-	if stage.Status != jobs.JobStatusWaitingManualStart {
+	if stage.Status != job.JobStatusWaitingManualStart {
 		return true, fmt.Errorf(
 			"pipelineId=%q stage=%d stage=%q is not waiting for manual",
 			pipelineId, currentStage, stage.Status)
@@ -109,7 +109,7 @@ func (s publisher) ManuallyLaunchCd(repoId, commitId, commitVersion uint64, jobP
 func (s publisher) resumePipelineStage(isManualResume bool, pipelineId string, currentStage int32, w context.Context) error {
 	// Get the repoId, commit, etc to read the actual job file
 	repoId, commitId, commitVersion,
-		filePath, jobName, _, ok := jobs.ParsePipelineId(pipelineId)
+		filePath, jobName, _, ok := job.ParsePipelineId(pipelineId)
 	if !ok {
 		return fmt.Errorf("bad pipelineId=%q", pipelineId)
 	}
@@ -120,7 +120,7 @@ func (s publisher) resumePipelineStage(isManualResume bool, pipelineId string, c
 	if !jobFileSizeIsOk {
 		err = s.jobs.SetStatusOfPipelineStage(
 			w, pipelineId, currentStage,
-			jobs.JobStatusBadFileSize)
+			job.JobStatusBadFileSize)
 		if err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func (s publisher) resumePipelineStage(isManualResume bool, pipelineId string, c
 	if !jobFileIsOk {
 		err = s.jobs.SetStatusOfPipelineStage(
 			w, pipelineId, currentStage,
-			jobs.JobStatusBadFileFormat)
+			job.JobStatusBadFileFormat)
 		if err != nil {
 			return err
 		}
@@ -158,7 +158,7 @@ func (s publisher) resumePipelineStage(isManualResume bool, pipelineId string, c
 	}
 	if !timeoutIsOk {
 		err = s.jobs.SetStatusOfPipelineStage(w,
-			pipelineId, currentStage, jobs.JobStatusExceedsPlanLimits)
+			pipelineId, currentStage, job.JobStatusExceedsPlanLimits)
 		if err != nil {
 			return err
 		}
@@ -168,7 +168,7 @@ func (s publisher) resumePipelineStage(isManualResume bool, pipelineId string, c
 	// Auto-start the stage if allowed; or just put it in waiting manual start
 	if cdJobStagePayload.CanAutoStart || isManualResume {
 		err = s.jobs.SetStatusOfPipelineStage(w, pipelineId, currentStage,
-			jobs.JobStatusQueued)
+			job.JobStatusQueued)
 		if err != nil {
 			return err
 		}
@@ -177,14 +177,14 @@ func (s publisher) resumePipelineStage(isManualResume bool, pipelineId string, c
 			return err
 		}
 		err = s.tc.Put(repoOwnerId,
-			jobs.PipelineStageId(pipelineId, currentStage),
+			job.PipelineStageId(pipelineId, currentStage),
 			cdJobStagePayload.JobPayload, w)
 		if err != nil {
 			return err
 		}
 	} else {
 		err = s.jobs.SetStatusOfPipelineStage(w, pipelineId, currentStage,
-			jobs.JobStatusWaitingManualStart)
+			job.JobStatusWaitingManualStart)
 		if err != nil {
 			return err
 		}

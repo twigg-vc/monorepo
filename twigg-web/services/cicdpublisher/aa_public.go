@@ -4,7 +4,7 @@ import (
 	"context"
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-web/featureflags"
-	"monorepo/twigg-web/services/jobs"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/services/twiggtoken"
 	"monorepo/twigg/server"
 	"time"
@@ -87,17 +87,17 @@ type JobsStorage interface {
 	CreateNewJob(wl context.Context,
 		repoId uint64, commit uint64, commitV uint64,
 		filePath string, jobName string, runNumber int64,
-		status jobs.JobStatus) (jobs.Job, error)
+		status job.JobStatus) (job.Job, error)
 	PutPipelineRef(tx context.Context,
-		repoId uint64, filePath string, jobName string) (jobs.PipelineRef, error)
+		repoId uint64, filePath string, jobName string) (job.PipelineRef, error)
 	ArchivePipelineRefIfExists(tx context.Context,
 		repoId uint64, filePath string, jobName string) error
 	CreateNewPipeline(tx context.Context,
 		repoId uint64, commit uint64, commitV uint64,
 		filePath string, jobName string, runNumber int64,
-		stageNames []string, isCreatedByUser bool, isCreatedByUserId int64) (jobs.Pipeline, error)
-	SetStatusOfPipelineStage(tx context.Context, pipelineId string, stage int32, status jobs.JobStatus) error
-	GetPipelineStage(tx context.Context, pipelineId string, stage int32) (jobs.PipelineStage, error)
+		stageNames []string, isCreatedByUser bool, isCreatedByUserId int64) (job.Pipeline, error)
+	SetStatusOfPipelineStage(tx context.Context, pipelineId string, stage int32, status job.JobStatus) error
+	GetPipelineStage(tx context.Context, pipelineId string, stage int32) (job.PipelineStage, error)
 	GetRepoPipelineRefNextAvailableRunNumber(tx context.Context,
 		repoId uint64, filePath string, jobName string) (int64, error)
 	SetResumerOfPipelineStage(tx context.Context, pipelineId string, stage int32, userId int64) error

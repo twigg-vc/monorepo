@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"monorepo/twigg-runner/runnerlib"
-	"monorepo/twigg-web/services/jobs"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/services/twiggtoken"
 	"monorepo/twigg/commit"
 	"monorepo/twigg/server"
@@ -94,13 +94,13 @@ func (s publisher) postCiJobs(maxTimeout time.Duration, trigger runnerlib.JobTri
 	if nJobsIsBad {
 		_, err = s.jobs.CreateNewJob(
 			w, repoId, c.L, c.Version, jobFileNameForErrors, "", runNumber,
-			jobs.JobStatusTooManyJobs)
+			job.JobStatusTooManyJobs)
 		return err
 	}
 	if timeoutIsBad {
 		_, err = s.jobs.CreateNewJob(
 			w, repoId, c.L, c.Version, jobFileNameForErrors, "", runNumber,
-			jobs.JobStatusExceedsPlanLimits)
+			job.JobStatusExceedsPlanLimits)
 		return err
 	}
 
@@ -196,13 +196,13 @@ func (s publisher) createAndPutCiJobsOfFile(repoOwnerId int64, repoId uint64, c 
 	if !jobFileSizeIsOk {
 		_, err = s.jobs.CreateNewJob(w, repoId,
 			c.L, c.Version, jobFilePath,
-			/*jobName*/ "", runNumber, jobs.JobStatusBadFileSize)
+			/*jobName*/ "", runNumber, job.JobStatusBadFileSize)
 		return
 	}
 	if !jobFileIsOk {
 		_, err = s.jobs.CreateNewJob(
 			w, repoId, c.L, c.Version, jobFilePath,
-			/*jobName*/ "", runNumber, jobs.JobStatusBadFileFormat)
+			/*jobName*/ "", runNumber, job.JobStatusBadFileFormat)
 		return
 	}
 
@@ -216,10 +216,10 @@ func (s publisher) createAndPutCiJobsOfFile(repoOwnerId int64, repoId uint64, c 
 		if err != nil {
 			return err
 		}
-		var jb jobs.Job
+		var jb job.Job
 		jb, err = s.jobs.CreateNewJob(w, repoId,
 			c.L, c.Version,
-			jobFilePath, ciJobs[i].Job.Name, runNumber, jobs.JobStatusQueued)
+			jobFilePath, ciJobs[i].Job.Name, runNumber, job.JobStatusQueued)
 		if err != nil {
 			return
 		}
@@ -259,13 +259,13 @@ func (s publisher) postCdJobs(maxTimeout time.Duration, trigger runnerlib.JobTri
 	if nJobsIsBad {
 		_, err = s.jobs.CreateNewJob(
 			w, repoId, c.L, c.Version, jobFileNameForErrors, "", runNumber,
-			jobs.JobStatusTooManyJobs)
+			job.JobStatusTooManyJobs)
 		return err
 	}
 	if timeoutIsBad {
 		_, err = s.jobs.CreateNewJob(
 			w, repoId, c.L, c.Version, jobFileNameForErrors, "", runNumber,
-			jobs.JobStatusExceedsPlanLimits)
+			job.JobStatusExceedsPlanLimits)
 		return err
 	}
 
@@ -377,13 +377,13 @@ func (s publisher) createAndPutCdJobsOfFile(repoOwnerId int64, repoId uint64, c 
 	if !jobFileSizeIsOk {
 		_, err = s.jobs.CreateNewJob(w, repoId,
 			c.L, c.Version, jobFilePath,
-			/*jobName*/ "", runNumber, jobs.JobStatusBadFileSize)
+			/*jobName*/ "", runNumber, job.JobStatusBadFileSize)
 		return
 	}
 	if !jobFileIsOk {
 		_, err = s.jobs.CreateNewJob(
 			w, repoId, c.L, c.Version, jobFilePath,
-			/*jobName*/ "", runNumber, jobs.JobStatusBadFileFormat)
+			/*jobName*/ "", runNumber, job.JobStatusBadFileFormat)
 		return
 	}
 	for _, cdJob := range cdJobs {
@@ -411,7 +411,7 @@ func (s publisher) createAndPutCdJobsOfFile(repoOwnerId int64, repoId uint64, c 
 		firstStage := cdJob.Stages[0]
 
 		// Create a running pipeline
-		var jobPipeline jobs.Pipeline
+		var jobPipeline job.Pipeline
 		jobPipeline, err = s.jobs.CreateNewPipeline(w,
 			repoId, c.L, c.Version,
 			jobFilePath, cdJob.Name, runNumber,
@@ -423,7 +423,7 @@ func (s publisher) createAndPutCdJobsOfFile(repoOwnerId int64, repoId uint64, c 
 		if firstStage.CanAutoStart {
 			err = s.jobs.SetStatusOfPipelineStage(
 				w, jobPipeline.Id(), 0,
-				jobs.JobStatusQueued)
+				job.JobStatusQueued)
 			if err != nil {
 				return err
 			}
@@ -436,7 +436,7 @@ func (s publisher) createAndPutCdJobsOfFile(repoOwnerId int64, repoId uint64, c 
 		} else {
 			err = s.jobs.SetStatusOfPipelineStage(
 				w, jobPipeline.Id(), 0,
-				jobs.JobStatusWaitingManualStart)
+				job.JobStatusWaitingManualStart)
 			if err != nil {
 				return err
 			}
