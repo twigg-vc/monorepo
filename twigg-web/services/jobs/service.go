@@ -140,46 +140,14 @@ func (s service) CreateNewPipeline(tx context.Context,
 		IsCreatedByUser: isCreatedByUser,
 		CreatedByUserId: createdByUserId,
 	}
-	var dummyVar int64
-	err := s.db.Bind(tx).QueryRow(
-		`SELECT 1 FROM jobPipelines WHERE
-		repoId = ? AND commitId = ? AND commitVersion = ? AND
-		path = ? AND name = ? AND runNumber = ?`,
-		repoId, commit, commitV, filePath, jobName, runNumber).Scan(&dummyVar)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	taken, err := s.db.PipelineExists(tx, repoId, commit, commitV, filePath, jobName, runNumber)
+	if err != nil {
 		return job.Pipeline{}, err
 	}
-	if !errors.Is(err, sql.ErrNoRows) {
+	if taken {
 		return job.Pipeline{}, errors.New("runNumber already taken")
 	}
-	err = s.db.Bind(tx).QueryRow(`
-		INSERT INTO jobPipelines (
-			repoId,
-			commitId,
-			commitVersion,
-			path,
-			name,
-			runNumber,
-			numberOfStages,
-			status,
-			createdTime,
-			isCreatedByUser,
-			createdByUserId
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		RETURNING internalJobPipelineId;
-	`,
-		j.RepoId,
-		j.Commit,
-		j.CommitVersion,
-		j.Path,
-		j.Name,
-		j.RunNumber,
-		j.NumberOfStages,
-		j.Status,
-		j.CreatedTime,
-		j.IsCreatedByUser,
-		j.CreatedByUserId,
-	).Scan(&j.InternalId)
+	j.InternalId, err = s.db.InsertPipeline(tx, j)
 	if err != nil {
 		return job.Pipeline{}, fmt.Errorf("failed to CreateNewPipeline: %s", err)
 	}
@@ -229,44 +197,7 @@ func (s service) getPipelineById(rl context.Context, id string) (p job.Pipeline,
 	if !ok {
 		return job.Pipeline{}, false, fmt.Errorf("bad PipelineId: %q", id)
 	}
-	err = s.db.Bind(rl).QueryRow(`
-		SELECT
-			internalJobPipelineId,
-			numberOfStages,
-			status,
-			createdTime,
-			isCreatedByUser,
-			createdByUserId
-		FROM jobPipelines
-		WHERE repoId=? AND commitId=? AND commitVersion=?
-		AND path=? AND name=? AND runNumber=?
-	`,
-		repoId,
-		commitId,
-		commitVersion,
-		path,
-		name,
-		runNumber,
-	).Scan(
-		&p.InternalId,
-		&p.NumberOfStages,
-		&p.Status,
-		&p.CreatedTime,
-		&p.IsCreatedByUser,
-		&p.CreatedByUserId,
-	)
-	if err != nil {
-		p = job.Pipeline{}
-		isNotFoundErr = errors.Is(err, sql.ErrNoRows)
-		return
-	}
-	p.RepoId = repoId
-	p.Commit = commitId
-	p.CommitVersion = commitVersion
-	p.Path = path
-	p.Name = name
-	p.RunNumber = runNumber
-	return
+	return s.db.GetPipeline(rl, repoId, commitId, commitVersion, path, name, runNumber)
 }
 func (s service) GetPipelineStagesById(rl context.Context, id string) (iterator.I[job.PipelineStage], error) {
 	rows, err := s.db.Bind(rl).Query(`

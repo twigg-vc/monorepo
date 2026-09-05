@@ -600,6 +600,24 @@ func (db WebDb) GetRepoPipelineRefs(ctx context.Context,
 	return db.db.GetRepoPipelineRefs(ctx, repoId, afterPath, afterName)
 }
 
+// Reports whether a pipeline row with that key exists.
+func (db WebDb) PipelineExists(ctx context.Context, repoId, commitId, commitVersion uint64,
+	path, name string, runNumber int64) (bool, error) {
+	return db.db.PipelineExists(ctx, repoId, commitId, commitVersion, path, name, runNumber)
+}
+
+// Creates a pipeline row and returns the internal id assigned to it.
+func (db WebDb) InsertPipeline(writeCtx context.Context, p job.Pipeline) (internalPipelineId int64, err error) {
+	return db.db.InsertPipeline(writeCtx, p)
+}
+
+// Returns the pipeline with that key. If there is none, isNotFoundErr is true
+// and err is ErrNotFound.
+func (db WebDb) GetPipeline(ctx context.Context, repoId, commitId, commitVersion uint64,
+	path, name string, runNumber int64) (p job.Pipeline, isNotFoundErr bool, err error) {
+	return db.db.GetPipeline(ctx, repoId, commitId, commitVersion, path, name, runNumber)
+}
+
 // Adapts the read context to the twigg server read interface.
 func (db WebDb) GetServerRead(ctx context.Context) server.Read {
 	return db.Bind(ctx)
