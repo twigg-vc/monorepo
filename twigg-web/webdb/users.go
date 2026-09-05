@@ -70,7 +70,32 @@ func (db webDb) UpsertUser(writeCtx context.Context,
 
 func (db webDb) GetUser(ctx context.Context,
 	userId int64) (u user.User, isNotFoundErr bool, err error) {
-	err = db.s.QueryRow(ctx, `
+	return db.getUserWhere(ctx, "id = ?", userId)
+}
+
+func (db webDb) GetUserByEmail(ctx context.Context,
+	email string) (u user.User, isNotFoundErr bool, err error) {
+	return db.getUserWhere(ctx, "email = ?", email)
+}
+
+func (db webDb) GetUserByUsername(ctx context.Context,
+	username string) (u user.User, isNotFoundErr bool, err error) {
+	return db.getUserWhere(ctx, "username = ?", username)
+}
+
+func (db webDb) GetUserByStripeId(ctx context.Context,
+	stripeId string) (u user.User, isNotFoundErr bool, err error) {
+	return db.getUserWhere(ctx, "stripeId = ?", stripeId)
+}
+
+func (db webDb) GetUserByCliKeyHash(ctx context.Context,
+	cliKeyHash string) (u user.User, isNotFoundErr bool, err error) {
+	return db.getUserWhere(ctx, "cliKeyHash = ?", cliKeyHash)
+}
+
+func (db webDb) getUserWhere(ctx context.Context, whereClause string,
+	arg any) (u user.User, isNotFoundErr bool, err error) {
+	err = db.s.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
 			id,
 			email,
@@ -88,8 +113,8 @@ func (db webDb) GetUser(ctx context.Context,
 			stripeSessionQuantity,
 			stripeSubscriptionID
 		FROM users2
-		WHERE id = ?;
-	`, userId).Scan(
+		WHERE %s;
+	`, whereClause), arg).Scan(
 		&u.Id, &u.Email, &u.State, &u.IsOrganization, &u.StripeId,
 		&u.CliKeyHash, &u.Username, &u.PasswordHash, &u.SelfPaidSubscription,
 		&u.SelfPaidSubscriptionQuantity, &u.StripeSessionId,

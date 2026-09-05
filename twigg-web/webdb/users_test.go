@@ -153,3 +153,75 @@ func TestGetUserReadsQuotaFields(t *testing.T) {
 		t.Fatalf("UpsertUser got TotalQuota %d, want %d", reUpserted.TotalQuota, quota)
 	}
 }
+
+func TestGetUserByField(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := b.BeginWrite()
+	defer closeW()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stored, err := b.UpsertUser(w, user.User{
+		Email:      "someone@twigg.vc",
+		State:      user.UserState_NoSubscription,
+		Username:   "someone",
+		StripeId:   "cus_1",
+		CliKeyHash: "cli-key-hash",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lookups := map[string]func() (user.User, bool, error){
+		"email":      func() (user.User, bool, error) { return b.GetUserByEmail(w, "someone@twigg.vc") },
+		"username":   func() (user.User, bool, error) { return b.GetUserByUsername(w, "someone") },
+		"stripeId":   func() (user.User, bool, error) { return b.GetUserByStripeId(w, "cus_1") },
+		"cliKeyHash": func() (user.User, bool, error) { return b.GetUserByCliKeyHash(w, "cli-key-hash") },
+	}
+	for field, lookup := range lookups {
+		got, isNotFoundErr, err := lookup()
+		if err != nil {
+			t.Fatalf("by %s: %v", field, err)
+		}
+		if isNotFoundErr {
+			t.Fatalf("by %s: user not found", field)
+		}
+		if got != stored {
+			t.Fatalf("by %s: got %+v, want %+v", field, got, stored)
+		}
+	}
+}
+
+func TestGetUserByFieldNotFound(t *testing.T) {
+	b, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	r, closeR, err := b.BeginRead()
+	defer closeR()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lookups := map[string]func() (user.User, bool, error){
+		"email":      func() (user.User, bool, error) { return b.GetUserByEmail(r, "nobody@twigg.vc") },
+		"username":   func() (user.User, bool, error) { return b.GetUserByUsername(r, "nobody") },
+		"stripeId":   func() (user.User, bool, error) { return b.GetUserByStripeId(r, "cus_nobody") },
+		"cliKeyHash": func() (user.User, bool, error) { return b.GetUserByCliKeyHash(r, "no-hash") },
+	}
+	for field, lookup := range lookups {
+		_, isNotFoundErr, err := lookup()
+		if !isNotFoundErr {
+			t.Fatalf("by %s: expected isNotFoundErr, got err %v", field, err)
+		}
+		if !errors.Is(err, webdb.ErrNotFound) {
+			t.Fatalf("by %s: expected ErrNotFound, got %v", field, err)
+		}
+	}
+}

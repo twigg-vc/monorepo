@@ -722,3 +722,27 @@ func (db WebDb) GetUser(ctx context.Context,
 	userId int64) (u user.User, isNotFoundErr bool, err error) {
 	return db.db.GetUser(ctx, userId)
 }
+
+// Returns the user with the email. Returns ErrNotFound if there is none.
+func (db WebDb) GetUserByEmail(ctx context.Context,
+	email string) (u user.User, isNotFoundErr bool, err error) {
+	return db.db.GetUserByEmail(ctx, email)
+}
+
+// Returns the user with the username. Returns ErrNotFound if there is none.
+func (db WebDb) GetUserByUsername(ctx context.Context,
+	username string) (u user.User, isNotFoundErr bool, err error) {
+	return db.db.GetUserByUsername(ctx, username)
+}
+
+// Returns the user with the stripe id. Returns ErrNotFound if there is none.
+func (db WebDb) GetUserByStripeId(ctx context.Context,
+	stripeId string) (u user.User, isNotFoundErr bool, err error) {
+	return db.db.GetUserByStripeId(ctx, stripeId)
+}
+
+// Returns the user with the cli key hash. Returns ErrNotFound if there is none.
+func (db WebDb) GetUserByCliKeyHash(ctx context.Context,
+	cliKeyHash string) (u user.User, isNotFoundErr bool, err error) {
+	return db.db.GetUserByCliKeyHash(ctx, cliKeyHash)
+}
