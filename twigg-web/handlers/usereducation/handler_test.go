@@ -10,7 +10,7 @@ import (
 
 	"monorepo/twigg-web/education"
 	"monorepo/twigg-web/handlers/usereducation"
-	"monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 )
 

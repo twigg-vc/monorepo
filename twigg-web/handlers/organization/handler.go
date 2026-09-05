@@ -6,7 +6,8 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
@@ -49,7 +50,7 @@ func (h handler) handlePostCreateOrganization(
 
 	newOrgName := r.FormValue(routes.NewOrganizationNameParamName)
 
-	if !user.UsernameIsValid(newOrgName) {
+	if !userservice.UsernameIsValid(newOrgName) {
 		http.Error(w, "invalid new org name", http.StatusBadRequest)
 		return
 	}
