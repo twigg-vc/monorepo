@@ -1711,3 +1711,65 @@ func (js *fakeJobLimitSetter) checkLimits(ownerId int64, expectedMaxJobs int,
 		js.t.Fatalf("expected timeout %v got %v for userId %d", expectedMaxTimeout, tm, ownerId)
 	}
 }
+
+func TestOrganizationUserStaysAnOrganization(t *testing.T) {
+	db, clDb, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer clDb()
+	w, clW, _, err := db.BeginWrite()
+	defer clW()
+	if err != nil {
+		t.Fatal(err)
+	}
+	jobLimit := newFakeJobLimitSetter(t)
+	s, err := NewService(jobLimit, stripeclient.NewMockStripeClient(), db, testSalt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	org, err := s.CreateNewOrganizationUser(w, "acme")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !org.IsOrganization {
+		t.Fatal("created organization is not an organization")
+	}
+
+	assertStillOrganization := func(after string) {
+		t.Helper()
+		got, isNotFoundErr, err := s.Get(w, org.Id)
+		if err != nil {
+			t.Fatalf("after %s: %v", after, err)
+		}
+		if isNotFoundErr {
+			t.Fatalf("after %s: organization not found", after)
+		}
+		if !got.IsOrganization {
+			t.Fatalf("after %s: organization is no longer an organization", after)
+		}
+		if got.Username != "acme" {
+			t.Fatalf("after %s: got username %q", after, got.Username)
+		}
+	}
+
+	if err := s.UpdateCliKey(w, org.Id, "a-cli-key"); err != nil {
+		t.Fatal(err)
+	}
+	assertStillOrganization("UpdateCliKey")
+
+	if err := s.DeleteCliKey(w, org.Id); err != nil {
+		t.Fatal(err)
+	}
+	assertStillOrganization("DeleteCliKey")
+
+	if err := s.HandleManualSubscriptionDeleted(w, org.Id); err != nil {
+		t.Fatal(err)
+	}
+	assertStillOrganization("HandleManualSubscriptionDeleted")
+
+	if err := s.ManualReset(w, org.Id); err != nil {
+		t.Fatal(err)
+	}
+	assertStillOrganization("ManualReset")
+}
