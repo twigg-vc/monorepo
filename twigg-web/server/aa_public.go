@@ -212,7 +212,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 	}
 	ciCdFileParser := cicdparser.CiCdFileParser{}
 	trackClient := trackclient.NewClient(s.C.TrackServerUrl, s.C.TrackServerKey)
-	trackQueue, err := trackqueue.New(jobsService, trackClient, setupW, sDb)
+	trackQueue, err := trackqueue.New(jobsService, trackClient, sDb)
 	if err != nil {
 		log.Fatalf("failed to setup trackqueue: %s", err)
 		return

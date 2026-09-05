@@ -16,8 +16,8 @@ type TrackQueue struct {
 	j *trackQueue
 }
 
-func New(js JobsStorage, tc TrackClient, setupTx context.Context, db webdb.WebDb, options ...Option) (TrackQueue, error) {
-	j, err := newTrackQueue(js, tc, setupTx, db, options...)
+func New(js JobsStorage, tc TrackClient, db webdb.WebDb, options ...Option) (TrackQueue, error) {
+	j, err := newTrackQueue(js, tc, db, options...)
 	return TrackQueue{j}, err
 }
 

@@ -318,19 +318,10 @@ func setupTest(t *testing.T) (TrackQueue, *fakeJobsStorage, *fakeTrackClient, we
 		t:            t,
 		postedJobIds: map[string]bool{},
 	}
-	w, close, commit, err := lDb.BeginWrite()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer close()
-	q, err := New(js, tc, w, lDb,
+	q, err := New(js, tc, lDb,
 		WithPoolInternal(10*time.Millisecond),        // Polls every 10 ms
 		WithJanitorPoolInterval(20*time.Millisecond), // Polls track every 20ms
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = commit()
 	if err != nil {
 		t.Fatal(err)
 	}
