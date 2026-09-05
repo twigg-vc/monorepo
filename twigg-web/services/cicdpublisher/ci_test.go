@@ -7,7 +7,7 @@ import (
 	"math"
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-web/featureflags"
-	"monorepo/twigg-web/services/jobs"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/services/sign"
 	"monorepo/twigg-web/services/twiggtoken"
 	"monorepo/twigg/client"
@@ -172,10 +172,10 @@ func TestSingleCiFileAtRoot(t *testing.T) {
 	if len(jobsStorage.jobStatus) != 2 {
 		t.Fatalf("expected 2 jobs in storage")
 	}
-	if jobsStorage.jobStatus[0] != jobs.JobStatusQueued {
+	if jobsStorage.jobStatus[0] != job.JobStatusQueued {
 		t.Fatalf("first job unexpected status")
 	}
-	if jobsStorage.jobStatus[1] != jobs.JobStatusQueued {
+	if jobsStorage.jobStatus[1] != job.JobStatusQueued {
 		t.Fatalf("second job unexpected status")
 	}
 	if len(jobsStorage.jobNames) != 2 {
@@ -249,7 +249,7 @@ func TestDeleteCiFileAndModifyOtherCiFile(t *testing.T) {
 	if len(jobsStorage.jobStatus) != 1 {
 		t.Fatalf("expected 1 jobs in storage, got %d", len(jobsStorage.jobStatus))
 	}
-	if jobsStorage.jobStatus[0] != jobs.JobStatusQueued {
+	if jobsStorage.jobStatus[0] != job.JobStatusQueued {
 		t.Fatalf("first job unexpected status: %s", jobsStorage.jobStatus[0])
 	}
 }
@@ -458,7 +458,7 @@ func TestTooLargeTimeout(t *testing.T) {
 	if len(jobsStorage.jobStatus) != 1 {
 		t.Fatalf("expected 1 jobs in storage, got %d", len(jobsStorage.jobStatus))
 	}
-	if jobsStorage.jobStatus[0] != jobs.JobStatusExceedsPlanLimits {
+	if jobsStorage.jobStatus[0] != job.JobStatusExceedsPlanLimits {
 		t.Fatalf("first job unexpected status: %s", jobsStorage.jobStatus[0])
 	}
 }
@@ -674,23 +674,23 @@ func TestSingleCdFileAtRoot(t *testing.T) {
 	jobsStorage.checkPipelineStatus(repoId,
 		c1.ServerL, c1.ServerV, CdFilename,
 		"CD Pipeline 0",
-		runNumber, jobs.PipelineStatusRunning, t)
+		runNumber, job.PipelineStatusRunning, t)
 	jobsStorage.checkPipelineStatus(repoId,
 		c1.ServerL, c1.ServerV, CdFilename,
 		"CD Pipeline 1",
-		runNumber, jobs.PipelineStatusRunning, t)
-	pipeline0Id := jobs.PipelineId(repoId, c1.L, c1.Version, CdFilename,
+		runNumber, job.PipelineStatusRunning, t)
+	pipeline0Id := job.PipelineId(repoId, c1.L, c1.Version, CdFilename,
 		"CD Pipeline 0", runNumber)
-	pipeline1Id := jobs.PipelineId(repoId, c1.L, c1.Version, CdFilename,
+	pipeline1Id := job.PipelineId(repoId, c1.L, c1.Version, CdFilename,
 		"CD Pipeline 1", runNumber)
 	// All stages of each pipelines must have been created
 	jobsStorage.checkPipelineStages(t, pipeline0Id, 3)
 	jobsStorage.checkPipelineStages(t, pipeline1Id, 1)
 	// Check the state of each stage
-	jobsStorage.checkPipelineStageStatus(t, pipeline0Id, 0, jobs.JobStatusQueued)
-	jobsStorage.checkPipelineStageStatus(t, pipeline0Id, 1, jobs.JobStatusWaiting)
-	jobsStorage.checkPipelineStageStatus(t, pipeline0Id, 2, jobs.JobStatusWaiting)
-	jobsStorage.checkPipelineStageStatus(t, pipeline1Id, 0, jobs.JobStatusWaitingManualStart)
+	jobsStorage.checkPipelineStageStatus(t, pipeline0Id, 0, job.JobStatusQueued)
+	jobsStorage.checkPipelineStageStatus(t, pipeline0Id, 1, job.JobStatusWaiting)
+	jobsStorage.checkPipelineStageStatus(t, pipeline0Id, 2, job.JobStatusWaiting)
+	jobsStorage.checkPipelineStageStatus(t, pipeline1Id, 0, job.JobStatusWaitingManualStart)
 
 	// Resume pipeline 0 stage 1. Note that this should really only be done
 	// if some external caller sets the stage 0 to be completed, but this
@@ -701,7 +701,7 @@ func TestSingleCdFileAtRoot(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Pipeline stage should be updated to queued
-		jobsStorage.checkPipelineStageStatus(t, pipeline0Id, 1, jobs.JobStatusQueued)
+		jobsStorage.checkPipelineStageStatus(t, pipeline0Id, 1, job.JobStatusQueued)
 		// The new payload should be posted
 		trackClient.checkNumPostedPayloads(2, t)
 		trackClient.checkHasPayloadDisconsideringTokens(runnerlib.JobPayload{
@@ -742,7 +742,7 @@ func TestSingleCdFileAtRoot(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Pipeline stage should be updated to waiting manual bc its not auto
-		jobsStorage.checkPipelineStageStatus(t, pipeline0Id, 2, jobs.JobStatusWaitingManualStart)
+		jobsStorage.checkPipelineStageStatus(t, pipeline0Id, 2, job.JobStatusWaitingManualStart)
 		// No payload should be posted bc its waiting a manual start
 		trackClient.checkNumPostedPayloads(2, t)
 	}
@@ -756,7 +756,7 @@ func TestSingleCdFileAtRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Pipeline stage should be updated to queued
-	jobsStorage.checkPipelineStageStatus(t, pipeline0Id, 2, jobs.JobStatusQueued)
+	jobsStorage.checkPipelineStageStatus(t, pipeline0Id, 2, job.JobStatusQueued)
 	jobsStorage.checkPipelineStageResumedByUser(t, pipeline0Id, 2, resumerUserId)
 	// Check the trackclient for the payload
 	trackClient.checkNumPostedPayloads(3, t)
@@ -799,23 +799,23 @@ func TestSingleCdFileAtRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pipeline0SecondRunId := jobs.PipelineId(repoId, c1.L, c1.Version, CdFilename,
+	pipeline0SecondRunId := job.PipelineId(repoId, c1.L, c1.Version, CdFilename,
 		"CD Pipeline 0", runNumber+1)
 	// Expect a third pipeline to exist now
 	jobsStorage.checkNumOfPipelines(3, t)
 	jobsStorage.checkPipelineStatus(repoId,
 		c1.ServerL, c1.ServerV, CdFilename,
 		"CD Pipeline 0",
-		runNumber+1, jobs.PipelineStatusRunning, t)
+		runNumber+1, job.PipelineStatusRunning, t)
 	jobsStorage.checkPipelineUserId(repoId,
 		c1.ServerL, c1.ServerV, CdFilename,
 		"CD Pipeline 0",
 		runNumber+1, userId, t)
 	// All stages of each pipelines must have been created
 	jobsStorage.checkPipelineStages(t, pipeline0SecondRunId, 3)
-	jobsStorage.checkPipelineStageStatus(t, pipeline0SecondRunId, 0, jobs.JobStatusQueued)
-	jobsStorage.checkPipelineStageStatus(t, pipeline0SecondRunId, 1, jobs.JobStatusWaiting)
-	jobsStorage.checkPipelineStageStatus(t, pipeline0SecondRunId, 2, jobs.JobStatusWaiting)
+	jobsStorage.checkPipelineStageStatus(t, pipeline0SecondRunId, 0, job.JobStatusQueued)
+	jobsStorage.checkPipelineStageStatus(t, pipeline0SecondRunId, 1, job.JobStatusWaiting)
+	jobsStorage.checkPipelineStageStatus(t, pipeline0SecondRunId, 2, job.JobStatusWaiting)
 }
 
 func TestPutAutoCiCdRun_OnlyOnSubmitsArePosted(t *testing.T) {
@@ -1130,15 +1130,15 @@ func TestManuallyLaunchCd(t *testing.T) {
 	jobsStorage.checkPipelineStatus(repoId,
 		c1.ServerL, c1.ServerV, CdFilename,
 		"CD Pipeline 0",
-		/*runNumber*/ 0, jobs.PipelineStatusRunning, t)
+		/*runNumber*/ 0, job.PipelineStatusRunning, t)
 	// All stages of each pipelines must have been created
-	pipeline0Run0Id := jobs.PipelineId(repoId, c1.L, c1.Version, CdFilename,
+	pipeline0Run0Id := job.PipelineId(repoId, c1.L, c1.Version, CdFilename,
 		"CD Pipeline 0",
 		/*runNumber*/ 0)
 	jobsStorage.checkPipelineStages(t, pipeline0Run0Id, 2)
 	// Check the state of each stage
-	jobsStorage.checkPipelineStageStatus(t, pipeline0Run0Id, 0, jobs.JobStatusQueued)
-	jobsStorage.checkPipelineStageStatus(t, pipeline0Run0Id, 1, jobs.JobStatusWaiting)
+	jobsStorage.checkPipelineStageStatus(t, pipeline0Run0Id, 0, job.JobStatusQueued)
+	jobsStorage.checkPipelineStageStatus(t, pipeline0Run0Id, 1, job.JobStatusWaiting)
 }
 
 // Provides the server for a repository
@@ -1167,12 +1167,12 @@ func (sp fakeRepoService) GetServerRead(rl context.Context) server.Read {
 type fakeJobsStorage struct {
 	publishedCiCdRuns       map[string]bool
 	jobIds                  []string
-	jobStatus               []jobs.JobStatus
+	jobStatus               []job.JobStatus
 	jobNames                []string
-	nonArchivedPipelineRefs map[jobs.PipelineRef]bool
-	archivedPipelineRefs    map[jobs.PipelineRef]bool
-	pipelineById            map[string]jobs.Pipeline
-	pipelineStagesById      map[string][]jobs.PipelineStage
+	nonArchivedPipelineRefs map[job.PipelineRef]bool
+	archivedPipelineRefs    map[job.PipelineRef]bool
+	pipelineById            map[string]job.Pipeline
+	pipelineStagesById      map[string][]job.PipelineStage
 }
 
 func (j *fakeJobsStorage) CiCdRunWasPublished(tx context.Context,
@@ -1194,17 +1194,17 @@ func (j *fakeJobsStorage) SetCiCdToPublished(tx context.Context,
 
 func (j *fakeJobsStorage) CreateNewJob(wl context.Context,
 	repoId uint64, commit uint64, commitV uint64,
-	filePath string, jobName string, runNumber int64, st jobs.JobStatus) (jobs.Job, error) {
-	id := jobs.JobId(repoId, commit, commitV, filePath, jobName, runNumber)
+	filePath string, jobName string, runNumber int64, st job.JobStatus) (job.Job, error) {
+	id := job.JobId(repoId, commit, commitV, filePath, jobName, runNumber)
 	for _, jId := range j.jobIds {
 		if jId == id {
-			return jobs.Job{}, errors.New("id already used")
+			return job.Job{}, errors.New("id already used")
 		}
 	}
 	j.jobIds = append(j.jobIds, id)
 	j.jobStatus = append(j.jobStatus, st)
 	j.jobNames = append(j.jobNames, jobName)
-	return jobs.Job{
+	return job.Job{
 		RepoId:        repoId,
 		Commit:        commit,
 		CommitVersion: commitV,
@@ -1216,14 +1216,14 @@ func (j *fakeJobsStorage) CreateNewJob(wl context.Context,
 }
 
 func (j *fakeJobsStorage) PutPipelineRef(tx context.Context,
-	repoId uint64, filePath string, jobName string) (jobs.PipelineRef, error) {
+	repoId uint64, filePath string, jobName string) (job.PipelineRef, error) {
 	if j.nonArchivedPipelineRefs == nil {
-		j.nonArchivedPipelineRefs = map[jobs.PipelineRef]bool{}
+		j.nonArchivedPipelineRefs = map[job.PipelineRef]bool{}
 	}
 	if j.archivedPipelineRefs == nil {
-		j.archivedPipelineRefs = map[jobs.PipelineRef]bool{}
+		j.archivedPipelineRefs = map[job.PipelineRef]bool{}
 	}
-	ref := jobs.PipelineRef{
+	ref := job.PipelineRef{
 		RepoId: repoId,
 		Path:   filePath,
 		Name:   jobName,
@@ -1238,12 +1238,12 @@ func (j *fakeJobsStorage) PutPipelineRef(tx context.Context,
 func (j *fakeJobsStorage) ArchivePipelineRefIfExists(tx context.Context,
 	repoId uint64, filePath string, jobName string) error {
 	if j.nonArchivedPipelineRefs == nil {
-		j.nonArchivedPipelineRefs = map[jobs.PipelineRef]bool{}
+		j.nonArchivedPipelineRefs = map[job.PipelineRef]bool{}
 	}
 	if j.archivedPipelineRefs == nil {
-		j.archivedPipelineRefs = map[jobs.PipelineRef]bool{}
+		j.archivedPipelineRefs = map[job.PipelineRef]bool{}
 	}
-	ref := jobs.PipelineRef{
+	ref := job.PipelineRef{
 		RepoId: repoId,
 		Path:   filePath,
 		Name:   jobName,
@@ -1256,7 +1256,7 @@ func (j *fakeJobsStorage) ArchivePipelineRefIfExists(tx context.Context,
 	return nil
 }
 func (j *fakeJobsStorage) checkRefExists(repoId uint64, filePath string, jobName string, t *testing.T) {
-	ref := jobs.PipelineRef{
+	ref := job.PipelineRef{
 		RepoId: repoId,
 		Path:   filePath,
 		Name:   jobName,
@@ -1268,7 +1268,7 @@ func (j *fakeJobsStorage) checkRefExists(repoId uint64, filePath string, jobName
 	t.Fatalf("ref repoId=%d path=%s name=%s not found", repoId, filePath, jobName)
 }
 func (j *fakeJobsStorage) checkRefIsArchived(repoId uint64, filePath string, jobName string, t *testing.T) {
-	ref := jobs.PipelineRef{
+	ref := job.PipelineRef{
 		RepoId: repoId,
 		Path:   filePath,
 		Name:   jobName,
@@ -1289,7 +1289,7 @@ func (j *fakeJobsStorage) checkNumOfPipelines(expected int, t *testing.T) {
 func (j *fakeJobsStorage) checkPipelineUserId(repoId uint64, commit, commitV uint64,
 	filePath string, jobName string, runNumber int64, expectedUserId int64, t *testing.T) {
 
-	pipelineId := jobs.PipelineId(repoId, commit, commitV, filePath, jobName, runNumber)
+	pipelineId := job.PipelineId(repoId, commit, commitV, filePath, jobName, runNumber)
 	pipeline, ok := j.pipelineById[pipelineId]
 	if !ok {
 		t.Fatalf(
@@ -1312,9 +1312,9 @@ func (j *fakeJobsStorage) checkPipelineUserId(repoId uint64, commit, commitV uin
 }
 
 func (j *fakeJobsStorage) checkPipelineStatus(repoId uint64, commit, commitV uint64,
-	filePath string, jobName string, runNumber int64, expectedStatus jobs.PipelineStatus, t *testing.T) {
+	filePath string, jobName string, runNumber int64, expectedStatus job.PipelineStatus, t *testing.T) {
 
-	pipelineId := jobs.PipelineId(repoId, commit, commitV, filePath, jobName, runNumber)
+	pipelineId := job.PipelineId(repoId, commit, commitV, filePath, jobName, runNumber)
 	pipeline, ok := j.pipelineById[pipelineId]
 	if !ok {
 		t.Fatalf(
@@ -1334,14 +1334,14 @@ func (j *fakeJobsStorage) checkPipelineStatus(repoId uint64, commit, commitV uin
 func (j *fakeJobsStorage) CreateNewPipeline(tx context.Context,
 	repoId uint64, commit uint64, commitV uint64,
 	filePath string, jobName string, runNumber int64,
-	stageNames []string, isCreatedByUser bool, createdByUserId int64) (jobs.Pipeline, error) {
+	stageNames []string, isCreatedByUser bool, createdByUserId int64) (job.Pipeline, error) {
 
 	// Create the pipeline
 	_, _ = j.PutPipelineRef(tx, repoId, filePath, jobName)
 	if j.pipelineById == nil {
-		j.pipelineById = map[string]jobs.Pipeline{}
+		j.pipelineById = map[string]job.Pipeline{}
 	}
-	p := jobs.Pipeline{
+	p := job.Pipeline{
 		RepoId:          repoId,
 		Commit:          commit,
 		CommitVersion:   commitV,
@@ -1349,36 +1349,36 @@ func (j *fakeJobsStorage) CreateNewPipeline(tx context.Context,
 		Name:            jobName,
 		RunNumber:       runNumber,
 		NumberOfStages:  int32(len(stageNames)),
-		Status:          jobs.PipelineStatusRunning,
+		Status:          job.PipelineStatusRunning,
 		CreatedTime:     "", // skipped just to make testing easier
 		IsCreatedByUser: isCreatedByUser,
 		CreatedByUserId: createdByUserId,
 	}
 	_, ok := j.pipelineById[p.Id()]
 	if ok {
-		return jobs.Pipeline{}, errors.New("id already used")
+		return job.Pipeline{}, errors.New("id already used")
 	}
 	j.pipelineById[p.Id()] = p
 
 	// Create all the stages
 	if j.pipelineStagesById == nil {
-		j.pipelineStagesById = map[string][]jobs.PipelineStage{}
+		j.pipelineStagesById = map[string][]job.PipelineStage{}
 	}
 	for i := range stageNames {
-		stage := jobs.PipelineStage{
+		stage := job.PipelineStage{
 			PipelineId:  p.Id(),
 			Name:        stageNames[i],
 			Stage:       int32(i),
 			CreatedTime: "",
-			Status:      jobs.JobStatusWaiting,
+			Status:      job.JobStatusWaiting,
 		}
 		j.pipelineStagesById[p.Id()] = append(j.pipelineStagesById[p.Id()], stage)
 	}
 	return p, nil
 }
-func (j *fakeJobsStorage) GetPipelineStage(tx context.Context, pipelineId string, stageN int32) (jobs.PipelineStage, error) {
+func (j *fakeJobsStorage) GetPipelineStage(tx context.Context, pipelineId string, stageN int32) (job.PipelineStage, error) {
 	if j.pipelineStagesById == nil {
-		j.pipelineStagesById = map[string][]jobs.PipelineStage{}
+		j.pipelineStagesById = map[string][]job.PipelineStage{}
 	}
 	stages := j.pipelineStagesById[pipelineId]
 	for _, stage := range stages {
@@ -1386,11 +1386,11 @@ func (j *fakeJobsStorage) GetPipelineStage(tx context.Context, pipelineId string
 			return stage, nil
 		}
 	}
-	return jobs.PipelineStage{}, fmt.Errorf("stage %d not found in pipelineId=%q", stageN, pipelineId)
+	return job.PipelineStage{}, fmt.Errorf("stage %d not found in pipelineId=%q", stageN, pipelineId)
 }
-func (j *fakeJobsStorage) SetStatusOfPipelineStage(tx context.Context, pipelineId string, stageN int32, status jobs.JobStatus) error {
+func (j *fakeJobsStorage) SetStatusOfPipelineStage(tx context.Context, pipelineId string, stageN int32, status job.JobStatus) error {
 	if j.pipelineStagesById == nil {
-		j.pipelineStagesById = map[string][]jobs.PipelineStage{}
+		j.pipelineStagesById = map[string][]job.PipelineStage{}
 	}
 	stages := j.pipelineStagesById[pipelineId]
 	for i := range stages {
@@ -1411,7 +1411,7 @@ func (j *fakeJobsStorage) checkPipelineStages(
 	t.Helper()
 	count := 0
 	if j.pipelineStagesById == nil {
-		j.pipelineStagesById = map[string][]jobs.PipelineStage{}
+		j.pipelineStagesById = map[string][]job.PipelineStage{}
 	}
 	stages := j.pipelineStagesById[jobPipelineId]
 	for _, s := range stages {
@@ -1432,11 +1432,11 @@ func (j *fakeJobsStorage) checkPipelineStageStatus(
 	t *testing.T,
 	jobPipelineId string,
 	stage int,
-	expectedStatus jobs.JobStatus,
+	expectedStatus job.JobStatus,
 ) {
 	t.Helper()
 	if j.pipelineStagesById == nil {
-		j.pipelineStagesById = map[string][]jobs.PipelineStage{}
+		j.pipelineStagesById = map[string][]job.PipelineStage{}
 	}
 	stages := j.pipelineStagesById[jobPipelineId]
 	if len(stages) <= stage {
@@ -1469,7 +1469,7 @@ func (j *fakeJobsStorage) checkPipelineStageStatus(
 }
 func (j *fakeJobsStorage) SetResumerOfPipelineStage(tx context.Context, pipelineId string, stageN int32, userId int64) error {
 	if j.pipelineStagesById == nil {
-		j.pipelineStagesById = map[string][]jobs.PipelineStage{}
+		j.pipelineStagesById = map[string][]job.PipelineStage{}
 	}
 	stages := j.pipelineStagesById[pipelineId]
 	for i := range stages {
@@ -1490,7 +1490,7 @@ func (j *fakeJobsStorage) checkPipelineStageResumedByUser(
 ) {
 	t.Helper()
 	if j.pipelineStagesById == nil {
-		j.pipelineStagesById = map[string][]jobs.PipelineStage{}
+		j.pipelineStagesById = map[string][]job.PipelineStage{}
 	}
 	stages := j.pipelineStagesById[jobPipelineId]
 	if len(stages) <= stage {
@@ -1533,7 +1533,7 @@ func (j *fakeJobsStorage) GetRepoPipelineRefNextAvailableRunNumber(tx context.Co
 	repoId uint64, filePath string, jobName string) (int64, error) {
 	found := false
 	maxRun := int64(math.MinInt64)
-	var maxRunPipeline jobs.Pipeline
+	var maxRunPipeline job.Pipeline
 	for _, pipeline := range j.pipelineById {
 		if pipeline.RepoId == repoId &&
 			pipeline.Path == filePath &&
