@@ -3,11 +3,18 @@
 package seed
 
 import (
+	"context"
+	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/services/repo"
 	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/user"
-	"monorepo/twigg-web/webdb"
 )
+
+type Db interface {
+	BeginWrite() (writeCtx context.Context, closeTx func(), commitTx func() error, err error)
+	GrantPermissionIfNotExists(ctx context.Context, userId int64,
+		p permissions.Permission, assetId string) (alreadyExists bool, err error)
+}
 
 // SeedUser represents a user we want to manually create in the server.
 // All fields must be populated.
@@ -21,7 +28,7 @@ type SeedUser struct {
 
 // CreateUsersIfNotExist creates the users if they don't exist yet.
 // Panics if anything goes wrong.
-func CreateUsersIfNotExistOrDie(users []SeedUser, db webdb.WebDb, u userservice.Service) {
+func CreateUsersIfNotExistOrDie(users []SeedUser, db Db, u userservice.Service) {
 	createUsersIfNotExistOrDie(users, db, u)
 }
 
@@ -36,6 +43,6 @@ type SeedRepo struct {
 
 // CreateRepoIfNotExistsOrDie creates repositories if they don't exist.
 // Panics if anything goes wrong.
-func CreateRepoIfNotExistsOrDie(seedRepos []SeedRepo, db webdb.WebDb, u userservice.Service, rSrv repo.Service) {
+func CreateRepoIfNotExistsOrDie(seedRepos []SeedRepo, db Db, u userservice.Service, rSrv repo.Service) {
 	createRepoIfNotExistsOrDie(seedRepos, db, u, rSrv)
 }

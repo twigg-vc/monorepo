@@ -6,10 +6,9 @@ import (
 	"monorepo/twigg-web/services/repo"
 	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/user"
-	"monorepo/twigg-web/webdb"
 )
 
-func createUsersIfNotExistOrDie(seedUsers []SeedUser, db webdb.WebDb, u userservice.Service) {
+func createUsersIfNotExistOrDie(seedUsers []SeedUser, db Db, u userservice.Service) {
 	if len(seedUsers) == 0 {
 		return
 	}
@@ -42,7 +41,7 @@ func createUsersIfNotExistOrDie(seedUsers []SeedUser, db webdb.WebDb, u userserv
 	}
 }
 
-func createRepoIfNotExistsOrDie(seedRepos []SeedRepo, db webdb.WebDb, u userservice.Service, rSrv repo.Service) {
+func createRepoIfNotExistsOrDie(seedRepos []SeedRepo, db Db, u userservice.Service, rSrv repo.Service) {
 	if len(seedRepos) == 0 {
 		return
 	}
