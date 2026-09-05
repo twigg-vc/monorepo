@@ -37,95 +37,23 @@ const plainPasswordMinLength = 5
 const plainPasswordMaxLength = 30
 
 func (s service) Get(r context.Context, id int64) (u user.User, isNotFoundErr bool, err error) {
-	return s.getUser(r, "id = ?", id)
+	return s.db.GetUser(r, id)
 }
 func (s service) GetByEmail(r context.Context, email string) (u user.User, isNotFoundErr bool, err error) {
-	return s.getUser(r, "email = ?", email)
+	return s.db.GetUserByEmail(r, email)
 }
 func (s service) GetByUsername(r context.Context, username string) (u user.User, isNotFoundErr bool, err error) {
-	return s.getUser(r, "username = ?", username)
+	return s.db.GetUserByUsername(r, username)
 }
 func (s service) GetByStripeId(r context.Context, stripeId string) (u user.User, isNotFoundErr bool, err error) {
-	return s.getUser(r, "stripeId = ?", stripeId)
+	return s.db.GetUserByStripeId(r, stripeId)
 }
 func (s service) GetByCliKey(r context.Context, plainCliKey string) (u user.User, isNotFoundErr bool, err error) {
-	return s.getUser(r, "cliKeyHash = ?", s.hashWithSalt(plainCliKey))
-}
-func (s service) getUser(
-	r context.Context,
-	whereQueryClause string,
-	queryArgs ...any) (u user.User, isNotFoundErr bool, err error) {
-	err = s.db.Bind(r).QueryRow(fmt.Sprintf(`
-		SELECT
-			id,
-			email,
-			isOrganization,
-			state,
-			stripeId,
-			cliKeyHash,
-			username,
-			passwordHash,
-			selfPaidSubscription,
-			selfPaidSubscriptionQuantity,
-			stripeSessionId,
-			stripeSessionUrl,
-			stripeSessionPriceId,
-			stripeSessionQuantity,
-			stripeSubscriptionID
-		FROM
-			users2
-		WHERE
-			%s `, whereQueryClause),
-		queryArgs...).Scan(
-		&u.Id,
-		&u.Email,
-		&u.IsOrganization,
-		&u.State,
-		&u.StripeId,
-		&u.CliKeyHash,
-		&u.Username,
-		&u.PasswordHash,
-		&u.SelfPaidSubscription,
-		&u.SelfPaidSubscriptionQuantity,
-		&u.StripeSessionId,
-		&u.StripeSessionUrl,
-		&u.StripeSessionPriceId,
-		&u.StripeSessionQuantity,
-		&u.StripeSubscriptionID,
-	)
-	if errors.Is(err, sql.ErrNoRows) {
-		isNotFoundErr = true
-		err = errors.New("user not found")
-		return
-	}
-	if err != nil {
-		err = fmt.Errorf("failed to get user: %s", err)
-		return
-	}
-	err = readUserDataFromOtherSources(s.db, &u)
-	if err != nil {
-		return
-	}
-	return
+	return s.db.GetUserByCliKeyHash(r, s.hashWithSalt(plainCliKey))
 }
 func (s service) GetUsername(userId int64, tx context.Context) (string, error) {
-	var uname string
-	err := s.db.Bind(tx).QueryRow(`
-		SELECT
-			username
-		FROM
-			users2
-		WHERE
-			id = ? `, userId).Scan(
-		&uname,
-	)
-	return uname, err
-}
-
-type userIter struct {
-	db       webdb.WebDb
-	r        context.Context
-	userRows *sql.Rows
+	username, _, err := s.db.GetUsername(tx, userId)
+	return username, err
 }
 
 func (s service) CountAll(r context.Context) (int64, error) {
@@ -140,78 +68,7 @@ func (s service) CountAll(r context.Context) (int64, error) {
 }
 
 func (s service) GetAll(r context.Context) (iterator.I[user.User], error) {
-	rows, err := s.db.Bind(r).Query(`
-		SELECT
-			id,
-			email,
-			isOrganization,
-			state,
-			stripeId,
-			cliKeyHash,
-			username,
-			passwordHash,
-			selfPaidSubscription,
-			selfPaidSubscriptionQuantity,
-			stripeSessionId,
-			stripeSessionUrl,
-			stripeSessionPriceId,
-			stripeSessionQuantity,
-			stripeSubscriptionID
-		FROM
-			users2
-		ORDER BY id DESC
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query all users2: %s", err)
-	}
-	return userIter{s.db, r, rows}, nil
-}
-func (it userIter) Get() (u user.User, err error) {
-	err = it.userRows.Scan(
-		&u.Id,
-		&u.Email,
-		&u.IsOrganization,
-		&u.State,
-		&u.StripeId,
-		&u.CliKeyHash,
-		&u.Username,
-		&u.PasswordHash,
-		&u.SelfPaidSubscription,
-		&u.SelfPaidSubscriptionQuantity,
-		&u.StripeSessionId,
-		&u.StripeSessionUrl,
-		&u.StripeSessionPriceId,
-		&u.StripeSessionQuantity,
-		&u.StripeSubscriptionID,
-	)
-	if err != nil {
-		return
-	}
-	err = readUserDataFromOtherSources(it.db, &u)
-	return
-}
-func (it userIter) Next() bool {
-	return it.userRows.Next()
-}
-func (it userIter) Err() error {
-	return it.userRows.Err()
-}
-func readUserDataFromOtherSources(
-	db webdb.WebDb,
-	u *user.User) error {
-	q, err := db.GetQuota(quotaOwnerName(*u))
-	if err != nil {
-		return err
-	}
-	qUsed, qLimitted, err := db.GetQuotaUsed(quotaOwnerName(*u))
-	if err != nil {
-		return err
-	}
-	u.TotalQuota = q
-	u.QuotaUsed = qUsed
-	u.QuotaLimmitted = qLimitted
-
-	return nil
+	return s.db.GetAllUsers(r)
 }
 
 func quotaOwnerName(u user.User) string {
