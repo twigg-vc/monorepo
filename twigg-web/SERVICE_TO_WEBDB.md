@@ -54,8 +54,26 @@ Already migrated — use as reference implementations:
   status strings cross the webdb boundary as plain `string` (like review's
   thread types as plain `uint32`) and the service owns the `CiCdStatus` type.
 
-Still legacy (create tables in their constructor): `services/user`,
-`services/jobs`, `services/trackqueue`, `services/migrations`.
+- Users: `webdb/migrations/0000009_users.sql`, `webdb/users.go`,
+  `webdb/stripesubscriptions.go` and their tests — surviving service:
+  `services/user` keeps the cli-key and password hashing, the username/email
+  validation, the Stripe client orchestration, the state transitions and the
+  plan-to-quota/job-limit mapping. The entity had to move out first: it lives in
+  `twigg-web/user/` so that `webdb` can return it, and consumers import the
+  entity as `user` while aliasing the service `userservice`.
+
+  Two things are worth copying from this one. First, `webdb` methods mirror the
+  service's statements one for one (`CreateUser` takes literals, `UpdateUser`
+  takes the entity because it writes every field, `SetUserStripeId` writes the
+  single column) — an earlier attempt at one `UpsertUser` for both paths was
+  rejected for taking a whole entity while using only part of it. Second,
+  `webdb` fills the quota fields itself, in the single-row reads and in the
+  `GetAllUsers` iterator, so the service no longer stitches a user together
+  after reading it; `UserQuotaOwnerName` is exposed so no consumer formats the
+  quota key.
+
+Still legacy (create tables in their constructor): `services/jobs`,
+`services/trackqueue`.
 
 Out of scope: anything on a separate database (only the main WebDb sqlite db is
 being consolidated). Metrics was such a case and was removed instead of migrated
@@ -93,17 +111,24 @@ verbatim. Keep `IF NOT EXISTS`: production databases already have these tables
 ### 3. Decide where the entity type lives
 
 `webdb` must be able to return the entity, so it can never live inside `webdb`
-consumers' packages. Two cases:
+consumers' packages. Move it to a top-level package in twigg-web named after
+it, like `twigg-web/notification/`, `twigg-web/repo/` or `twigg-web/user/` — entity
+struct + pure helpers, no DB code. This holds even when the service survives:
+its own internal tests import `webdb`, which cycles if the entity stayed in the
+service package. Plain data struct rules apply (`NewXXX` constructor, no impl
+split).
 
-- **No surviving service** (the package gets deleted): move the entity to a
-  top-level package in twigg-web named after it, like `twigg-web/notification/`
-  or `twigg-web/permissions/` — entity struct + pure helpers, no DB code.
-- **Surviving service**: the entity stays in the service package (e.g.
-  `user.User` in `services/user`), and `webdb` imports it. This works because
-  the service depends on its own db interface, not on `webdb`, so there is no
-  import cycle.
+When the entity is widely used, move it in its own stacked commit *before* the
+migration, and split that move up:
 
-Either way, plain data struct rules apply (`NewXXX` constructor, no impl split).
+1. Turn any method that must outlive the move into a function taking the entity
+   (`SetUsername(u *User, ...)`), so it can stay in the service package —
+   methods can only be declared where the type is.
+2. Move the type behind a temporary alias in the service (`type User =
+   user.User`), so that commit touches no consumer at all.
+3. Repoint consumers a few files per commit: the entity takes the natural name
+   (`user`) and the service gets aliased (`userservice`).
+4. Delete the alias.
 
 ### 4. Implement the CRUD on webDb
 
