@@ -7,7 +7,8 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/review"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg/commit"
 	"time"
 )
@@ -15,10 +16,10 @@ import (
 type service struct {
 	db          Db
 	owners      OwnersChecker
-	userService user.Service
+	userService userservice.Service
 }
 
-func new(db Db, owners OwnersChecker, userService user.Service) (Service, error) {
+func new(db Db, owners OwnersChecker, userService userservice.Service) (Service, error) {
 	return service{db, owners, userService}, nil
 }
 

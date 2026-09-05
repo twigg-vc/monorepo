@@ -5,7 +5,8 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/review"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg/commit"
 )
 
@@ -101,7 +102,7 @@ type Db interface {
 	GetUsersWithPermission(ctx context.Context, assetId string, p permissions.Permission) (iterator.I[int64], error)
 }
 
-func New(db Db, owners OwnersChecker, userService user.Service) (Service, error) {
+func New(db Db, owners OwnersChecker, userService userservice.Service) (Service, error) {
 	return new(db, owners, userService)
 }
 

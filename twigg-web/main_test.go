@@ -22,7 +22,7 @@ import (
 	reposervice "monorepo/twigg-web/services/repo"
 	"monorepo/twigg-web/services/sign"
 	"monorepo/twigg-web/services/twiggtoken"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/srvconfig"
 	twiggwebclient "monorepo/twigg-web/twigg-web-client"
 	"monorepo/twigg-web/webcomponents"
@@ -1696,11 +1696,11 @@ func TestNotifications(t *testing.T) {
 
 func TestQuotaEnforcementOnTwiggPushes(t *testing.T) {
 	// Mock a smaller quota for testing
-	backup := user.TeamStorageQuota
+	backup := userservice.TeamStorageQuota
 	t.Cleanup(func() {
-		user.TeamStorageQuota = backup
+		userservice.TeamStorageQuota = backup
 	})
-	user.TeamStorageQuota = 5 * 1024 // 5 kB
+	userservice.TeamStorageQuota = 5 * 1024 // 5 kB
 
 	srv := GetMockServer(t)
 	b := NewTestBrowser(srv.C.PublicUrl, t)

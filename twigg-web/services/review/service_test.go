@@ -5,7 +5,8 @@ import (
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/services/stripeclient"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 	"reflect"
 	"sort"
@@ -759,7 +760,7 @@ func TestGetDataCheckOwnersDowngradesReadyWhenOwnersNotOk(t *testing.T) {
 	}
 	defer closeW()
 
-	us, err := user.NewService(mockJobLimitSetter{}, stripeclient.NewMockStripeClient(), b, "test-salt")
+	us, err := userservice.NewService(mockJobLimitSetter{}, stripeclient.NewMockStripeClient(), b, "test-salt")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -863,7 +864,7 @@ func TestGetDataReadyWhenOwnersAddLgtm(t *testing.T) {
 	}
 	defer closeW()
 
-	us, err := user.NewService(mockJobLimitSetter{}, stripeclient.NewMockStripeClient(), b, "test-salt")
+	us, err := userservice.NewService(mockJobLimitSetter{}, stripeclient.NewMockStripeClient(), b, "test-salt")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1095,7 +1096,7 @@ func TestResolveSupremeLeaders_OrgOwned(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	us, err := user.NewService(mockJobLimitSetter{}, stripeclient.NewMockStripeClient(), b, "test-salt")
+	us, err := userservice.NewService(mockJobLimitSetter{}, stripeclient.NewMockStripeClient(), b, "test-salt")
 	if err != nil {
 		t.Fatal(err)
 	}
