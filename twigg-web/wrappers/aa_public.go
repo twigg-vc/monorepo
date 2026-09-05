@@ -52,11 +52,16 @@ type AuthMuxRequest struct {
 	Flags    featureflags.Flags
 }
 
+type CliKeyAuthMuxDb interface {
+	UserRepoMuxDb
+	BeginWrite() (writeCtx context.Context, closeTx func(), commitTx func() error, err error)
+}
+
 // ########## Creates a mux for requests from the CLI, authenticated with the
 // user's api key. It validates that the user has a subscription and is the
 // repo owner or has write permission in the repo (same checks as the
 // session-based repo muxes).
-func NewCliKeyAuthMux(configName string, db webdb.WebDb,
+func NewCliKeyAuthMux(configName string, db CliKeyAuthMuxDb,
 	repoSrv reposervice.Service, userSrv userservice.Service,
 	mux RlMux) CliKeyAuthMux {
 	return cliKeyAuthMux{configName, db, repoSrv, userSrv, mux}
@@ -168,9 +173,13 @@ type UserWithSubMuxRequest struct {
 
 // ##########
 
+type UserRepoMuxDb interface {
+	HasPermission(ctx context.Context, userId int64, p perm.Permission, assetId string) (bool, error)
+}
+
 // ########## Creates a mux for users that are have permission in repo
 func NewUserRepoMux(configName string, userWithSubMux UserWithSubMux,
-	permSrv webdb.WebDb,
+	permSrv UserRepoMuxDb,
 	repoSrv reposervice.Service,
 	userSrv userservice.Service) UserRepoMux {
 	return userRepoMux{configName, userWithSubMux, permSrv, repoSrv, userSrv}

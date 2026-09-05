@@ -9,14 +9,13 @@ import (
 	"monorepo/twigg-web/services/repo"
 	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/user"
-	"monorepo/twigg-web/webdb"
 	"net/http"
 )
 
 type userRepoMux struct {
 	configName     string
 	userWithSubMux UserWithSubMux
-	permSrv        webdb.WebDb
+	permSrv        UserRepoMuxDb
 	repoSrv        repo.Service
 	userSrv        userservice.Service
 }
@@ -67,7 +66,7 @@ func (m userRepoMux) HandleFuncW(pattern string, handler func(w http.ResponseWri
 // If ok is false, this function already wrote the HTTP response and the
 // caller must return immediately without writing anything else.
 func resolveRepoAndValidateWritePerm(w http.ResponseWriter, r *http.Request,
-	dbRead context.Context, userId int64, permSrv webdb.WebDb,
+	dbRead context.Context, userId int64, permSrv UserRepoMuxDb,
 	repoSrv repo.Service, userSrv userservice.Service) (
 	ownerUsr user.User, repo webrepo.Repo, ok bool) {
 

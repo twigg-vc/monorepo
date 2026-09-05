@@ -6,14 +6,13 @@ import (
 	"monorepo/twigg-web/featureflags"
 	"monorepo/twigg-web/services/repo"
 	userservice "monorepo/twigg-web/services/user"
-	"monorepo/twigg-web/webdb"
 	"monorepo/twigg/xchange"
 	"net/http"
 )
 
 type cliKeyAuthMux struct {
 	configName string
-	db         webdb.WebDb
+	db         CliKeyAuthMuxDb
 	repoSrv    repo.Service
 	userSrv    userservice.Service
 	mux        RlMux
