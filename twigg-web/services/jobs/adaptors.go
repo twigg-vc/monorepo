@@ -3,13 +3,7 @@ package jobs
 import (
 	"context"
 	"fmt"
-	"regexp"
 )
-
-const pipelineIdPrefix = "p-"
-const pipelineStageIdSuffix = ".s"
-
-var pipelineStageIdRegexp = regexp.MustCompile(fmt.Sprintf(`^%s.*\%s[0-9]+$`, pipelineIdPrefix, pipelineStageIdSuffix))
 
 func (s service) SetToPosted(wl context.Context, jobIdOrPipelineStageId string) error {
 	if MightBePipelineStageId(jobIdOrPipelineStageId) {

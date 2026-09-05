@@ -2,12 +2,9 @@ package jobs
 
 import (
 	"context"
-	"fmt"
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/webdb"
-	"strconv"
-	"strings"
 )
 
 type Job = job.Job
@@ -24,60 +21,22 @@ type PipelineRef struct {
 	Name   string
 }
 
-type Pipeline struct {
-	InternalId      int64
-	RepoId          uint64
-	Commit          uint64
-	CommitVersion   uint64
-	Path            string // Path to file that defines job
-	Name            string // Name of the job in the file
-	RunNumber       int64  // n-th time that the job was run
-	NumberOfStages  int32  // Number of stages in the pipeline
-	Status          PipelineStatus
-	CreatedTime     string
-	IsCreatedByUser bool  // Indicates a user manually lanched it
-	CreatedByUserId int64 // Indicates the id of the user who launched it
-}
+type Pipeline = job.Pipeline
+type PipelineStatus = job.PipelineStatus
 
-// Returns true if a string might be and id of a pipeline
-func MightBePipelineStageId(id string) bool {
-	return pipelineStageIdRegexp.MatchString(id)
-}
+var MightBePipelineStageId = job.MightBePipelineStageId
+var PipelineId = job.PipelineId
+var PipelineStageId = job.PipelineStageId
+var ParsePipelineId = job.ParsePipelineId
+var ParsePipelineStageId = job.ParsePipelineStageId
 
-func (p Pipeline) Id() string {
-	return PipelineId(p.RepoId, p.Commit, p.CommitVersion, p.Path, p.Name, p.RunNumber)
-}
-func (p Pipeline) IdOfStage(stage int32) string {
-	return PipelineStageId(p.Id(), stage)
-}
-
-func PipelineId(RepoId uint64, Commit uint64, CommitVersion uint64,
-	Path string, Name string, RunNumber int64) string {
-	return pipelineIdPrefix + JobId(RepoId, Commit, CommitVersion, Path, Name, RunNumber)
-}
-func PipelineStageId(pipelineId string, stage int32) string {
-	return fmt.Sprintf("%s%s%d", pipelineId, pipelineStageIdSuffix, stage)
-}
-func ParsePipelineId(id string) (RepoId uint64, Commit uint64, CommitVersion uint64,
-	Path string, Name string, RunNumber int64, ok bool) {
-	return ParseJobId(strings.TrimPrefix(id, pipelineIdPrefix))
-}
-func ParsePipelineStageId(id string) (RepoId uint64, Commit uint64, CommitVersion uint64,
-	Path string, Name string, RunNumber int64, Stage int32, ok bool) {
-	i := strings.LastIndex(id, pipelineStageIdSuffix)
-	if i < 0 {
-		return
-	}
-	stageStr := id[i+2:]
-	stage, err := strconv.ParseInt(stageStr, 10, 32)
-	if err != nil {
-		return
-	}
-	Stage = int32(stage)
-	RepoId, Commit, CommitVersion, Path, Name, RunNumber, ok =
-		ParsePipelineId(id[:i])
-	return
-}
+const (
+	PipelineStatusWaitingManualStart = job.PipelineStatusWaitingManualStart
+	PipelineStatusRunning            = job.PipelineStatusRunning
+	PipelineStatusSuccess            = job.PipelineStatusSuccess
+	PipelineStatusFail               = job.PipelineStatusFail
+	PipelineStatusCancel             = job.PipelineStatusCancel
+)
 
 type PipelineStage struct {
 	PipelineId      string
@@ -191,14 +150,4 @@ const (
 	JobStatusBadFileFormat      = job.JobStatusBadFileFormat
 	JobStatusBadFileSize        = job.JobStatusBadFileSize
 	JobStatusExceedsPlanLimits  = job.JobStatusExceedsPlanLimits
-)
-
-type PipelineStatus string
-
-const (
-	PipelineStatusWaitingManualStart PipelineStatus = "waiting-manual-start"
-	PipelineStatusRunning            PipelineStatus = "running"
-	PipelineStatusSuccess            PipelineStatus = "success"
-	PipelineStatusFail               PipelineStatus = "fail"
-	PipelineStatusCancel             PipelineStatus = "cancel"
 )

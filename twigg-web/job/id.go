@@ -2,9 +2,16 @@ package job
 
 import (
 	"encoding/base64"
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
+
+const pipelineIdPrefix = "p-"
+const pipelineStageIdSuffix = ".s"
+
+var pipelineStageIdRegexp = regexp.MustCompile(fmt.Sprintf(`^%s.*\%s[0-9]+$`, pipelineIdPrefix, pipelineStageIdSuffix))
 
 func parseJobId(id string) (repoId uint64, commit uint64, commitVersion uint64,
 	path string, name string, runNumber int64, ok bool) {
@@ -35,5 +42,22 @@ func parseJobId(id string) (repoId uint64, commit uint64, commitVersion uint64,
 		return
 	}
 	ok = true
+	return
+}
+
+func parsePipelineStageId(id string) (RepoId uint64, Commit uint64, CommitVersion uint64,
+	Path string, Name string, RunNumber int64, Stage int32, ok bool) {
+	i := strings.LastIndex(id, pipelineStageIdSuffix)
+	if i < 0 {
+		return
+	}
+	stageStr := id[i+2:]
+	stage, err := strconv.ParseInt(stageStr, 10, 32)
+	if err != nil {
+		return
+	}
+	Stage = int32(stage)
+	RepoId, Commit, CommitVersion, Path, Name, RunNumber, ok =
+		ParsePipelineId(id[:i])
 	return
 }
