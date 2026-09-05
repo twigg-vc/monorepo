@@ -3,7 +3,6 @@ package jobs
 import (
 	"context"
 	"crypto/rand"
-	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -164,21 +163,8 @@ func (s service) CreateNewPipeline(tx context.Context,
 			Status:      job.JobStatusWaiting,
 			CreatedTime: createdTime,
 		}
-		_, err = s.db.Bind(tx).Exec(`
-		INSERT INTO jobPipelineStages (
-			jobPipelineId,
-			stage,
-			name,
-			createdTime,
-			status
-		) VALUES (?, ?, ?, ?, ?)
-	`,
-			stage.PipelineId,
-			stage.Stage,
-			stage.Name,
-			stage.CreatedTime,
-			stage.Status,
-		)
+		err = s.db.InsertPipelineStage(tx, stage.PipelineId, stage.Stage, stage.Name,
+			stage.CreatedTime, stage.Status)
 		if err != nil {
 			return job.Pipeline{}, err
 		}
@@ -199,49 +185,7 @@ func (s service) getPipelineById(rl context.Context, id string) (p job.Pipeline,
 	return s.db.GetPipeline(rl, repoId, commitId, commitVersion, path, name, runNumber)
 }
 func (s service) GetPipelineStagesById(rl context.Context, id string) (iterator.I[job.PipelineStage], error) {
-	rows, err := s.db.Bind(rl).Query(`
-		SELECT
-			jobPipelineId,
-			stage,
-			name,
-			createdTime,
-			status,
-			isResumedByUser,
-			resumedByUserId
-		FROM jobPipelineStages
-		WHERE jobPipelineId = ?
-		ORDER BY stage
-	`, id)
-	if err != nil {
-		return nil, err
-	}
-	return pipelineStages{rows}, nil
-}
-
-type pipelineStages struct {
-	rows *sql.Rows
-}
-
-func (it pipelineStages) Get() (job.PipelineStage, error) {
-	var j job.PipelineStage
-	if err := it.rows.Scan(
-		&j.PipelineId,
-		&j.Stage,
-		&j.Name,
-		&j.CreatedTime,
-		&j.Status,
-		&j.IsResumedByUser,
-		&j.ResumedByUserId,
-	); err != nil {
-		return job.PipelineStage{}, fmt.Errorf("pipelineStages.Get: failed to scan job: %w", err)
-	}
-	return j, nil
-}
-func (it pipelineStages) Next() bool {
-	return it.rows.Next()
-}
-func (it pipelineStages) Err() error {
-	return it.rows.Err()
+	return s.db.GetPipelineStages(rl, id)
 }
 
 func (s service) SetStatusOfPipelineStage(tx context.Context, pipelineId string, stage int32, status job.JobStatus) error {

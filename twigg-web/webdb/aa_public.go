@@ -633,6 +633,19 @@ func (db WebDb) GetRepoPipelinesByRef(ctx context.Context, repoId uint64,
 	return db.db.GetRepoPipelinesByRef(ctx, repoId, path, name, afterInternalPipelineId)
 }
 
+// Creates a pipeline stage row. The columns that are not taken here keep their
+// table default.
+func (db WebDb) InsertPipelineStage(writeCtx context.Context, pipelineId string,
+	stage int32, name, createdTime string, status job.JobStatus) error {
+	return db.db.InsertPipelineStage(writeCtx, pipelineId, stage, name, createdTime, status)
+}
+
+// Returns the stages of a pipeline, ordered by stage.
+func (db WebDb) GetPipelineStages(ctx context.Context,
+	pipelineId string) (iterator.I[job.PipelineStage], error) {
+	return db.db.GetPipelineStages(ctx, pipelineId)
+}
+
 // Adapts the read context to the twigg server read interface.
 func (db WebDb) GetServerRead(ctx context.Context) server.Read {
 	return db.Bind(ctx)
