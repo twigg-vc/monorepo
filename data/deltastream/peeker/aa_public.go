@@ -2,33 +2,50 @@ package peeker
 
 import "io"
 
-type Peeker interface {
-	io.Reader
+type Peeker struct {
+	p *peeker
+}
 
-	// Returns the peeked data.
-	// Never returns nil after IsInit().
-	Peeked() []byte
+func (pk Peeker) Read(b []byte) (int, error) {
+	return pk.p.Read(b)
+}
 
-	// Forces the data to be peeked. This ensures the validity of the
-	// DataIs* methods even if Read() is never called.
-	// Read() automatically calls this function on first read.
-	Init() error
-	// Returns whether the peeker was initialized, which is equivalent to
-	// wheter Init() or Read() was ever called.
-	IsInit() bool
+// Returns the peeked data.
+// Never returns nil after IsInit().
+func (pk Peeker) Peeked() []byte {
+	return pk.p.Peeked()
+}
 
-	// Since the peeker only reads data lazily (i.e. after the first Read),
-	// the DataIs* methods can't really be trusted before Read() has been
-	// called at least once or Init() was called.
+// Forces the data to be peeked. This ensures the validity of the
+// DataIs* methods even if Read() is never called.
+// Read() automatically calls this function on first read.
+func (pk Peeker) Init() error {
+	return pk.p.Init()
+}
 
-	// Panics if n > maxBytesPeeked
-	DataIsSmallerThan(n int) bool
+// Returns whether the peeker was initialized, which is equivalent to
+// wheter Init() or Read() was ever called.
+func (pk Peeker) IsInit() bool {
+	return pk.p.IsInit()
+}
 
-	// Panics if n > maxBytesPeeked
-	DataIsLargerThan(n int) bool
+// Since the peeker only reads data lazily (i.e. after the first Read),
+// the DataIs* methods can't really be trusted before Read() has been
+// called at least once or Init() was called.
 
-	// Uses heuristics to identify data that is probably textual
-	DataIsProbablyText() bool
+// Panics if n > maxBytesPeeked
+func (pk Peeker) DataIsSmallerThan(n int) bool {
+	return pk.p.DataIsSmallerThan(n)
+}
+
+// Panics if n > maxBytesPeeked
+func (pk Peeker) DataIsLargerThan(n int) bool {
+	return pk.p.DataIsLargerThan(n)
+}
+
+// Uses heuristics to identify data that is probably textual
+func (pk Peeker) DataIsProbablyText() bool {
+	return pk.p.DataIsProbablyText()
 }
 
 // Creates an instance that will analyze the data provided by the reader.
@@ -38,5 +55,5 @@ type Peeker interface {
 // never returns errors.
 // Note that up to `maxBytesPeeked` bytes are loaded into memory.
 func New(data io.Reader, maxBytesPeeked int) Peeker {
-	return newPeeker(data, maxBytesPeeked)
+	return Peeker{newPeeker(data, maxBytesPeeked)}
 }
