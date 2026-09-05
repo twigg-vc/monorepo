@@ -4,13 +4,13 @@ import (
 	"context"
 	"log"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/jobs"
+	jobsservice "monorepo/twigg-web/services/jobs"
 	"net/http"
 )
 
 type userRepoPipelineMux struct {
 	u  UserRepoMux
-	js jobs.Service
+	js jobsservice.Service
 }
 
 func (m userRepoPipelineMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,

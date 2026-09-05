@@ -3,10 +3,11 @@ package wrappers
 import (
 	"context"
 	"monorepo/twigg-web/featureflags"
+	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/metrics"
 	perm "monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/repo"
-	"monorepo/twigg-web/services/jobs"
+	jobsservice "monorepo/twigg-web/services/jobs"
 	reposervice "monorepo/twigg-web/services/repo"
 	"monorepo/twigg-web/services/session"
 	"monorepo/twigg-web/services/stripeclient"
@@ -235,7 +236,7 @@ type UserWithReadPermissionMuxRequest struct {
 // ##########
 
 // ########## Creates a mux for users that are have permission in repo and in a jpb pipeline
-func NewUserRepoPipelineMux(u UserRepoMux, js jobs.Service) UserRepoPipelineMux {
+func NewUserRepoPipelineMux(u UserRepoMux, js jobsservice.Service) UserRepoPipelineMux {
 	return UserRepoPipelineMux{userRepoPipelineMux{u, js}}
 }
 
@@ -257,7 +258,7 @@ type UserRepoPipelineMuxRequest struct {
 	UserWithWritePermission user.User
 	Repo                    repo.Repo
 	RepoOwnerUsr            user.User
-	Pipeline                jobs.Pipeline
+	Pipeline                job.Pipeline
 	Flags                   featureflags.Flags
 }
 
