@@ -41,6 +41,3 @@ func (l *logger) Stop() {
 	close(l.stopCh)
 	l.wg.Wait()
 }
-func (l *logger) private() {
-
-}

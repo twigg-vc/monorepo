@@ -6,20 +6,25 @@ import (
 	"time"
 )
 
-type MemLogger interface {
-	// Starts logging memory stats
-	Start()
-	// Stops logging memory stats
-	Stop()
+type MemLogger struct {
+	l *logger
+}
 
-	private()
+// Starts logging memory stats
+func (ml MemLogger) Start() {
+	ml.l.Start()
+}
+
+// Stops logging memory stats
+func (ml MemLogger) Stop() {
+	ml.l.Stop()
 }
 
 func New(interval time.Duration, m metrics.Service) MemLogger {
-	return &logger{
+	return MemLogger{&logger{
 		interval: interval,
 		stopCh:   make(chan struct{}),
 		m:        m,
 		wg:       sync.WaitGroup{},
-	}
+	}}
 }
