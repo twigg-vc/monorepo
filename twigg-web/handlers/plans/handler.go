@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"net/http"

@@ -6,7 +6,7 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/routes"
-	"monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
 )
