@@ -1,12 +1,17 @@
 package login
 
 import (
+	"context"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/session"
 	userservice "monorepo/twigg-web/services/user"
-	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 )
+
+type Db interface {
+	BeginRead() (readCtx context.Context, closeTx func(), err error)
+	BeginWrite() (writeCtx context.Context, closeTx func(), commitTx func() error, err error)
+}
 
 // Add handlers and return 2 wrap functions
 // logInWrap use it to wrap handler function so that
@@ -16,7 +21,7 @@ import (
 func AddHandlers(
 	allowPasswordLogin bool,
 	rt routes.Router,
-	db webdb.WebDb,
+	db Db,
 	userService userservice.Service,
 	sessionService session.Service,
 	mux wrappers.RlMux) {

@@ -7,13 +7,12 @@ import (
 	"monorepo/twigg-web/services/session"
 	userservice "monorepo/twigg-web/services/user"
 	twiggwc "monorepo/twigg-web/webcomponents"
-	"monorepo/twigg-web/webdb"
 	"net/http"
 )
 
 type handler struct {
 	allowPasswordLogin bool
-	db                 webdb.WebDb
+	db                 Db
 	userService        userservice.Service
 	sessionService     session.Service
 }
