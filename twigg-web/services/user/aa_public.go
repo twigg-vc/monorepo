@@ -7,7 +7,6 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/services/stripeclient"
 	"monorepo/twigg-web/user"
-	"monorepo/twigg-web/webdb"
 	"time"
 )
 
@@ -94,8 +93,37 @@ func IsEmail(s string) bool {
 
 // Constructor of the service
 func NewService(js JobLimitSetter,
-	stripeClient stripeclient.StripeClient, db webdb.WebDb, salt string) (Service, error) {
+	stripeClient stripeclient.StripeClient, db Db, salt string) (Service, error) {
 	return newService(js, stripeClient, db, salt)
+}
+
+// The storage the service needs.
+type Db interface {
+	CreateUser(writeCtx context.Context, email string, state user.UserState,
+		isOrganization bool, username, passwordHash string,
+		selfPaidSubscription user.SubscriptionPlan,
+		selfPaidSubscriptionQuantity int64) (userId int64, err error)
+	UpdateUser(writeCtx context.Context, u user.User) error
+	SetUserStripeId(writeCtx context.Context, userId int64, stripeId string) error
+
+	GetUser(ctx context.Context, userId int64) (u user.User, isNotFoundErr bool, err error)
+	GetUserByEmail(ctx context.Context, email string) (u user.User, isNotFoundErr bool, err error)
+	GetUserByUsername(ctx context.Context, username string) (u user.User, isNotFoundErr bool, err error)
+	GetUserByStripeId(ctx context.Context, stripeId string) (u user.User, isNotFoundErr bool, err error)
+	GetUserByCliKeyHash(ctx context.Context, cliKeyHash string) (u user.User, isNotFoundErr bool, err error)
+	GetUsername(ctx context.Context, userId int64) (username string, isNotFoundErr bool, err error)
+	GetUserIsOrganization(ctx context.Context, userId int64) (isOrganization bool, isNotFoundErr bool, err error)
+	CountUsers(ctx context.Context) (int64, error)
+	GetAllUsers(ctx context.Context) (iterator.I[user.User], error)
+
+	UpsertStripeSubscription(writeCtx context.Context, stripeSubscriptionId string,
+		userId int64, isActive bool) error
+	GetStripeSubscriptionIsActive(ctx context.Context,
+		stripeSubscriptionId string) (isActive bool, isNotFoundErr bool, err error)
+
+	UserQuotaOwnerName(userId int64) string
+	SetQuota(quotaOwner string, nBytes int64) error
+	FreezeQuota(quotaOwner string) error
 }
 
 var (

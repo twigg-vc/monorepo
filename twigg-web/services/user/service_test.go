@@ -1572,7 +1572,7 @@ func TestQuota(t *testing.T) {
 	}
 
 	// Mock the usage of quota
-	db.SetBlob(w, quotaOwnerName(u), "", "", bytes.NewBufferString("abc"))
+	db.SetBlob(w, db.UserQuotaOwnerName(u.Id), "", "", bytes.NewBufferString("abc"))
 	u, _, _ = s.Get(w, u.Id)
 	qUsed := u.QuotaUsed
 	if qUsed == 0 {

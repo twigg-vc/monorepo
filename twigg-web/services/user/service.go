@@ -8,7 +8,6 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/services/stripeclient"
 	"monorepo/twigg-web/user"
-	"monorepo/twigg-web/webdb"
 	"net/mail"
 	"regexp"
 	"strconv"
@@ -16,14 +15,14 @@ import (
 )
 
 type service struct {
-	db           webdb.WebDb
+	db           Db
 	js           JobLimitSetter
 	stripeClient stripeclient.StripeClient
 	salt         string
 }
 
 func newService(js JobLimitSetter, stripeClient stripeclient.StripeClient,
-	db webdb.WebDb, salt string) (service, error) {
+	db Db, salt string) (service, error) {
 	return service{
 		db:           db,
 		js:           js,
@@ -61,10 +60,6 @@ func (s service) CountAll(r context.Context) (int64, error) {
 
 func (s service) GetAll(r context.Context) (iterator.I[user.User], error) {
 	return s.db.GetAllUsers(r)
-}
-
-func quotaOwnerName(u user.User) string {
-	return strconv.FormatInt(u.Id, 10)
 }
 
 func (s service) updateUser(u user.User, w context.Context) error {
@@ -361,7 +356,7 @@ func (s service) HandleStripeCheckoutSessionSuccess(w context.Context,
 	default:
 		return user.User{}, fmt.Errorf("%d is not a valid plan", plan)
 	}
-	err = s.db.SetQuota(quotaOwnerName(u), quota)
+	err = s.db.SetQuota(s.db.UserQuotaOwnerName(u.Id), quota)
 	if err != nil {
 		return user.User{}, fmt.Errorf("failed to set quota: %s", err)
 	}
@@ -416,7 +411,7 @@ func (s service) HandlesSubscriptionDeleted(
 	if err != nil {
 		return user.User{}, fmt.Errorf("failed to inactivate stripe sub: %s", err)
 	}
-	err = s.db.FreezeQuota(quotaOwnerName(u))
+	err = s.db.FreezeQuota(s.db.UserQuotaOwnerName(u.Id))
 	if err != nil {
 		return user.User{}, fmt.Errorf("failed to freeze quota: %s", err)
 	}
@@ -481,7 +476,7 @@ func (s service) HandleManualSubscriptionDeleted(w context.Context, userId int64
 	if u.State != user.UserState_ManualSubscription {
 		return fmt.Errorf("%d is not on a manual subscription", userId)
 	}
-	err = s.db.FreezeQuota(quotaOwnerName(u))
+	err = s.db.FreezeQuota(s.db.UserQuotaOwnerName(u.Id))
 	if err != nil {
 		return fmt.Errorf("failed to freeze quota: %s", err)
 	}
@@ -544,7 +539,7 @@ func (s service) HandleManualPaymentSuccess(w context.Context, userId int64,
 	default:
 		return user.User{}, fmt.Errorf("%d is not a valid plan", plan)
 	}
-	err = s.db.SetQuota(quotaOwnerName(u), quota)
+	err = s.db.SetQuota(s.db.UserQuotaOwnerName(u.Id), quota)
 	if err != nil {
 		return user.User{}, fmt.Errorf("failed to set quota: %s", err)
 	}
@@ -584,7 +579,7 @@ func (s service) ManualReset(w context.Context, userId int64) error {
 			return fmt.Errorf("failed to inactivate stripe sub: %s", err)
 		}
 	}
-	err = s.db.FreezeQuota(quotaOwnerName(u))
+	err = s.db.FreezeQuota(s.db.UserQuotaOwnerName(u.Id))
 	if err != nil {
 		return fmt.Errorf("failed to freeze quota: %s", err)
 	}
