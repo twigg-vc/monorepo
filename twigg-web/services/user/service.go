@@ -57,14 +57,7 @@ func (s service) GetUsername(userId int64, tx context.Context) (string, error) {
 }
 
 func (s service) CountAll(r context.Context) (int64, error) {
-	var count int64
-	err := s.db.Bind(r).QueryRow(`
-	SELECT COUNT(*) FROM users2
-	`).Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("failed to count all users2: %s", err)
-	}
-	return count, nil
+	return s.db.CountUsers(r)
 }
 
 func (s service) GetAll(r context.Context) (iterator.I[user.User], error) {
