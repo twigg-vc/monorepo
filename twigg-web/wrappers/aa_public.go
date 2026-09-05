@@ -147,15 +147,21 @@ type UserMuxRequest struct {
 // ########## Creates a mux for admin users
 func NewAdminUserMux(userMux UserMux,
 	adminUserEmails []string) AdminUserMux {
-	return adminUserMux{userMux, adminUserEmails}
+	return AdminUserMux{adminUserMux{userMux, adminUserEmails}}
 }
 
-type AdminUserMux interface {
-	HandleFuncR(pattern string, handler func(w http.ResponseWriter,
-		r AdminUserMuxRequest, dbRead context.Context))
-	HandleFuncW(pattern string, handler func(w http.ResponseWriter,
-		r AdminUserMuxRequest,
-		dbWrite context.Context) (shouldCommit bool))
+type AdminUserMux struct {
+	m adminUserMux
+}
+
+func (m AdminUserMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,
+	r AdminUserMuxRequest, dbRead context.Context)) {
+	m.m.HandleFuncR(pattern, handler)
+}
+func (m AdminUserMux) HandleFuncW(pattern string, handler func(w http.ResponseWriter,
+	r AdminUserMuxRequest,
+	dbWrite context.Context) (shouldCommit bool)) {
+	m.m.HandleFuncW(pattern, handler)
 }
 type AdminUserMuxRequest struct {
 	*http.Request
