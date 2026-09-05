@@ -4,69 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/services/stripeclient"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 	"time"
 )
-
-type User struct {
-	Id             int64
-	Email          string
-	State          user.UserState
-	IsOrganization bool
-
-	// If !="", identifies user
-	CliKeyHash string
-	// If !="", identifies user
-	StripeId string
-
-	Username     string
-	PasswordHash string
-
-	SelfPaidSubscription         SubscriptionPlan
-	SelfPaidSubscriptionQuantity int64
-
-	StripeSessionId       string
-	StripeSessionUrl      string
-	StripeSessionPriceId  stripeclient.PriceId
-	StripeSessionQuantity int64 // Quantity used to create session
-	StripeSubscriptionID  string
-
-	QuotaUsed      int64 // number of blob bytes used
-	TotalQuota     int64 // number of blob bytes "purchased"
-	QuotaLimmitted int64 // number of blob bytes that failed to write due to "no quota"
-}
-
-func (u User) HasSub() bool {
-	return u.SelfPaidSubscription != Subscription_None
-}
-
-func (u User) MustUpgradeSelfPaidSub(
-	hasMoreThanTwoNonArchivedRepos bool) bool {
-	if u.QuotaUsed > u.TotalQuota || u.QuotaLimmitted > 0 {
-		return true
-	}
-	switch u.SelfPaidSubscription {
-	case Subscription_None, Subscription_Trial:
-		return hasMoreThanTwoNonArchivedRepos
-	case Subscription_Solo, Subscription_Team:
-		return false
-	default:
-		panic(fmt.Sprintf("unknown sub %d", u.SelfPaidSubscription))
-	}
-}
-func (u User) CanCreateRepo(hasTwoOrMoreReposAlready bool) bool {
-	if u.SelfPaidSubscription == Subscription_None {
-		return false
-	}
-	if u.SelfPaidSubscription == Subscription_Trial {
-		return !hasTwoOrMoreReposAlready
-	}
-	return true
-}
 
 type Service interface {
 	Get(r context.Context, id int64) (u User, isNotFoundErr bool, err error)
@@ -155,13 +98,15 @@ func NewService(js JobLimitSetter,
 	return newService(js, stripeClient, db, salt)
 }
 
-type SubscriptionPlan int
+type User = user.User
+
+type SubscriptionPlan = user.SubscriptionPlan
 
 const (
-	Subscription_None SubscriptionPlan = iota
-	Subscription_Solo
-	Subscription_Team
-	Subscription_Trial
+	Subscription_None  = user.Subscription_None
+	Subscription_Solo  = user.Subscription_Solo
+	Subscription_Team  = user.Subscription_Team
+	Subscription_Trial = user.Subscription_Trial
 )
 
 var (
