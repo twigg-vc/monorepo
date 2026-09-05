@@ -55,6 +55,7 @@ func (m AuthMux) HandleFunc(
 	pattern string, handler func(w http.ResponseWriter, r AuthMuxRequest)) {
 	m.m.HandleFunc(pattern, handler)
 }
+
 type AuthMuxRequest struct {
 	*http.Request
 	Username string
@@ -116,23 +117,30 @@ func NewUserMux(authMux AuthMux,
 	db UserMuxDb,
 	userService userservice.Service,
 ) UserMux {
-	return userMux{authMux, stripeClient, db, userService}
+	return UserMux{userMux{authMux, stripeClient, db, userService}}
 }
 
-type UserMux interface {
-	// HandleFuncR registers a handler for routes that require a read-only
-	// operations. After the handler returns, dbRead is automatically closed.
-	HandleFuncR(pattern string,
-		handler func(w http.ResponseWriter, r UserMuxRequest, dbRead context.Context))
-
-	// HandleFuncW registers a handler for routes that perform write
-	// operations. dbWrite is automatically closed and shouldCommit bool
-	// indicates whether the write transaction should be committed, after
-	// handler returns.
-	HandleFuncW(pattern string,
-		handler func(w http.ResponseWriter, r UserMuxRequest,
-			dbWrite context.Context) (shouldCommit bool))
+type UserMux struct {
+	m userMux
 }
+
+// HandleFuncR registers a handler for routes that require a read-only
+// operations. After the handler returns, dbRead is automatically closed.
+func (m UserMux) HandleFuncR(pattern string,
+	handler func(w http.ResponseWriter, r UserMuxRequest, dbRead context.Context)) {
+	m.m.HandleFuncR(pattern, handler)
+}
+
+// HandleFuncW registers a handler for routes that perform write
+// operations. dbWrite is automatically closed and shouldCommit bool
+// indicates whether the write transaction should be committed, after
+// handler returns.
+func (m UserMux) HandleFuncW(pattern string,
+	handler func(w http.ResponseWriter, r UserMuxRequest,
+		dbWrite context.Context) (shouldCommit bool)) {
+	m.m.HandleFuncW(pattern, handler)
+}
+
 type UserMuxRequest struct {
 	*http.Request
 	User                  user.User
@@ -163,6 +171,7 @@ func (m AdminUserMux) HandleFuncW(pattern string, handler func(w http.ResponseWr
 	dbWrite context.Context) (shouldCommit bool)) {
 	m.m.HandleFuncW(pattern, handler)
 }
+
 type AdminUserMuxRequest struct {
 	*http.Request
 	AdminUser user.User
@@ -171,23 +180,30 @@ type AdminUserMuxRequest struct {
 
 // ########## Creates a mux for users with self paid or guest sub
 func NewUserWithSubMux(userMux UserMux, repoService reposervice.Service) UserWithSubMux {
-	return userWithSubMux{userMux, repoService}
+	return UserWithSubMux{userWithSubMux{userMux, repoService}}
 }
 
-type UserWithSubMux interface {
-	// HandleFuncR registers a handler for routes that require a read-only
-	// operations. After the handler returns, dbRead is automatically closed.
-	HandleFuncR(pattern string, handler func(w http.ResponseWriter,
-		r UserWithSubMuxRequest, dbRead context.Context))
-
-	// HandleFuncW registers a handler for routes that perform write
-	// operations. dbWrite is automatically closed and shouldCommit bool
-	// indicates whether the write transaction should be committed, after
-	// handler returns.
-	HandleFuncW(pattern string, handler func(w http.ResponseWriter,
-		r UserWithSubMuxRequest,
-		dbWrite context.Context) (shouldCommit bool))
+type UserWithSubMux struct {
+	m userWithSubMux
 }
+
+// HandleFuncR registers a handler for routes that require a read-only
+// operations. After the handler returns, dbRead is automatically closed.
+func (m UserWithSubMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,
+	r UserWithSubMuxRequest, dbRead context.Context)) {
+	m.m.HandleFuncR(pattern, handler)
+}
+
+// HandleFuncW registers a handler for routes that perform write
+// operations. dbWrite is automatically closed and shouldCommit bool
+// indicates whether the write transaction should be committed, after
+// handler returns.
+func (m UserWithSubMux) HandleFuncW(pattern string, handler func(w http.ResponseWriter,
+	r UserWithSubMuxRequest,
+	dbWrite context.Context) (shouldCommit bool)) {
+	m.m.HandleFuncW(pattern, handler)
+}
+
 type UserWithSubMuxRequest struct {
 	*http.Request
 	UserWithSub           user.User
@@ -208,22 +224,29 @@ func NewUserRepoMux(configName string, userWithSubMux UserWithSubMux,
 	permSrv UserRepoMuxDb,
 	repoSrv reposervice.Service,
 	userSrv userservice.Service) UserRepoMux {
-	return userRepoMux{configName, userWithSubMux, permSrv, repoSrv, userSrv}
+	return UserRepoMux{userRepoMux{configName, userWithSubMux, permSrv, repoSrv, userSrv}}
 }
 
-type UserRepoMux interface {
-	// HandleFuncR registers a handler for routes that require a read-only
-	// operations. After the handler returns, dbRead is automatically closed.
-	HandleFuncR(pattern string, handler func(w http.ResponseWriter,
-		r UserRepoMuxRequest, dbRead context.Context))
-
-	// HandleFuncW registers a handler for routes that perform write
-	// operations. dbWrite is automatically closed and shouldCommit bool
-	// indicates whether the write transaction should be committed, after
-	// handler returns.
-	HandleFuncW(pattern string, handler func(w http.ResponseWriter,
-		r UserRepoMuxRequest, dbWrite context.Context) (shouldCommit bool))
+type UserRepoMux struct {
+	m userRepoMux
 }
+
+// HandleFuncR registers a handler for routes that require a read-only
+// operations. After the handler returns, dbRead is automatically closed.
+func (m UserRepoMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,
+	r UserRepoMuxRequest, dbRead context.Context)) {
+	m.m.HandleFuncR(pattern, handler)
+}
+
+// HandleFuncW registers a handler for routes that perform write
+// operations. dbWrite is automatically closed and shouldCommit bool
+// indicates whether the write transaction should be committed, after
+// handler returns.
+func (m UserRepoMux) HandleFuncW(pattern string, handler func(w http.ResponseWriter,
+	r UserRepoMuxRequest, dbWrite context.Context) (shouldCommit bool)) {
+	m.m.HandleFuncW(pattern, handler)
+}
+
 type UserRepoMuxRequest struct {
 	*http.Request
 	UserWithWritePermission user.User
@@ -349,22 +372,29 @@ type ServerKeyAndTokenAuthTrackMuxRequest struct {
 // ########## Creates a mux for users that have owner permission in organization
 func NewOrgOwnerMux(configName string, userWithSubMux UserWithSubMux,
 	userSrv userservice.Service) OrgOwnerMux {
-	return orgOwnerMux{configName, userWithSubMux, userSrv}
+	return OrgOwnerMux{orgOwnerMux{configName, userWithSubMux, userSrv}}
 }
 
-type OrgOwnerMux interface {
-	// HandleFuncR registers a handler for routes that require a read-only
-	// operations. After the handler returns, dbRead is automatically closed.
-	HandleFuncR(pattern string, handler func(w http.ResponseWriter,
-		r OrgOwnerMuxRequest, dbRead context.Context))
-
-	// HandleFuncW registers a handler for routes that perform write
-	// operations. dbWrite is automatically closed and shouldCommit bool
-	// indicates whether the write transaction should be committed, after
-	// handler returns.
-	HandleFuncW(pattern string, handler func(w http.ResponseWriter,
-		r OrgOwnerMuxRequest, dbWrite context.Context) (shouldCommit bool))
+type OrgOwnerMux struct {
+	m orgOwnerMux
 }
+
+// HandleFuncR registers a handler for routes that require a read-only
+// operations. After the handler returns, dbRead is automatically closed.
+func (m OrgOwnerMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,
+	r OrgOwnerMuxRequest, dbRead context.Context)) {
+	m.m.HandleFuncR(pattern, handler)
+}
+
+// HandleFuncW registers a handler for routes that perform write
+// operations. dbWrite is automatically closed and shouldCommit bool
+// indicates whether the write transaction should be committed, after
+// handler returns.
+func (m OrgOwnerMux) HandleFuncW(pattern string, handler func(w http.ResponseWriter,
+	r OrgOwnerMuxRequest, dbWrite context.Context) (shouldCommit bool)) {
+	m.m.HandleFuncW(pattern, handler)
+}
+
 type OrgOwnerMuxRequest struct {
 	*http.Request
 	UserWithOwnerPermission user.User
@@ -377,22 +407,29 @@ type OrgOwnerMuxRequest struct {
 // ########## Creates a mux for users that have member permission in organization
 func NewOrgMemberMux(configName string, userWithSubMux UserWithSubMux,
 	userSrv userservice.Service) OrgMemberMux {
-	return orgMemberMux{configName, userWithSubMux, userSrv}
+	return OrgMemberMux{orgMemberMux{configName, userWithSubMux, userSrv}}
 }
 
-type OrgMemberMux interface {
-	// HandleFuncR registers a handler for routes that require a read-only
-	// operations. After the handler returns, dbRead is automatically closed.
-	HandleFuncR(pattern string, handler func(w http.ResponseWriter,
-		r OrgMemberMuxRequest, dbRead context.Context))
-
-	// HandleFuncW registers a handler for routes that perform write
-	// operations. dbWrite is automatically closed and shouldCommit bool
-	// indicates whether the write transaction should be committed, after
-	// handler returns.
-	HandleFuncW(pattern string, handler func(w http.ResponseWriter,
-		r OrgMemberMuxRequest, dbWrite context.Context) (shouldCommit bool))
+type OrgMemberMux struct {
+	m orgMemberMux
 }
+
+// HandleFuncR registers a handler for routes that require a read-only
+// operations. After the handler returns, dbRead is automatically closed.
+func (m OrgMemberMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,
+	r OrgMemberMuxRequest, dbRead context.Context)) {
+	m.m.HandleFuncR(pattern, handler)
+}
+
+// HandleFuncW registers a handler for routes that perform write
+// operations. dbWrite is automatically closed and shouldCommit bool
+// indicates whether the write transaction should be committed, after
+// handler returns.
+func (m OrgMemberMux) HandleFuncW(pattern string, handler func(w http.ResponseWriter,
+	r OrgMemberMuxRequest, dbWrite context.Context) (shouldCommit bool)) {
+	m.m.HandleFuncW(pattern, handler)
+}
+
 type OrgMemberMuxRequest struct {
 	*http.Request
 	UserWithMemberPermission user.User
@@ -405,22 +442,29 @@ type OrgMemberMuxRequest struct {
 // ########## Creates a mux for users that have owner or member permission in organization
 func NewOrgOwnerOrMemberMux(configName string, userWithSubMux UserWithSubMux,
 	userSrv userservice.Service) OrgOwnerOrMemberMux {
-	return orgOwnerOrMemberMux{configName, userWithSubMux, userSrv}
+	return OrgOwnerOrMemberMux{orgOwnerOrMemberMux{configName, userWithSubMux, userSrv}}
 }
 
-type OrgOwnerOrMemberMux interface {
-	// HandleFuncR registers a handler for routes that require a read-only
-	// operations. After the handler returns, dbRead is automatically closed.
-	HandleFuncR(pattern string, handler func(w http.ResponseWriter,
-		r OrgOwnerOrMemberMuxRequest, dbRead context.Context))
-
-	// HandleFuncW registers a handler for routes that perform write
-	// operations. dbWrite is automatically closed and shouldCommit bool
-	// indicates whether the write transaction should be committed, after
-	// handler returns.
-	HandleFuncW(pattern string, handler func(w http.ResponseWriter,
-		r OrgOwnerOrMemberMuxRequest, dbWrite context.Context) (shouldCommit bool))
+type OrgOwnerOrMemberMux struct {
+	m orgOwnerOrMemberMux
 }
+
+// HandleFuncR registers a handler for routes that require a read-only
+// operations. After the handler returns, dbRead is automatically closed.
+func (m OrgOwnerOrMemberMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,
+	r OrgOwnerOrMemberMuxRequest, dbRead context.Context)) {
+	m.m.HandleFuncR(pattern, handler)
+}
+
+// HandleFuncW registers a handler for routes that perform write
+// operations. dbWrite is automatically closed and shouldCommit bool
+// indicates whether the write transaction should be committed, after
+// handler returns.
+func (m OrgOwnerOrMemberMux) HandleFuncW(pattern string, handler func(w http.ResponseWriter,
+	r OrgOwnerOrMemberMuxRequest, dbWrite context.Context) (shouldCommit bool)) {
+	m.m.HandleFuncW(pattern, handler)
+}
+
 type OrgOwnerOrMemberMuxRequest struct {
 	*http.Request
 	UserWithOwnerOrMemberPermission user.User
