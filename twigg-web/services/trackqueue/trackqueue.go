@@ -8,12 +8,11 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-track/trackclient"
-	"monorepo/twigg-web/webdb"
 	"time"
 )
 
 type trackQueue struct {
-	db webdb.WebDb
+	db Db
 	js JobsStorage
 	tc TrackClient
 
@@ -37,7 +36,7 @@ const (
 	defaultMaxRunningTimeoutMs = 60_000
 )
 
-func newTrackQueue(js JobsStorage, tc TrackClient, db webdb.WebDb,
+func newTrackQueue(js JobsStorage, tc TrackClient, db Db,
 	options ...Option) (*trackQueue, error) {
 	q := &trackQueue{
 		db: db,

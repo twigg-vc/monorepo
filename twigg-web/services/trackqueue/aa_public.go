@@ -2,9 +2,9 @@ package trackqueue
 
 import (
 	"context"
+	"monorepo/base/iterator"
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-track/trackclient"
-	"monorepo/twigg-web/webdb"
 	"time"
 )
 
@@ -16,7 +16,7 @@ type TrackQueue struct {
 	j *trackQueue
 }
 
-func New(js JobsStorage, tc TrackClient, db webdb.WebDb, options ...Option) (TrackQueue, error) {
+func New(js JobsStorage, tc TrackClient, db Db, options ...Option) (TrackQueue, error) {
 	j, err := newTrackQueue(js, tc, db, options...)
 	return TrackQueue{j}, err
 }
@@ -60,6 +60,31 @@ func (q TrackQueue) GetLimits(ownerId int64, tx context.Context) (maxJobs int,
 // bandwidth will be blocked.
 func (j TrackQueue) PutJobFinished(jobId string, tx context.Context) error {
 	return j.j.PutJobFinished(jobId, tx)
+}
+
+// The storage the queue needs. The loops run outside of the request handlers,
+// so they open their own transactions.
+type Db interface {
+	BeginWrite() (writeCtx context.Context, closeTx func(), commitTx func() error, err error)
+	BeginRead() (readCtx context.Context, closeTx func(), err error)
+
+	InsertTrackQueueJobIfNotExists(writeCtx context.Context, jobId string,
+		ownerId int64, payload []byte, status string, createdAtNs int64) error
+	GetTrackQueueJobOwnerAndPayload(ctx context.Context, jobId string) (
+		ownerId int64, payload []byte, isNotFoundErr bool, err error)
+	GetOldestTrackQueueJobWithinOwnerLimits(ctx context.Context, status string) (
+		jobId string, ownerId int64, payload []byte, isNotFoundErr bool, err error)
+	GetTrackQueueJobIdsByStatus(ctx context.Context, status string) (iterator.I[string], error)
+	SetTrackQueueJobStatus(writeCtx context.Context, jobId string, status string) error
+	DeleteTrackQueueJob(writeCtx context.Context, jobId string) error
+
+	InsertZeroTrackOwnerUsageIfNotExists(writeCtx context.Context, ownerId int64) error
+	AddTrackOwnerUsage(writeCtx context.Context, ownerId int64,
+		runningJobsDelta int64, runningTimeoutMsDelta int64) error
+	SetTrackOwnerLimits(writeCtx context.Context, ownerId int64,
+		maxJobs int64, maxTimeoutMs int64) error
+	GetTrackOwnerLimits(ctx context.Context, ownerId int64) (
+		maxJobs int64, maxTimeoutMs int64, isNotFoundErr bool, err error)
 }
 
 type TrackClient interface {
