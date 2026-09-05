@@ -44,11 +44,16 @@ func (m RlMux) HandleFunc(pattern string, handler func(w http.ResponseWriter, r 
 
 // ########## Creates a mux for requests that expect authenticated users
 func NewAuthMux(sessionService session.Service, configName string, mux RlMux) AuthMux {
-	return authMux{sessionService, configName, mux}
+	return AuthMux{authMux{sessionService, configName, mux}}
 }
 
-type AuthMux interface {
-	HandleFunc(pattern string, handler func(w http.ResponseWriter, r AuthMuxRequest))
+type AuthMux struct {
+	m authMux
+}
+
+func (m AuthMux) HandleFunc(
+	pattern string, handler func(w http.ResponseWriter, r AuthMuxRequest)) {
+	m.m.HandleFunc(pattern, handler)
 }
 type AuthMuxRequest struct {
 	*http.Request
