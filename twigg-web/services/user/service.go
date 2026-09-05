@@ -70,52 +70,14 @@ func quotaOwnerName(u user.User) string {
 
 func (s service) updateUser(u user.User, w context.Context) error {
 	// Check if is updating isOrganization field
-	var currentIsOrg bool
-	err := s.db.Bind(w).QueryRow(`
-		SELECT isOrganization FROM users2 WHERE id = ?
-	`, u.Id).Scan(&currentIsOrg)
+	currentIsOrg, _, err := s.db.GetUserIsOrganization(w, u.Id)
 	if err != nil {
 		return fmt.Errorf("failed to load current isOrganization: %w", err)
 	}
 	if u.IsOrganization != currentIsOrg {
 		return fmt.Errorf("isOrganization is immutable and cannot be updated")
 	}
-
-	_, err = s.db.Bind(w).Exec(`
-		UPDATE users2
-		SET
-			email = ?,
-			state = ?,
-			stripeId = ?,
-			cliKeyHash = ?,
-			username = ?,
-			passwordHash = ?,
-			selfPaidSubscription = ?,
-			selfPaidSubscriptionQuantity = ?,
-			stripeSessionId = ?,
-			stripeSessionUrl = ?,
-			stripeSessionPriceId = ?,
-			stripeSessionQuantity = ?,
-			stripeSubscriptionID = ?
-		WHERE
-			id= ?
-	`,
-		u.Email,
-		u.State,
-		u.StripeId,
-		u.CliKeyHash,
-		u.Username,
-		u.PasswordHash,
-		u.SelfPaidSubscription,
-		u.SelfPaidSubscriptionQuantity,
-		u.StripeSessionId,
-		u.StripeSessionUrl,
-		u.StripeSessionPriceId,
-		u.StripeSessionQuantity,
-		u.StripeSubscriptionID,
-		u.Id,
-	)
-	return err
+	return s.db.UpdateUser(w, u)
 }
 
 func (s service) RegisterNewUser(w context.Context,
