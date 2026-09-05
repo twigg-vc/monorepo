@@ -157,13 +157,6 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 	}
 
 	// Create Services
-	setupW, closeSetupW, commitSetupW, err := sDb.BeginWrite()
-	defer closeSetupW()
-	if err != nil {
-		log.Fatalf("failed to get setup lock: %s", err)
-		return
-	}
-	// Initialize all the services and run setups
 	const memLoggerInterval = 60 * time.Minute // Log memory use every 60 min
 	memLogger := memlogger.New(memLoggerInterval, mService)
 
@@ -205,11 +198,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 	default:
 		panic("invalid stripe mode")
 	}
-	jobsService, err := jobsservice.NewService(sDb, setupW)
-	if err != nil {
-		log.Fatalf("failed to setup jobs service: %s", err)
-		return
-	}
+	jobsService := jobsservice.NewService(sDb)
 	ciCdFileParser := cicdparser.CiCdFileParser{}
 	trackClient := trackclient.NewClient(s.C.TrackServerUrl, s.C.TrackServerKey)
 	trackQueue, err := trackqueue.New(jobsService, trackClient, sDb)
@@ -244,12 +233,6 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 	ciQueue, err := cicdqueue.New(jobsService, ciService, sDb, s.QueueRunner)
 	if err != nil {
 		log.Fatalf("failed to setup ci-queue service: %s", err)
-		return
-	}
-	err = commitSetupW()
-	closeSetupW()
-	if err != nil {
-		log.Fatalf("failed to commit setup: %s", err)
 		return
 	}
 	if !filepath.IsAbs(s.C.StorageFolderAbsPath) {

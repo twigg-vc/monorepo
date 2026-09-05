@@ -22,10 +22,7 @@ func TestCiCdRunWasPublished(t *testing.T) {
 	}
 	defer clW()
 
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	const (
 		repoId    = 1
 		commit    = 2
@@ -68,10 +65,7 @@ func TestCreateJob(t *testing.T) {
 	}
 	defer clW()
 
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 
 	repoId := uint64(1)
 	commit := uint64(1)
@@ -133,10 +127,7 @@ func Test_PutPipelineRef_And_ArchivePipelineRefIfExists(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clW()
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 
 	_, err = s.PutPipelineRef(w, 1, "path", "name")
 	if err != nil {
@@ -220,10 +211,7 @@ func TestSetJobStatus(t *testing.T) {
 	}
 	defer clW()
 
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 
 	repoId := uint64(1)
 	commit := uint64(1)
@@ -263,10 +251,7 @@ func TestGetCommitJobs(t *testing.T) {
 	}
 	defer clW()
 
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 
 	repoId := uint64(1)
 	commit := uint64(1)
@@ -368,10 +353,7 @@ func TestGetRepoJobs(t *testing.T) {
 	}
 	defer clW()
 
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 
 	repoId := uint64(1)
 	otherRepoId := uint64(99)
@@ -431,10 +413,7 @@ func TestCantReuseRunNumber(t *testing.T) {
 	}
 	defer clW()
 
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 
 	repoId := uint64(1)
 	commit := uint64(1)
@@ -468,10 +447,7 @@ func TestCreateNewPipeline(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clW()
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	tx := w
 	const (
 		repoId          = 1
@@ -566,10 +542,7 @@ func TestGetRepoPipelineRefNextAvailableRunNumber(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clW()
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	tx := w
 	const (
 		repoId   = 1
@@ -632,10 +605,7 @@ func TestGetPipelineById(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clW()
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	tx := w
 
 	const (
@@ -695,10 +665,7 @@ func TestSetStatusOfPipelineStageAndGetPipelineStagesById(t *testing.T) {
 	}
 	defer clW()
 
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	tx := w
 
 	nonExistingId := job.PipelineId(
@@ -793,10 +760,7 @@ func TesLastStageOfPipelineToSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clW()
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	tx := w
 	const (
 		repoId    = 1
@@ -852,10 +816,7 @@ func TestSetIntermediaryStageToFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clW()
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	tx := w
 	const (
 		repoId    = 1
@@ -913,10 +874,7 @@ func TestManualStartStageProgression(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clW()
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	tx := w
 	const (
 		repoId    = 1
@@ -984,10 +942,7 @@ func TestGetRepoPipelineNamesAndGetRepoPipelinesByName(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clW()
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	tx := w
 
 	emptyRefIt, err := s.GetRepoPipelineRefs(tx, 99, "", "")
@@ -1173,10 +1128,7 @@ func TestSetToPosted(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clW()
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	tx := w
 	const (
 		repoId         = 1
@@ -1245,10 +1197,7 @@ func TestGetPipelineStage(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clW()
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	tx := w
 	const (
 		repoId         = 1
@@ -1312,10 +1261,7 @@ func TestCanPutResumePipelineToStage(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clW()
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	tx := w
 	const (
 		repoId         = 1
@@ -1389,10 +1335,7 @@ func TestSetResumerOfPipelineStage(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clW()
-	s, err := NewService(db, w)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewService(db)
 	tx := w
 	const (
 		repoId         = 1

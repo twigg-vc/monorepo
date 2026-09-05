@@ -86,7 +86,7 @@ type Service interface {
 	CanPutResumePipelineToStage(tx context.Context, pipelineId string, stage int32) (bool, error)
 }
 
-// Does the necessary setup and returns service instance
-func NewService(db webdb.WebDb, wl context.Context) (Service, error) {
-	return newService(db, wl)
+// Returns a service instance
+func NewService(db webdb.WebDb) Service {
+	return newService(db)
 }
