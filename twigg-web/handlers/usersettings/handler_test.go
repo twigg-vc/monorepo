@@ -10,7 +10,6 @@ import (
 
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
-	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 )
@@ -19,8 +18,8 @@ const reqUserId = 1
 
 func TestHandlePostSetUsername_OK(t *testing.T) {
 	us := newFakeUserService()
-	us.chooseUsernameAndStartTrial = func() (userservice.User, error) {
-		return userservice.User{}, nil
+	us.chooseUsernameAndStartTrial = func() (user.User, error) {
+		return user.User{}, nil
 	}
 	rs := newFakeRepoService()
 	rs.nonArchivedRepoCountIsGreaterThan = func(ownerId int64, n int) (bool, error) {
@@ -42,7 +41,7 @@ func TestHandlePostSetUsername_OK(t *testing.T) {
 	req.Form = form
 	r := wrappers.UserMuxRequest{
 		Request: req,
-		User: userservice.User{
+		User: user.User{
 			Id:    reqUserId,
 			State: user.UserState_NoUsername,
 		},
@@ -71,8 +70,8 @@ func TestHandlePostSetUsername_OK(t *testing.T) {
 
 func TestHandlePostSetUsername_UserAlreadyHasRepos(t *testing.T) {
 	us := newFakeUserService()
-	us.chooseUsernameAndStartTrial = func() (userservice.User, error) {
-		return userservice.User{}, nil
+	us.chooseUsernameAndStartTrial = func() (user.User, error) {
+		return user.User{}, nil
 	}
 
 	// createNew is intentionally not mocked: calling it panics.
@@ -87,7 +86,7 @@ func TestHandlePostSetUsername_UserAlreadyHasRepos(t *testing.T) {
 	req.Form = form
 	r := wrappers.UserMuxRequest{
 		Request: req,
-		User: userservice.User{
+		User: user.User{
 			Id:    reqUserId,
 			State: user.UserState_NoUsername,
 		},
@@ -113,7 +112,7 @@ func TestHandlePostSetUsername_InvalidUsername(t *testing.T) {
 	req.Form = form
 	r := wrappers.UserMuxRequest{
 		Request: req,
-		User: userservice.User{
+		User: user.User{
 			Id:    1,
 			State: user.UserState_NoUsername,
 		},
@@ -140,7 +139,7 @@ func TestHandlePostSetUsername_WrongState(t *testing.T) {
 	req.Form = form
 	r := wrappers.UserMuxRequest{
 		Request: req,
-		User: userservice.User{
+		User: user.User{
 			Id:    1,
 			State: user.UserState_NotSignedUp, // <-- not allowed
 		},
@@ -158,8 +157,8 @@ func TestHandlePostSetUsername_WrongState(t *testing.T) {
 
 func TestHandlePostSetUsername_ServiceError(t *testing.T) {
 	us := newFakeUserService()
-	us.chooseUsernameAndStartTrial = func() (userservice.User, error) {
-		return userservice.User{}, errors.New("THE DB BLEW UP")
+	us.chooseUsernameAndStartTrial = func() (user.User, error) {
+		return user.User{}, errors.New("THE DB BLEW UP")
 	}
 	h := handler{userS: us}
 	form := url.Values{}
@@ -168,7 +167,7 @@ func TestHandlePostSetUsername_ServiceError(t *testing.T) {
 	req.Form = form
 	r := wrappers.UserMuxRequest{
 		Request: req,
-		User: userservice.User{
+		User: user.User{
 			Id:    1,
 			State: user.UserState_NoUsername,
 		},
@@ -192,12 +191,12 @@ func newFakeUserService() *mockUserService {
 }
 
 type mockUserService struct {
-	chooseUsernameAndStartTrial func() (userservice.User, error)
+	chooseUsernameAndStartTrial func() (user.User, error)
 	updateCliKey                func() error
 	deleteCliKey                func() error
 }
 
-func (f *mockUserService) ChooseUsernameAndStartTrial(w context.Context, id int64, username string) (userservice.User, error) {
+func (f *mockUserService) ChooseUsernameAndStartTrial(w context.Context, id int64, username string) (user.User, error) {
 	return f.chooseUsernameAndStartTrial()
 }
 func (f *mockUserService) UpdateCliKey(w context.Context, userId int64, key string) error {

@@ -3,7 +3,7 @@ package login
 import (
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/session"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 )
@@ -17,7 +17,7 @@ func AddHandlers(
 	allowPasswordLogin bool,
 	rt routes.Router,
 	db webdb.WebDb,
-	userService user.Service,
+	userService userservice.Service,
 	sessionService session.Service,
 	mux wrappers.RlMux) {
 

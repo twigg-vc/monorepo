@@ -6,7 +6,7 @@ import (
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/repo"
 	"monorepo/twigg-web/services/twiggtoken"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/client"
@@ -17,7 +17,7 @@ import (
 // All handlers will be wrapped with the provided `wrap` if its not nil.
 func AddHandlers(
 	db webdb.WebDb,
-	uSrv user.Service,
+	uSrv userservice.Service,
 	rSrv repo.Service,
 	ciq CiCdQueue,
 	mux wrappers.RlMux,

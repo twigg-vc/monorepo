@@ -5,7 +5,7 @@ import (
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/keys"
-	"monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 	"time"

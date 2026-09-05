@@ -10,7 +10,8 @@ import (
 	"monorepo/twigg-web/routes"
 	reposervice "monorepo/twigg-web/services/repo"
 	"monorepo/twigg-web/services/twiggtoken"
-	"monorepo/twigg-web/services/user"
+	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg/commit"
 	"monorepo/twigg/server"
@@ -22,7 +23,7 @@ import (
 
 type handler struct {
 	db         webdb.WebDb
-	uSrv       user.Service
+	uSrv       userservice.Service
 	rSrv       reposervice.Service
 	ciq        CiCdQueue
 	configName string
@@ -166,7 +167,7 @@ func (hl handler) handlePush(w http.ResponseWriter, r *http.Request) {
 // Returns the result of the verifier and the user.
 // The user is returned just in case it's needed anywhere else to avoid
 // reading it again. Check the verifierResult for errors
-func newVerifier(r *http.Request, uSrv user.Service, repoSrv reposervice.Service, dbRead context.Context, permSrv webdb.WebDb, repoOwner user.User, repoId uint64, isPull bool, signer twiggtoken.TokenSigner) (verifierResult, user.User) {
+func newVerifier(r *http.Request, uSrv userservice.Service, repoSrv reposervice.Service, dbRead context.Context, permSrv webdb.WebDb, repoOwner user.User, repoId uint64, isPull bool, signer twiggtoken.TokenSigner) (verifierResult, user.User) {
 	if !repoOwner.HasSub() {
 		return verifierResult{
 			ok:       false,
@@ -315,11 +316,11 @@ func (p *pushObserver) OnPush(
 
 // Called just to ensure usernames can't be numeric
 var _ int = func() int {
-	if user.UsernameIsValid("1") ||
-		user.UsernameIsValid("11") ||
-		user.UsernameIsValid("111") ||
-		user.UsernameIsValid("1111111") ||
-		user.UsernameIsValid("123456789") {
+	if userservice.UsernameIsValid("1") ||
+		userservice.UsernameIsValid("11") ||
+		userservice.UsernameIsValid("111") ||
+		userservice.UsernameIsValid("1111111") ||
+		userservice.UsernameIsValid("123456789") {
 		// The code above assumes that usernames can't be numeric.
 		// This is done so that /<number>/<number> are routed to repoId with
 		// <number>
