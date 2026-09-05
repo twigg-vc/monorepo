@@ -10,7 +10,6 @@ import (
 	"monorepo/twigg-web/services/session"
 	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/user"
-	"monorepo/twigg-web/webdb"
 	"net/http"
 )
 
@@ -18,7 +17,7 @@ type userWithReadPermissionMux struct {
 	configName     string
 	mux            RlMux
 	sessionService session.Service
-	db             webdb.WebDb
+	db             UserWithReadPermissionMuxDb
 	repoSrv        repo.Service
 	userSrv        userservice.Service
 }

@@ -14,7 +14,6 @@ import (
 	"monorepo/twigg-web/services/twiggtoken"
 	userservice "monorepo/twigg-web/services/user"
 	"monorepo/twigg-web/user"
-	"monorepo/twigg-web/webdb"
 	"net/http"
 )
 
@@ -214,13 +213,18 @@ type UserRepoMuxRequest struct {
 
 // ##########
 
+type UserWithReadPermissionMuxDb interface {
+	UserRepoMuxDb
+	BeginRead() (readCtx context.Context, closeTx func(), err error)
+}
+
 // ########## Creates a mux for users that can read a repo. Public repos are
 // readable by anyone, including anonymous (logged out) users; private repos
 // require a logged in user that is the owner or has read or write permission
 // in the repo.
 func NewUserWithReadPermissionMux(configName string, mux RlMux,
 	sessionService session.Service,
-	db webdb.WebDb,
+	db UserWithReadPermissionMuxDb,
 	repoSrv reposervice.Service,
 	userSrv userservice.Service) UserWithReadPermissionMux {
 	return UserWithReadPermissionMux{
