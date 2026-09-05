@@ -8,15 +8,14 @@ import (
 	"fmt"
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/job"
-	"monorepo/twigg-web/webdb"
 	"time"
 )
 
 type service struct {
-	db webdb.WebDb
+	db Db
 }
 
-func newService(db webdb.WebDb) service {
+func newService(db Db) service {
 	return service{db: db}
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"monorepo/base/iterator"
 	"monorepo/twigg-web/job"
-	"monorepo/twigg-web/webdb"
 )
 
 type Service interface {
@@ -86,7 +85,53 @@ type Service interface {
 	CanPutResumePipelineToStage(tx context.Context, pipelineId string, stage int32) (bool, error)
 }
 
+// The storage the service needs.
+type Db interface {
+	CiCdRunExists(ctx context.Context,
+		repoId, commitId, commitVersion uint64, runNumber int64) (bool, error)
+	InsertCiCdRun(writeCtx context.Context,
+		repoId, commitId, commitVersion uint64, runNumber int64, nonce string) error
+
+	JobExists(ctx context.Context, repoId, commitId, commitVersion uint64,
+		path, name string, runNumber int64) (bool, error)
+	InsertJob(writeCtx context.Context, j job.Job) (internalJobId int64, err error)
+	GetJob(ctx context.Context, repoId, commitId, commitVersion uint64,
+		path, name string, runNumber int64) (j job.Job, isNotFoundErr bool, err error)
+	SetJobStatus(writeCtx context.Context, repoId, commitId, commitVersion uint64,
+		path, name string, runNumber int64, status job.JobStatus) (isNotFoundErr bool, err error)
+	GetCommitJobs(ctx context.Context, repoId, commitId uint64,
+		afterInternalJobId int64) (iterator.I[job.Job], error)
+	GetRepoJobs(ctx context.Context, repoId uint64,
+		afterInternalJobId int64) (iterator.I[job.Job], error)
+
+	PutPipelineRef(writeCtx context.Context,
+		repoId uint64, path, name string) error
+	ArchivePipelineRef(writeCtx context.Context,
+		repoId uint64, path, name string) error
+	GetRepoPipelineRefs(ctx context.Context,
+		repoId uint64, afterPath, afterName string) (iterator.I[job.PipelineRef], error)
+
+	PipelineExists(ctx context.Context, repoId, commitId, commitVersion uint64,
+		path, name string, runNumber int64) (bool, error)
+	InsertPipeline(writeCtx context.Context, p job.Pipeline) (internalPipelineId int64, err error)
+	GetPipeline(ctx context.Context, repoId, commitId, commitVersion uint64,
+		path, name string, runNumber int64) (p job.Pipeline, isNotFoundErr bool, err error)
+	SetPipelineStatus(writeCtx context.Context, repoId, commitId, commitVersion uint64,
+		path, name string, runNumber int64, status job.PipelineStatus) error
+	GetRepoPipelinesByRef(ctx context.Context, repoId uint64,
+		path, name string, afterInternalPipelineId int64) (iterator.I[job.Pipeline], error)
+
+	InsertPipelineStage(writeCtx context.Context, pipelineId string,
+		stage int32, name, createdTime string, status job.JobStatus) error
+	GetPipelineStages(ctx context.Context,
+		pipelineId string) (iterator.I[job.PipelineStage], error)
+	SetPipelineStageStatus(writeCtx context.Context, pipelineId string,
+		stage int32, status job.JobStatus) (isNotFoundErr bool, err error)
+	SetPipelineStageResumer(writeCtx context.Context, pipelineId string,
+		stage int32, userId int64) (isNotFoundErr bool, err error)
+}
+
 // Returns a service instance
-func NewService(db webdb.WebDb) Service {
+func NewService(db Db) Service {
 	return newService(db)
 }
