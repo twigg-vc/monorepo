@@ -74,16 +74,20 @@ type CliKeyAuthMuxDb interface {
 func NewCliKeyAuthMux(configName string, db CliKeyAuthMuxDb,
 	repoSrv reposervice.Service, userSrv userservice.Service,
 	mux RlMux) CliKeyAuthMux {
-	return cliKeyAuthMux{configName, db, repoSrv, userSrv, mux}
+	return CliKeyAuthMux{cliKeyAuthMux{configName, db, repoSrv, userSrv, mux}}
 }
 
-type CliKeyAuthMux interface {
-	// HandleFuncW registers a handler for routes that perform write
-	// operations. dbWrite is automatically closed and shouldCommit bool
-	// indicates whether the write transaction should be committed, after
-	// handler returns.
-	HandleFuncW(pattern string, handler func(w http.ResponseWriter,
-		r CliKeyAuthMuxRequest, dbWrite context.Context) (shouldCommit bool))
+type CliKeyAuthMux struct {
+	m cliKeyAuthMux
+}
+
+// HandleFuncW registers a handler for routes that perform write
+// operations. dbWrite is automatically closed and shouldCommit bool
+// indicates whether the write transaction should be committed, after
+// handler returns.
+func (m CliKeyAuthMux) HandleFuncW(pattern string, handler func(w http.ResponseWriter,
+	r CliKeyAuthMuxRequest, dbWrite context.Context) (shouldCommit bool)) {
+	m.m.HandleFuncW(pattern, handler)
 }
 
 // CliKeyAuthMuxRequest is intentionally a different type from the session
