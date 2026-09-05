@@ -12,32 +12,32 @@ import (
 )
 
 type Service interface {
-	Get(r context.Context, id int64) (u User, isNotFoundErr bool, err error)
-	GetByEmail(r context.Context, email string) (u User, isNotFoundErr bool, err error)
-	GetByUsername(r context.Context, username string) (u User, isNotFoundErr bool, err error)
-	GetByStripeId(r context.Context, stripeId string) (u User, isNotFoundErr bool, err error)
+	Get(r context.Context, id int64) (u user.User, isNotFoundErr bool, err error)
+	GetByEmail(r context.Context, email string) (u user.User, isNotFoundErr bool, err error)
+	GetByUsername(r context.Context, username string) (u user.User, isNotFoundErr bool, err error)
+	GetByStripeId(r context.Context, stripeId string) (u user.User, isNotFoundErr bool, err error)
 	GetUsername(userId int64, tx context.Context) (string, error)
 
 	// Used to create a new user with email, username and password
 	RegisterNewUser(w context.Context,
-		email, username, plainPassword string) (User, error)
+		email, username, plainPassword string) (user.User, error)
 	// Use when creating a user from a OAuth, where we only have email.
-	RegisterNewUserFromOAuth(w context.Context, email string) (User, error)
+	RegisterNewUserFromOAuth(w context.Context, email string) (user.User, error)
 
-	CreateNewOrganizationUser(w context.Context, organizationUsername string) (User, error)
-
-	// Returns updated User
-	UpdateUsername(w context.Context, id int64, username string) (User, error)
+	CreateNewOrganizationUser(w context.Context, organizationUsername string) (user.User, error)
 
 	// Returns updated User
-	ChooseUsernameAndStartTrial(w context.Context, id int64, username string) (User, error)
+	UpdateUsername(w context.Context, id int64, username string) (user.User, error)
+
+	// Returns updated User
+	ChooseUsernameAndStartTrial(w context.Context, id int64, username string) (user.User, error)
 
 	// Returns the total num of users
 	CountAll(r context.Context) (int64, error)
 	// Returns all users, one by one
-	GetAll(r context.Context) (it iterator.I[User], err error)
+	GetAll(r context.Context) (it iterator.I[user.User], err error)
 	// Returns true if the provided plain password (not hash) is correct
-	PasswordIsCorrect(u User, plainPassword string) bool
+	PasswordIsCorrect(u user.User, plainPassword string) bool
 
 	// Update User cliKeyHash.
 	UpdateCliKey(w context.Context, id int64, plainCliKey string) error
@@ -45,14 +45,14 @@ type Service interface {
 	DeleteCliKey(w context.Context, id int64) error
 	// Returns a user by its cliKey
 	GetByCliKey(r context.Context, plainCliKey string) (
-		u User, isNotFoundErr bool, err error)
+		u user.User, isNotFoundErr bool, err error)
 
 	// Does all the necessary setup (if any) and returns a user who is ready
 	// to perform payment with stripe. Check user.StripeSessionUrl for the
 	// redirect URL. If user.PaymentPlanIsActive returns error.
 	// forceCurrency is used to force a currency (usd/brl); it's ignored if invalid
 	GetUserForPaymentWithStripe(w context.Context, id int64,
-		priceId stripeclient.PriceId, quantity int64, forceCurrency string) (u User, isNotFoundErr bool, err error)
+		priceId stripeclient.PriceId, quantity int64, forceCurrency string) (u user.User, isNotFoundErr bool, err error)
 
 	// It updates the user's record to mark the payment plan as active and
 	// stores the relevant Stripe subscription information. Only use it when
@@ -60,23 +60,23 @@ type Service interface {
 	// values in a expected manner, otherwise it panics.
 	HandleStripeCheckoutSessionSuccess(w context.Context,
 		id int64, stripeSubscriptionID, stripeSessionId string,
-		priceId stripeclient.PriceId, quantity int64) (User, error)
+		priceId stripeclient.PriceId, quantity int64) (user.User, error)
 
 	// It updates the user's record to mark their payment plan as inactive and
 	// change the relevant stripe subscription information. Only use it when
 	// handling stripe webhook customer.subscription.deleted event. We expect
 	//  that stripe send us values in a expected manner, otherwise it panics.
 	HandlesSubscriptionDeleted(w context.Context,
-		stripeId, subscriptionId string) (User, error)
+		stripeId, subscriptionId string) (user.User, error)
 
 	// It updates the user's record to mark their plan quantity updated version
 	HandleSubscriptionQuantityUpdated(w context.Context,
-		stripeId, subscriptionId string, updatedQuantity int64) (User, error)
+		stripeId, subscriptionId string, updatedQuantity int64) (user.User, error)
 
 	// Handles a "manual payment" success, i.e. someone "manually" paying us
 	// with cash or something like that.
 	HandleManualPaymentSuccess(w context.Context, userId int64,
-		sub SubscriptionPlan, subQuantity int64) (User, error)
+		sub user.SubscriptionPlan, subQuantity int64) (user.User, error)
 
 	// Handles the deletion of a manual subscription
 	HandleManualSubscriptionDeleted(w context.Context, userId int64) error
@@ -97,17 +97,6 @@ func NewService(js JobLimitSetter,
 	stripeClient stripeclient.StripeClient, db webdb.WebDb, salt string) (Service, error) {
 	return newService(js, stripeClient, db, salt)
 }
-
-type User = user.User
-
-type SubscriptionPlan = user.SubscriptionPlan
-
-const (
-	Subscription_None  = user.Subscription_None
-	Subscription_Solo  = user.Subscription_Solo
-	Subscription_Team  = user.Subscription_Team
-	Subscription_Trial = user.Subscription_Trial
-)
 
 var (
 	SoloStorageQuota  = int64(10 * 1024 * 1024 * 1024) // 10 GB

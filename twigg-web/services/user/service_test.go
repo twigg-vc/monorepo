@@ -59,14 +59,14 @@ func TestCreateAndGetUsernameWithPassword(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedUser := User{
+	expectedUser := user.User{
 		State:                        user.UserState_NoSubscription,
 		Id:                           1,
 		Email:                        "my@email.com",
 		IsOrganization:               false,
 		Username:                     "bilbo",
 		PasswordHash:                 HashWithSalt("strong-password", testSalt),
-		SelfPaidSubscription:         Subscription_None,
+		SelfPaidSubscription:         user.Subscription_None,
 		SelfPaidSubscriptionQuantity: 0,
 		CliKeyHash:                   "",
 		StripeId:                     "",
@@ -166,7 +166,7 @@ func TestGetAll(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gotUsers := []User{}
+	gotUsers := []user.User{}
 	for users.Next() {
 		gotUser, err := users.Get()
 		if err != nil {
@@ -183,7 +183,7 @@ func TestGetAll(t *testing.T) {
 	}
 
 	// Expects descending order
-	expectedUsers := []User{
+	expectedUsers := []user.User{
 		{
 			State:                        user.UserState_NoSubscription,
 			Id:                           3,
@@ -191,7 +191,7 @@ func TestGetAll(t *testing.T) {
 			IsOrganization:               false,
 			Username:                     "third",
 			PasswordHash:                 HashWithSalt("third-password", testSalt),
-			SelfPaidSubscription:         Subscription_None,
+			SelfPaidSubscription:         user.Subscription_None,
 			SelfPaidSubscriptionQuantity: 0,
 			CliKeyHash:                   "",
 			StripeId:                     "",
@@ -207,7 +207,7 @@ func TestGetAll(t *testing.T) {
 			Email:                        "second@email.com",
 			Username:                     "second",
 			PasswordHash:                 HashWithSalt("second-password", testSalt),
-			SelfPaidSubscription:         Subscription_None,
+			SelfPaidSubscription:         user.Subscription_None,
 			SelfPaidSubscriptionQuantity: 0,
 			CliKeyHash:                   "",
 			StripeId:                     "",
@@ -223,7 +223,7 @@ func TestGetAll(t *testing.T) {
 			Email:                        "first@email.com",
 			Username:                     "first",
 			PasswordHash:                 HashWithSalt("first-password", testSalt),
-			SelfPaidSubscription:         Subscription_None,
+			SelfPaidSubscription:         user.Subscription_None,
 			SelfPaidSubscriptionQuantity: 0,
 			CliKeyHash:                   "",
 			StripeId:                     "",
@@ -580,7 +580,7 @@ func TestHandleStripeCheckoutSessionSuccess(t *testing.T) {
 	if u.State != user.UserState_StripeSubscription {
 		t.Fatal("wrong state")
 	}
-	if u.SelfPaidSubscription != Subscription_Solo {
+	if u.SelfPaidSubscription != user.Subscription_Solo {
 		t.Fatal("wrong sub")
 	}
 	if u.SelfPaidSubscriptionQuantity != 1 {
@@ -945,14 +945,14 @@ func TestHandlesSubscriptionDeleted(t *testing.T) {
 
 	// Note that the plan fields are not updated bc PaymentPlanIsActive
 	// shows the plan is inactive
-	expectUser := User{
+	expectUser := user.User{
 		State:                        user.UserState_NoSubscription,
 		Id:                           1,
 		Email:                        "appa@mail.com",
 		IsOrganization:               false,
 		Username:                     "appa",
 		PasswordHash:                 HashWithSalt("12345", testSalt),
-		SelfPaidSubscription:         Subscription_None,
+		SelfPaidSubscription:         user.Subscription_None,
 		SelfPaidSubscriptionQuantity: 0,
 		CliKeyHash:                   "",
 		StripeId:                     u.StripeId,
@@ -995,26 +995,26 @@ func TestHandleSuccessfulManualPayment(t *testing.T) {
 
 	// Create a user
 	s.RegisterNewUser(w, "aang@southern-temple.air", "aang", "password")
-	gotUser, err := s.HandleManualPaymentSuccess(w, 1, Subscription_Solo, 1)
+	gotUser, err := s.HandleManualPaymentSuccess(w, 1, user.Subscription_Solo, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	jobLimit.checkLimits(1, SoloMaxParallelJobs, SoloMaxParallelTimeoutSum)
 	// Paying again wont work because the plan is already active
-	_, err = s.HandleManualPaymentSuccess(w, 1, Subscription_Solo, 1)
+	_, err = s.HandleManualPaymentSuccess(w, 1, user.Subscription_Solo, 1)
 	if err == nil {
 		t.Fatal("should not succeed to pay again")
 	}
 
-	expectedUser := User{
+	expectedUser := user.User{
 		State:                        user.UserState_ManualSubscription,
 		Id:                           1,
 		Email:                        "aang@southern-temple.air",
 		IsOrganization:               false,
 		Username:                     "aang",
 		PasswordHash:                 HashWithSalt("password", testSalt),
-		SelfPaidSubscription:         Subscription_Solo,
+		SelfPaidSubscription:         user.Subscription_Solo,
 		SelfPaidSubscriptionQuantity: 1,
 		CliKeyHash:                   "",
 		StripeId:                     "",
@@ -1059,14 +1059,14 @@ func TestHandleCantPayManually(t *testing.T) {
 
 	// Create a user and pay manually
 	u, _ := s.RegisterNewUser(w, "aang@southern-temple.air", "aang", "password")
-	_, err = s.HandleManualPaymentSuccess(w, u.Id, Subscription_Solo, 1)
+	_, err = s.HandleManualPaymentSuccess(w, u.Id, user.Subscription_Solo, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	jobLimit.checkLimits(u.Id, SoloMaxParallelJobs, SoloMaxParallelTimeoutSum)
 
 	// Cant pay again manually
-	_, err = s.HandleManualPaymentSuccess(w, u.Id, Subscription_Solo, 1)
+	_, err = s.HandleManualPaymentSuccess(w, u.Id, user.Subscription_Solo, 1)
 	if err == nil {
 		t.Fatal("should not succeed to pay again")
 	}
@@ -1109,7 +1109,7 @@ func TestHandlePayingManuallyCancelsStripeSession(t *testing.T) {
 	stripeSession := u.StripeSessionId
 
 	// Just pay manually instead, the stripe session should be expired
-	_, err = s.HandleManualPaymentSuccess(w, u.Id, Subscription_Solo, 1)
+	_, err = s.HandleManualPaymentSuccess(w, u.Id, user.Subscription_Solo, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1146,14 +1146,14 @@ func TestChooseUsernameAndStartTrial(t *testing.T) {
 	}
 	jobLimit.checkLimits(u.Id, TrialMaxParallelJobs, TrialMaxParallelTimeoutSum)
 
-	expectedUser := User{
+	expectedUser := user.User{
 		State:                        user.UserState_ManualSubscription,
 		Id:                           1,
 		Email:                        email,
 		IsOrganization:               false,
 		Username:                     username,
 		PasswordHash:                 "",
-		SelfPaidSubscription:         Subscription_Trial,
+		SelfPaidSubscription:         user.Subscription_Trial,
 		SelfPaidSubscriptionQuantity: 1,
 		CliKeyHash:                   "",
 		StripeId:                     "",
@@ -1275,14 +1275,14 @@ func TestRegisterNewUserFromOAuth(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedUser := User{
+	expectedUser := user.User{
 		State:                        user.UserState_NoUsername,
 		Id:                           1,
 		Email:                        emailFromOAuthProvider,
 		IsOrganization:               false,
 		Username:                     "",
 		PasswordHash:                 "",
-		SelfPaidSubscription:         Subscription_None,
+		SelfPaidSubscription:         user.Subscription_None,
 		SelfPaidSubscriptionQuantity: 0,
 		CliKeyHash:                   "",
 		StripeId:                     "",
@@ -1334,14 +1334,14 @@ func TestUpdateUsername(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedUser := User{
+	expectedUser := user.User{
 		State:                        user.UserState_NoSubscription,
 		Id:                           1,
 		Email:                        emailFromOAuthProvider,
 		IsOrganization:               false,
 		Username:                     username,
 		PasswordHash:                 "",
-		SelfPaidSubscription:         Subscription_None,
+		SelfPaidSubscription:         user.Subscription_None,
 		SelfPaidSubscriptionQuantity: 0,
 		CliKeyHash:                   "",
 		StripeId:                     "",
@@ -1416,14 +1416,14 @@ func TestUpdateCliKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedUser := User{
+	expectedUser := user.User{
 		State:                        user.UserState_NoSubscription,
 		Id:                           1,
 		Email:                        "yoda@twigg.vc",
 		IsOrganization:               false,
 		Username:                     "yoda",
 		PasswordHash:                 u.PasswordHash,
-		SelfPaidSubscription:         Subscription_None,
+		SelfPaidSubscription:         user.Subscription_None,
 		SelfPaidSubscriptionQuantity: 0,
 		CliKeyHash:                   HashWithSalt("tk_test_4eC39HqLyjWDarjtT1zdp7dc", testSalt),
 		StripeId:                     "",
@@ -1470,14 +1470,14 @@ func TestDeleteCliKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deletedCliKeyUser := User{
+	deletedCliKeyUser := user.User{
 		State:                        user.UserState_NoSubscription,
 		Id:                           1,
 		Email:                        "yoda@twigg.vc",
 		IsOrganization:               false,
 		Username:                     "yoda",
 		PasswordHash:                 u.PasswordHash,
-		SelfPaidSubscription:         Subscription_None,
+		SelfPaidSubscription:         user.Subscription_None,
 		SelfPaidSubscriptionQuantity: 0,
 		CliKeyHash:                   "",
 		StripeId:                     "",
@@ -1562,7 +1562,7 @@ func TestQuota(t *testing.T) {
 
 	// Create a user and pay manually
 	u, _ := s.RegisterNewUser(w, "aang@southern-temple.air", "aang", "password")
-	s.HandleManualPaymentSuccess(w, u.Id, Subscription_Solo, 1)
+	s.HandleManualPaymentSuccess(w, u.Id, user.Subscription_Solo, 1)
 	u, _, _ = s.Get(w, u.Id)
 	if u.TotalQuota != SoloStorageQuota {
 		t.Fatal("wrong quota")
@@ -1598,14 +1598,14 @@ func TestCreateNewOrganizationUser(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedUser := User{
+	expectedUser := user.User{
 		State:                        user.UserState_ManualSubscription,
 		Id:                           1,
 		Email:                        "",
 		IsOrganization:               true,
 		Username:                     "english-east-india",
 		PasswordHash:                 "",
-		SelfPaidSubscription:         Subscription_Trial,
+		SelfPaidSubscription:         user.Subscription_Trial,
 		SelfPaidSubscriptionQuantity: 1,
 		CliKeyHash:                   "",
 		StripeId:                     "",

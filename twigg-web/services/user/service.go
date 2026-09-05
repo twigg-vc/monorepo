@@ -36,25 +36,25 @@ func newService(js JobLimitSetter, stripeClient stripeclient.StripeClient,
 const plainPasswordMinLength = 5
 const plainPasswordMaxLength = 30
 
-func (s service) Get(r context.Context, id int64) (u User, isNotFoundErr bool, err error) {
+func (s service) Get(r context.Context, id int64) (u user.User, isNotFoundErr bool, err error) {
 	return s.getUser(r, "id = ?", id)
 }
-func (s service) GetByEmail(r context.Context, email string) (u User, isNotFoundErr bool, err error) {
+func (s service) GetByEmail(r context.Context, email string) (u user.User, isNotFoundErr bool, err error) {
 	return s.getUser(r, "email = ?", email)
 }
-func (s service) GetByUsername(r context.Context, username string) (u User, isNotFoundErr bool, err error) {
+func (s service) GetByUsername(r context.Context, username string) (u user.User, isNotFoundErr bool, err error) {
 	return s.getUser(r, "username = ?", username)
 }
-func (s service) GetByStripeId(r context.Context, stripeId string) (u User, isNotFoundErr bool, err error) {
+func (s service) GetByStripeId(r context.Context, stripeId string) (u user.User, isNotFoundErr bool, err error) {
 	return s.getUser(r, "stripeId = ?", stripeId)
 }
-func (s service) GetByCliKey(r context.Context, plainCliKey string) (u User, isNotFoundErr bool, err error) {
+func (s service) GetByCliKey(r context.Context, plainCliKey string) (u user.User, isNotFoundErr bool, err error) {
 	return s.getUser(r, "cliKeyHash = ?", s.hashWithSalt(plainCliKey))
 }
 func (s service) getUser(
 	r context.Context,
 	whereQueryClause string,
-	queryArgs ...any) (u User, isNotFoundErr bool, err error) {
+	queryArgs ...any) (u user.User, isNotFoundErr bool, err error) {
 	err = s.db.Bind(r).QueryRow(fmt.Sprintf(`
 		SELECT
 			id,
@@ -139,7 +139,7 @@ func (s service) CountAll(r context.Context) (int64, error) {
 	return count, nil
 }
 
-func (s service) GetAll(r context.Context) (iterator.I[User], error) {
+func (s service) GetAll(r context.Context) (iterator.I[user.User], error) {
 	rows, err := s.db.Bind(r).Query(`
 		SELECT
 			id,
@@ -166,7 +166,7 @@ func (s service) GetAll(r context.Context) (iterator.I[User], error) {
 	}
 	return userIter{s.db, r, rows}, nil
 }
-func (it userIter) Get() (u User, err error) {
+func (it userIter) Get() (u user.User, err error) {
 	err = it.userRows.Scan(
 		&u.Id,
 		&u.Email,
@@ -198,7 +198,7 @@ func (it userIter) Err() error {
 }
 func readUserDataFromOtherSources(
 	db webdb.WebDb,
-	u *User) error {
+	u *user.User) error {
 	q, err := db.GetQuota(quotaOwnerName(*u))
 	if err != nil {
 		return err
@@ -214,11 +214,11 @@ func readUserDataFromOtherSources(
 	return nil
 }
 
-func quotaOwnerName(u User) string {
+func quotaOwnerName(u user.User) string {
 	return strconv.FormatInt(u.Id, 10)
 }
 
-func (s service) updateUser(u User, w context.Context) error {
+func (s service) updateUser(u user.User, w context.Context) error {
 	// Check if is updating isOrganization field
 	var currentIsOrg bool
 	err := s.db.Bind(w).QueryRow(`
@@ -269,43 +269,43 @@ func (s service) updateUser(u User, w context.Context) error {
 }
 
 func (s service) RegisterNewUser(w context.Context,
-	email, username, plainPassword string) (User, error) {
+	email, username, plainPassword string) (user.User, error) {
 	// Check if email is valid and not taken
 	if !isEmail(email) {
-		return User{}, fmt.Errorf("%s is not a valid email", email)
+		return user.User{}, fmt.Errorf("%s is not a valid email", email)
 	}
 	_, notFoundErr, err := s.GetByEmail(w, email)
 	if err != nil && !notFoundErr {
-		return User{}, err
+		return user.User{}, err
 	}
 	if !notFoundErr {
-		return User{}, errors.New("email taken")
+		return user.User{}, errors.New("email taken")
 	}
 	_, notFoundErr, err = s.GetByUsername(w, username)
 	if err != nil && !notFoundErr {
-		return User{}, err
+		return user.User{}, err
 	}
 	if !notFoundErr {
-		return User{}, errors.New("username taken")
+		return user.User{}, errors.New("username taken")
 	}
 
 	// Check if the password is good
 	if plainPassword == "" {
-		return User{}, errors.New("password is required")
+		return user.User{}, errors.New("password is required")
 	}
 	if len(plainPassword) < plainPasswordMinLength {
-		return User{}, fmt.Errorf(
+		return user.User{}, fmt.Errorf(
 			"min of %v characters in password", plainPasswordMinLength)
 	}
 	if len(plainPassword) > plainPasswordMaxLength {
-		return User{}, fmt.Errorf(
+		return user.User{}, fmt.Errorf(
 			"max of %v characters in password", plainPasswordMaxLength)
 	}
 	passwordHash := s.hashWithSalt(plainPassword)
 
 	// Check if username is good
 	if !UsernameIsValid(username) {
-		return User{}, errInvalidUsername
+		return user.User{}, errInvalidUsername
 	}
 
 	const selfPaidSubscriptionSeatsInUse = 0 // This column is deprecated
@@ -322,23 +322,23 @@ func (s service) RegisterNewUser(w context.Context,
 		u.SelfPaidSubscription, u.SelfPaidSubscriptionQuantity, selfPaidSubscriptionSeatsInUse,
 		u.Username, u.PasswordHash).Scan(&u.Id)
 	if err != nil {
-		return User{}, fmt.Errorf("failed to insert new user: %s", err)
+		return user.User{}, fmt.Errorf("failed to insert new user: %s", err)
 	}
-	err = s.putJobLimits(u.Id, Subscription_None, w)
+	err = s.putJobLimits(u.Id, user.Subscription_None, w)
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
 	return u, nil
 }
 
-func (s service) RegisterNewUserFromOAuth(w context.Context, email string) (User, error) {
+func (s service) RegisterNewUserFromOAuth(w context.Context, email string) (user.User, error) {
 	//Check if email already exist
 	_, notFoundErr, err := s.GetByEmail(w, email)
 	if err != nil && !notFoundErr {
-		return User{}, err
+		return user.User{}, err
 	}
 	if !notFoundErr {
-		return User{}, errors.New("email already used by another account")
+		return user.User{}, errors.New("email already used by another account")
 	}
 
 	const selfPaidSubscriptionSeatsInUse = 0 // This column is deprecated
@@ -352,28 +352,28 @@ func (s service) RegisterNewUserFromOAuth(w context.Context, email string) (User
 	`, u.Email, u.State, false,
 		u.SelfPaidSubscription, u.SelfPaidSubscriptionQuantity, selfPaidSubscriptionSeatsInUse).Scan(&u.Id)
 	if err != nil {
-		return User{}, fmt.Errorf("failed to insert new oauth user: %s", err)
+		return user.User{}, fmt.Errorf("failed to insert new oauth user: %s", err)
 	}
-	err = s.putJobLimits(u.Id, Subscription_None, w)
+	err = s.putJobLimits(u.Id, user.Subscription_None, w)
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
 	return u, nil
 }
 
-func (s service) CreateNewOrganizationUser(w context.Context, organizationUsername string) (User, error) {
+func (s service) CreateNewOrganizationUser(w context.Context, organizationUsername string) (user.User, error) {
 	if !UsernameIsValid(organizationUsername) {
-		return User{}, errInvalidUsername
+		return user.User{}, errInvalidUsername
 	}
 	_, notFoundErr, err := s.GetByUsername(w, organizationUsername)
 	if err != nil && !notFoundErr {
-		return User{}, err
+		return user.User{}, err
 	}
 	if !notFoundErr {
-		return User{}, errors.New("username already taken")
+		return user.User{}, errors.New("username already taken")
 	}
 
-	u := User{
+	u := user.User{
 		Email:          "",
 		IsOrganization: true,
 		State:          user.UserState_NoSubscription,
@@ -402,61 +402,61 @@ func (s service) CreateNewOrganizationUser(w context.Context, organizationUserna
 		selfPaidSubscriptionSeatsInUse,
 	).Scan(&u.Id)
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
-	return s.HandleManualPaymentSuccess(w, u.Id, Subscription_Trial, 1)
+	return s.HandleManualPaymentSuccess(w, u.Id, user.Subscription_Trial, 1)
 }
 
 var errInvalidUsername = errors.New("invalid username")
 
-func (s service) UpdateUsername(w context.Context, id int64, username string) (User, error) {
+func (s service) UpdateUsername(w context.Context, id int64, username string) (user.User, error) {
 	if !UsernameIsValid(username) {
-		return User{}, errInvalidUsername
+		return user.User{}, errInvalidUsername
 	}
 
 	_, isNotFoundErr, err := s.GetByUsername(w, username)
 	if err != nil && !isNotFoundErr {
-		return User{}, err
+		return user.User{}, err
 	}
 	if !isNotFoundErr {
-		return User{}, fmt.Errorf("username already taken")
+		return user.User{}, fmt.Errorf("username already taken")
 	}
 	u, _, err := s.Get(w, id)
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
 	if u.Username != "" {
-		return User{}, errors.New("changing username is not allowed")
+		return user.User{}, errors.New("changing username is not allowed")
 	}
 	SetUsername(&u, username)
 
 	return u, s.updateUser(u, w)
 }
-func (s service) ChooseUsernameAndStartTrial(w context.Context, id int64, username string) (User, error) {
+func (s service) ChooseUsernameAndStartTrial(w context.Context, id int64, username string) (user.User, error) {
 	if !UsernameIsValid(username) {
-		return User{}, errInvalidUsername
+		return user.User{}, errInvalidUsername
 	}
 
 	_, isNotFoundErr, err := s.GetByUsername(w, username)
 	if err != nil && !isNotFoundErr {
-		return User{}, err
+		return user.User{}, err
 	}
 	if !isNotFoundErr {
-		return User{}, fmt.Errorf("username already taken")
+		return user.User{}, fmt.Errorf("username already taken")
 	}
 	u, _, err := s.Get(w, id)
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
 	if u.Username != "" {
-		return User{}, errors.New("changing username is not allowed")
+		return user.User{}, errors.New("changing username is not allowed")
 	}
 	SetUsername(&u, username)
 	err = s.updateUser(u, w)
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
-	return s.HandleManualPaymentSuccess(w, id, Subscription_Trial, 1)
+	return s.HandleManualPaymentSuccess(w, id, user.Subscription_Trial, 1)
 }
 func (s service) UpdateCliKey(w context.Context, id int64, plainCliKey string) error {
 	u, _, err := s.Get(w, id)
@@ -475,12 +475,12 @@ func (s service) DeleteCliKey(w context.Context, id int64) error {
 	return s.updateUser(u, w)
 }
 
-func (s service) PasswordIsCorrect(u User, plainPassword string) bool {
+func (s service) PasswordIsCorrect(u user.User, plainPassword string) bool {
 	return u.PasswordHash == s.hashWithSalt(plainPassword)
 }
 func (s service) GetUserForPaymentWithStripe(
 	w context.Context, id int64, priceId stripeclient.PriceId, quantity int64, forceCurrency string) (
-	u User, isNotFoundErr bool, err error) {
+	u user.User, isNotFoundErr bool, err error) {
 
 	// Get user by id. If user.PaymentPlanIsActive, return an error
 	u, isNotFoundErr, err = s.Get(w, id)
@@ -541,14 +541,14 @@ func (s service) HandleStripeCheckoutSessionSuccess(w context.Context,
 	stripeSubscriptionID string,
 	stripeSessionId string,
 	priceId stripeclient.PriceId,
-	quantity int64) (User, error) {
+	quantity int64) (user.User, error) {
 	// Get user by id, if user not found return an error
 	u, isNotFoundErr, err := s.Get(w, id)
 	if isNotFoundErr {
 		panic("stripe send payment of a unknown user")
 	}
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
 
 	// The session was already paid. This is probably stripe replaying a
@@ -572,7 +572,7 @@ func (s service) HandleStripeCheckoutSessionSuccess(w context.Context,
 		panic("invalid quantity")
 	}
 	plan := stripePriceIdToPaymentPlan(priceId, s.stripeClient)
-	if plan == Subscription_Solo && quantity != 1 {
+	if plan == user.Subscription_Solo && quantity != 1 {
 		panic("invalid quantity for solo plan")
 	}
 
@@ -582,48 +582,48 @@ func (s service) HandleStripeCheckoutSessionSuccess(w context.Context,
 		) VALUES (?, ?, TRUE) ;
 	`, stripeSubscriptionID, u.Id)
 	if err != nil {
-		return User{}, fmt.Errorf("failed to insert stripe sub: %s", err)
+		return user.User{}, fmt.Errorf("failed to insert stripe sub: %s", err)
 	}
 
 	var quota int64
 	switch plan {
-	case Subscription_Solo:
+	case user.Subscription_Solo:
 		quota = SoloStorageQuota
-	case Subscription_Team:
+	case user.Subscription_Team:
 		quota = TeamStorageQuota
 	default:
-		return User{}, fmt.Errorf("%d is not a valid plan", plan)
+		return user.User{}, fmt.Errorf("%d is not a valid plan", plan)
 	}
 	err = s.db.SetQuota(quotaOwnerName(u), quota)
 	if err != nil {
-		return User{}, fmt.Errorf("failed to set quota: %s", err)
+		return user.User{}, fmt.Errorf("failed to set quota: %s", err)
 	}
 	err = s.putJobLimits(u.Id, plan, w)
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
 
 	// Update and save the user
 	HandleStripePaymentCompleted(&u, plan, quantity, stripeSubscriptionID)
 	err = s.updateUser(u, w)
 	if err != nil {
-		return User{}, fmt.Errorf("failed to update User: %s", err)
+		return user.User{}, fmt.Errorf("failed to update User: %s", err)
 	}
 	updatedUser, _, err := s.Get(w, u.Id)
 	if err != nil {
-		return User{}, fmt.Errorf("failed get updated user: %s", err)
+		return user.User{}, fmt.Errorf("failed get updated user: %s", err)
 	}
 	return updatedUser, nil
 }
 func (s service) HandlesSubscriptionDeleted(
-	w context.Context, stripeId, subscriptionId string) (User, error) {
+	w context.Context, stripeId, subscriptionId string) (user.User, error) {
 	// Get user
 	u, isNotFoundErr, err := s.GetByStripeId(w, stripeId)
 	if isNotFoundErr {
 		log.Printf("stripe send delete subscription of a unknown user. stripe id: %q", stripeId)
 	}
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
 	// If the user has sub, it must mean we're deleting again (
 	// replaying the subscription deleted msg). Let's just verify that.
@@ -638,20 +638,20 @@ func (s service) HandlesSubscriptionDeleted(
 				stripeSubscriptionId = ?
 		`, subscriptionId).Scan(&isActive)
 		if errors.Is(err, sql.ErrNoRows) {
-			return User{}, fmt.Errorf("stripe sub not found")
+			return user.User{}, fmt.Errorf("stripe sub not found")
 		}
 		if err != nil {
-			return User{}, fmt.Errorf("failed to query stripe sub: %s", err)
+			return user.User{}, fmt.Errorf("failed to query stripe sub: %s", err)
 		}
 		if isActive {
 			panicF("stripeSub %s is active on user of inactive plan on db",
 				subscriptionId)
 		}
-		return User{}, nil
+		return user.User{}, nil
 
 	}
 	if u.StripeSubscriptionID != subscriptionId {
-		return User{}, fmt.Errorf("user with id %s and subId %s not found", stripeId, subscriptionId)
+		return user.User{}, fmt.Errorf("user with id %s and subId %s not found", stripeId, subscriptionId)
 	}
 	_, err = s.db.Bind(w).Exec(`
 		UPDATE stripe_subscriptions2
@@ -661,48 +661,48 @@ func (s service) HandlesSubscriptionDeleted(
 			stripeSubscriptionId = ?
 	`, subscriptionId)
 	if err != nil {
-		return User{}, fmt.Errorf("failed to inactivate stripe sub: %s", err)
+		return user.User{}, fmt.Errorf("failed to inactivate stripe sub: %s", err)
 	}
 	err = s.db.FreezeQuota(quotaOwnerName(u))
 	if err != nil {
-		return User{}, fmt.Errorf("failed to freeze quota: %s", err)
+		return user.User{}, fmt.Errorf("failed to freeze quota: %s", err)
 	}
-	err = s.putJobLimits(u.Id, Subscription_None, w)
+	err = s.putJobLimits(u.Id, user.Subscription_None, w)
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
 
 	DeleteStripeSubscription(&u)
 	err = s.updateUser(u, w)
 	if err != nil {
-		return User{}, fmt.Errorf("failed to update User: %s", err)
+		return user.User{}, fmt.Errorf("failed to update User: %s", err)
 	}
 	updatedUser, _, err := s.Get(w, u.Id)
 	if err != nil {
-		return User{}, fmt.Errorf("failed get updated user: %s", err)
+		return user.User{}, fmt.Errorf("failed get updated user: %s", err)
 	}
 	return updatedUser, nil
 }
 
 func (s service) HandleSubscriptionQuantityUpdated(w context.Context,
-	stripeId, stripeSubscriptionId string, updatedQuantity int64) (User, error) {
+	stripeId, stripeSubscriptionId string, updatedQuantity int64) (user.User, error) {
 
 	if updatedQuantity <= 0 {
-		return User{}, fmt.Errorf("invalid quantity updating subscription for stripe id=%q. Quantity should be > 0 got=%v", stripeId, updatedQuantity)
+		return user.User{}, fmt.Errorf("invalid quantity updating subscription for stripe id=%q. Quantity should be > 0 got=%v", stripeId, updatedQuantity)
 	}
 	// Get user
 	u, _, err := s.GetByStripeId(w, stripeId)
 	if err != nil {
-		return User{}, fmt.Errorf("got error trying to get user in HandleSubscriptionQuantityUpdated() err=%w", err)
+		return user.User{}, fmt.Errorf("got error trying to get user in HandleSubscriptionQuantityUpdated() err=%w", err)
 	}
-	if u.SelfPaidSubscription == Subscription_Solo {
-		return User{}, fmt.Errorf("can not update quantity of Solo plan. tried to for userId=%v", u.Id)
+	if u.SelfPaidSubscription == user.Subscription_Solo {
+		return user.User{}, fmt.Errorf("can not update quantity of Solo plan. tried to for userId=%v", u.Id)
 	}
 	if u.StripeSubscriptionID != stripeSubscriptionId {
-		return User{}, fmt.Errorf("user with id=%v and subId=%s not found", u.Id, stripeSubscriptionId)
+		return user.User{}, fmt.Errorf("user with id=%v and subId=%s not found", u.Id, stripeSubscriptionId)
 	}
 	if !u.HasSub() {
-		return User{}, fmt.Errorf("user stripe id=%q does not have subscription to update", stripeId)
+		return user.User{}, fmt.Errorf("user stripe id=%q does not have subscription to update", stripeId)
 	}
 
 	if updatedQuantity == u.SelfPaidSubscriptionQuantity {
@@ -711,11 +711,11 @@ func (s service) HandleSubscriptionQuantityUpdated(w context.Context,
 	u.SelfPaidSubscriptionQuantity = updatedQuantity
 	err = s.updateUser(u, w)
 	if err != nil {
-		return User{}, fmt.Errorf("failed to update User: %s", err)
+		return user.User{}, fmt.Errorf("failed to update User: %s", err)
 	}
 	updatedUser, _, err := s.Get(w, u.Id)
 	if err != nil {
-		return User{}, fmt.Errorf("failed get updated user: %s", err)
+		return user.User{}, fmt.Errorf("failed get updated user: %s", err)
 	}
 	return updatedUser, nil
 }
@@ -732,7 +732,7 @@ func (s service) HandleManualSubscriptionDeleted(w context.Context, userId int64
 	if err != nil {
 		return fmt.Errorf("failed to freeze quota: %s", err)
 	}
-	err = s.putJobLimits(u.Id, Subscription_None, w)
+	err = s.putJobLimits(u.Id, user.Subscription_None, w)
 	if err != nil {
 		return err
 	}
@@ -742,7 +742,7 @@ func (s service) HandleManualSubscriptionDeleted(w context.Context, userId int64
 
 // Calls stripe to cancel the session of the user and updates the relevant
 // fieds on the user
-func (s service) deleteCurrentStripeSessionIfItExists(u *User) error {
+func (s service) deleteCurrentStripeSessionIfItExists(u *user.User) error {
 	// Nothing to cancel if not paying
 	if u.State != user.UserState_PayingWithStripe {
 		return nil
@@ -756,58 +756,58 @@ func (s service) deleteCurrentStripeSessionIfItExists(u *User) error {
 }
 
 func (s service) HandleManualPaymentSuccess(w context.Context, userId int64,
-	plan SubscriptionPlan, quantity int64) (User, error) {
+	plan user.SubscriptionPlan, quantity int64) (user.User, error) {
 	// Validate parameters
 	if quantity < 1 {
-		return User{}, fmt.Errorf("%d is an invalid quantity", quantity)
+		return user.User{}, fmt.Errorf("%d is an invalid quantity", quantity)
 	}
-	if plan == Subscription_Solo && quantity != 1 {
-		return User{}, fmt.Errorf("%d is an invalid quantity for solo plan", quantity)
+	if plan == user.Subscription_Solo && quantity != 1 {
+		return user.User{}, fmt.Errorf("%d is an invalid quantity for solo plan", quantity)
 	}
 
 	// Get the user
-	user, _, err := s.Get(w, userId)
+	u, _, err := s.Get(w, userId)
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
-	if user.HasSub() {
-		return User{}, errors.New("user already has sub")
+	if u.HasSub() {
+		return user.User{}, errors.New("user already has sub")
 	}
 
 	// If user is paying via stripe, cancel that session first
-	err = s.deleteCurrentStripeSessionIfItExists(&user)
+	err = s.deleteCurrentStripeSessionIfItExists(&u)
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
 
 	var quota int64
 	switch plan {
-	case Subscription_Trial:
+	case user.Subscription_Trial:
 		quota = TrialStorageQuota
-	case Subscription_Solo:
+	case user.Subscription_Solo:
 		quota = SoloStorageQuota
-	case Subscription_Team:
+	case user.Subscription_Team:
 		quota = TeamStorageQuota
 	default:
-		return User{}, fmt.Errorf("%d is not a valid plan", plan)
+		return user.User{}, fmt.Errorf("%d is not a valid plan", plan)
 	}
-	err = s.db.SetQuota(quotaOwnerName(user), quota)
+	err = s.db.SetQuota(quotaOwnerName(u), quota)
 	if err != nil {
-		return User{}, fmt.Errorf("failed to set quota: %s", err)
+		return user.User{}, fmt.Errorf("failed to set quota: %s", err)
 	}
-	err = s.putJobLimits(user.Id, plan, w)
+	err = s.putJobLimits(u.Id, plan, w)
 	if err != nil {
-		return User{}, err
+		return user.User{}, err
 	}
 
-	ManuallyPayForPlan(&user, plan, quantity)
-	err = s.updateUser(user, w)
+	ManuallyPayForPlan(&u, plan, quantity)
+	err = s.updateUser(u, w)
 	if err != nil {
-		return User{}, fmt.Errorf("failed to update User: %s", err)
+		return user.User{}, fmt.Errorf("failed to update User: %s", err)
 	}
-	updatedUser, _, err := s.Get(w, user.Id)
+	updatedUser, _, err := s.Get(w, u.Id)
 	if err != nil {
-		return User{}, fmt.Errorf("failed get updated user: %s", err)
+		return user.User{}, fmt.Errorf("failed get updated user: %s", err)
 	}
 	return updatedUser, nil
 }
@@ -841,7 +841,7 @@ func (s service) ManualReset(w context.Context, userId int64) error {
 	if err != nil {
 		return fmt.Errorf("failed to freeze quota: %s", err)
 	}
-	err = s.putJobLimits(u.Id, Subscription_None, w)
+	err = s.putJobLimits(u.Id, user.Subscription_None, w)
 	if err != nil {
 		return err
 	}
@@ -874,35 +874,35 @@ func (s *service) hashWithSalt(plainText string) string {
 }
 
 // Panics if price id is not PriceId_Team or PriceId_Solo
-func stripePriceIdToPaymentPlan(pId stripeclient.PriceId, sCLient stripeclient.StripeClient) SubscriptionPlan {
+func stripePriceIdToPaymentPlan(pId stripeclient.PriceId, sCLient stripeclient.StripeClient) user.SubscriptionPlan {
 	product, isOk := sCLient.ResolvePriceId(pId)
 	if !isOk {
 		panic("could not resolve price id")
 	}
 	switch product {
 	case stripeclient.Product_Subscription_Team:
-		return Subscription_Team
+		return user.Subscription_Team
 	case stripeclient.Product_Subscription_Solo:
-		return Subscription_Solo
+		return user.Subscription_Solo
 	default:
 		panic("invalid price id")
 	}
 }
 
-func (s service) putJobLimits(userId int64, plan SubscriptionPlan, w context.Context) error {
+func (s service) putJobLimits(userId int64, plan user.SubscriptionPlan, w context.Context) error {
 	var maxParallelJobs int
 	var maxParallelJobsTimeout time.Duration
 	switch plan {
-	case Subscription_None:
+	case user.Subscription_None:
 		maxParallelJobs = 0
 		maxParallelJobsTimeout = 0
-	case Subscription_Trial:
+	case user.Subscription_Trial:
 		maxParallelJobs = TrialMaxParallelJobs
 		maxParallelJobsTimeout = TrialMaxParallelTimeoutSum
-	case Subscription_Solo:
+	case user.Subscription_Solo:
 		maxParallelJobs = SoloMaxParallelJobs
 		maxParallelJobsTimeout = SoloMaxParallelTimeoutSum
-	case Subscription_Team:
+	case user.Subscription_Team:
 		maxParallelJobs = TeamMaxParllelJobs
 		maxParallelJobsTimeout = TeamMaxParallelTimeoutSum
 	default:

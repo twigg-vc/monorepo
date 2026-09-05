@@ -7,8 +7,8 @@ import (
 )
 
 // Id is not populated
-func SignupUserWithPassword(email, username, passwordHash string) User {
-	u := User{
+func SignupUserWithPassword(email, username, passwordHash string) user.User {
+	u := user.User{
 		State:        user.UserState_NoSubscription,
 		Email:        email,
 		Username:     username,
@@ -19,8 +19,8 @@ func SignupUserWithPassword(email, username, passwordHash string) User {
 }
 
 // Id is not populated
-func SignupWithOAuth(email string) User {
-	u := User{
+func SignupWithOAuth(email string) user.User {
+	u := user.User{
 		State: user.UserState_NoUsername,
 		Email: email,
 	}
@@ -28,7 +28,7 @@ func SignupWithOAuth(email string) User {
 	return u
 }
 
-func SetUsername(u *User, username string) {
+func SetUsername(u *user.User, username string) {
 	u.Username = username
 	if u.State == user.UserState_NoUsername {
 		u.State = user.UserState_NoSubscription
@@ -36,12 +36,12 @@ func SetUsername(u *User, username string) {
 	CheckStateOrDie(*u)
 }
 
-func ResetManually(u *User) {
+func ResetManually(u *user.User) {
 	// Some of these fields are saved on other tables, but this resets them
 	// anyway
 	u.State = user.UserState_NoSubscription
 	u.CliKeyHash = ""
-	u.SelfPaidSubscription = Subscription_None
+	u.SelfPaidSubscription = user.Subscription_None
 	u.SelfPaidSubscriptionQuantity = 0
 	u.StripeSessionId = ""
 	u.StripeSessionUrl = ""
@@ -52,7 +52,7 @@ func ResetManually(u *User) {
 	CheckStateOrDie(*u)
 }
 
-func ManuallyPayForPlan(u *User, plan SubscriptionPlan, quantity int64) {
+func ManuallyPayForPlan(u *user.User, plan user.SubscriptionPlan, quantity int64) {
 	if u.State != user.UserState_NoSubscription {
 		panicF("cant ManuallyPayForPlan on state %s", u.State)
 	}
@@ -63,7 +63,7 @@ func ManuallyPayForPlan(u *User, plan SubscriptionPlan, quantity int64) {
 }
 
 func StartStripePayment(
-	u *User,
+	u *user.User,
 	StripeSessionId,
 	StripeSessionUrl string,
 	StripeSessionPriceId stripeclient.PriceId,
@@ -82,7 +82,7 @@ func StartStripePayment(
 	CheckStateOrDie(*u)
 }
 
-func StopPayingWithStripe(u *User) {
+func StopPayingWithStripe(u *user.User) {
 	if u.State != user.UserState_PayingWithStripe {
 		panicF("cant cancelStripePayment on state %s", u.State)
 	}
@@ -94,7 +94,7 @@ func StopPayingWithStripe(u *User) {
 	CheckStateOrDie(*u)
 }
 
-func DeleteStripeSubscription(u *User) {
+func DeleteStripeSubscription(u *user.User) {
 	if u.State != user.UserState_StripeSubscription {
 		panicF("cant DeleteStripeSubscription on state %s", u.State)
 	}
@@ -107,7 +107,7 @@ func DeleteStripeSubscription(u *User) {
 	u.StripeSessionQuantity = 0
 	CheckStateOrDie(*u)
 }
-func DeleteManualSubscription(u *User) {
+func DeleteManualSubscription(u *user.User) {
 	if u.State != user.UserState_ManualSubscription {
 		panicF("cant DeleteManualSubscription on state %s", u.State)
 	}
@@ -116,7 +116,7 @@ func DeleteManualSubscription(u *User) {
 }
 
 func HandleStripePaymentCompleted(
-	u *User, plan SubscriptionPlan, quantity int64, stripeSubscriptionId string) {
+	u *user.User, plan user.SubscriptionPlan, quantity int64, stripeSubscriptionId string) {
 	if u.State != user.UserState_PayingWithStripe {
 		panicF("cant handleStripePayment on state %s", u.State)
 	}
@@ -134,9 +134,9 @@ func HandleStripePaymentCompleted(
 
 // helper to set all properties that need to be set when a user
 // cancels any kind of subscription
-func DeleteSubscription(u *User) {
+func DeleteSubscription(u *user.User) {
 	u.State = user.UserState_NoSubscription
-	u.SelfPaidSubscription = Subscription_None
+	u.SelfPaidSubscription = user.Subscription_None
 	u.SelfPaidSubscriptionQuantity = 0
 }
 
@@ -145,7 +145,7 @@ const MaxUsersInTrialPlan = 1
 
 // Function used to validade the fields of a user given its state.
 // It panics if it finds any inconsistency.
-func CheckStateOrDie(u User) {
+func CheckStateOrDie(u user.User) {
 	s := u.State
 
 	if s == user.UserState_None {
