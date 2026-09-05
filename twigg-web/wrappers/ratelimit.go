@@ -19,7 +19,7 @@ type rlMux struct {
 }
 
 func newRateLimitted(maxQps float64, maxQpsBurst int, metrics metrics.Service,
-	sessionService session.Service, mux Mux) RlMux {
+	sessionService session.Service, mux Mux) rlMux {
 	return rlMux{
 		metrics:        metrics,
 		sessionService: sessionService,

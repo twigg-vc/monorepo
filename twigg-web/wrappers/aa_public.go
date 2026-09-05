@@ -21,7 +21,7 @@ import (
 func NewRateLimitted(maxQps float64, maxQpsBurst int,
 	mService metrics.Service,
 	sessionService session.Service, mux Mux) RlMux {
-	return newRateLimitted(maxQps, maxQpsBurst, mService, sessionService, mux)
+	return RlMux{newRateLimitted(maxQps, maxQpsBurst, mService, sessionService, mux)}
 }
 
 type Mux interface {
@@ -29,9 +29,15 @@ type Mux interface {
 	HandleFunc(pattern string, handler func(w http.ResponseWriter, r *http.Request))
 }
 
-type RlMux interface {
-	ServeHTTP(w http.ResponseWriter, r *http.Request)
-	HandleFunc(pattern string, handler func(w http.ResponseWriter, r *http.Request))
+type RlMux struct {
+	m rlMux
+}
+
+func (m RlMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	m.m.ServeHTTP(w, r)
+}
+func (m RlMux) HandleFunc(pattern string, handler func(w http.ResponseWriter, r *http.Request)) {
+	m.m.HandleFunc(pattern, handler)
 }
 
 // ##########
