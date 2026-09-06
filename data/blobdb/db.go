@@ -41,6 +41,8 @@ func (db db) SetBlob(writeCtx context.Context,
 	}
 	err = nil
 	hasParent := !parentNotFound
+	hasDeltaEncodingBase := false
+	var deltaEncodingBase Version
 	var parentR io.Reader
 	if hasParent {
 		v = parentM.Version + 1
@@ -63,6 +65,8 @@ func (db db) SetBlob(writeCtx context.Context,
 			if err != nil {
 				return
 			}
+			hasDeltaEncodingBase = true
+			deltaEncodingBase = parentM.Version
 		} else {
 			// We use parentM.DistanceToNonDelta+1 for the DistanceToNonDelta
 			// of this new entry, so we set it to -1 here to use the value 0
@@ -107,19 +111,21 @@ func (db db) SetBlob(writeCtx context.Context,
 		return
 	}
 	err = db.m.InsertMetadata(writeCtx, BlobData{
-		IdPrefix:           idPrefix,
-		Id:                 id,
-		Version:            v,
-		Size:               nWritten,
-		CompressedSize:     compressedSize,
-		SavedAt:            time.Now(),
-		IsDeleted:          false,
-		QuotaOwner:         quotaOwner,
-		IsLatest:           true,
-		Datastrip:          db.log.Name(),
-		Offset:             offset,
-		DistanceToNonDelta: parentM.DistanceToNonDelta + 1,
-		Encoding:           compressor.Data().Method,
+		IdPrefix:             idPrefix,
+		Id:                   id,
+		Version:              v,
+		Size:                 nWritten,
+		CompressedSize:       compressedSize,
+		SavedAt:              time.Now(),
+		IsDeleted:            false,
+		QuotaOwner:           quotaOwner,
+		IsLatest:             true,
+		Datastrip:            db.log.Name(),
+		Offset:               offset,
+		DistanceToNonDelta:   parentM.DistanceToNonDelta + 1,
+		Encoding:             compressor.Data().Method,
+		HasDeltaEncodingBase: hasDeltaEncodingBase,
+		DeltaEncodingBase:    deltaEncodingBase,
 	})
 	if err != nil {
 		return
@@ -181,9 +187,15 @@ func (db db) getReader(readCtx context.Context, m BlobData) (io.Reader, func(), 
 	closeParentReader := func() {}
 	if m.Encoding != deltastream.CompressionMethodSpeedFlate {
 		// Delta encoded blobs need the parent version to be decompressed
+		var parentVersion Version
+		if m.HasDeltaEncodingBase {
+			parentVersion = m.DeltaEncodingBase
+		} else {
+			parentVersion = m.Version - 1
+		}
 		var isNotFoundErr bool
 		parentM, isNotFoundErr, err = db.m.GetMetadataByVersion(readCtx,
-			m.IdPrefix, m.Id, m.Version-1)
+			m.IdPrefix, m.Id, parentVersion)
 		if err != nil {
 			if isNotFoundErr {
 				err = ErrNotFound

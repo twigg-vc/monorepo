@@ -185,7 +185,7 @@ func Test_SetGetBlob(t *testing.T) {
 // delta encoded chains and the forced non-delta resets, then reads every
 // version back.
 func Test_ManyVersions(t *testing.T) {
-	db, _, _, _ := getNewBlobDb(false, 0)
+	db, _, metadata, _ := getNewBlobDb(false, 0)
 	ctx := context.Background()
 
 	var contents []string
@@ -213,6 +213,26 @@ func Test_ManyVersions(t *testing.T) {
 		if string(data) != contents[i] {
 			t.Fatalf("version %d: data=%q, expected %q", i, data, contents[i])
 		}
+	}
+
+	// Check DeltaEncodingBase
+	v0, _, _ := metadata.GetMetadataByVersion(ctx, "prefix", "id", 0)
+	if v0.HasDeltaEncodingBase {
+		t.Fatal("v0 is delta encoded")
+	}
+	v1, _, _ := metadata.GetMetadataByVersion(ctx, "prefix", "id", 1)
+	if !v1.HasDeltaEncodingBase {
+		t.Fatal("v1 not delta encoded")
+	}
+	if v1.DeltaEncodingBase != 0 {
+		t.Fatal("v1 has bad encoding base")
+	}
+	v2, _, _ := metadata.GetMetadataByVersion(ctx, "prefix", "id", 2)
+	if !v2.HasDeltaEncodingBase {
+		t.Fatal("v2 not delta encoded")
+	}
+	if v2.DeltaEncodingBase != 1 {
+		t.Fatal("v2 has bad encoding base")
 	}
 }
 

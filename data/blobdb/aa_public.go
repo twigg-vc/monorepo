@@ -75,19 +75,26 @@ func (db BlobDb) GetBlobVersion(readCtx context.Context, idPrefix, id string, v 
 type Version = uint64
 
 type BlobData struct {
-	IdPrefix           string
-	Id                 string
-	Version            Version
-	Size               int64
-	CompressedSize     int64
-	SavedAt            time.Time
-	IsDeleted          bool
-	QuotaOwner         string
-	IsLatest           bool
-	Datastrip          string
-	Offset             int64
+	IdPrefix       string
+	Id             string
+	Version        Version
+	Size           int64
+	CompressedSize int64
+	SavedAt        time.Time
+	IsDeleted      bool
+	QuotaOwner     string
+	IsLatest       bool
+	Datastrip      string
+	Offset         int64
+	// DistanceToNonDelta indicates the size of the consecutive delta chain
 	DistanceToNonDelta int64
-	Encoding           deltastream.CompressionMethod
+	// Encoding indicates the method of compression used to store the blob.
+	// For delta compression methods:
+	// if HasDeltaEncodingBase, DeltaEncodingBase indicates which version was
+	// used as the delta base. Else, Version-1 is the delta base.
+	Encoding             deltastream.CompressionMethod
+	HasDeltaEncodingBase bool
+	DeltaEncodingBase    Version
 }
 
 var (

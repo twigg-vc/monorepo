@@ -45,19 +45,21 @@ func Test_BlobMetadataDb(t *testing.T) {
 
 	// All fields must roundtrip
 	in := blobdb.BlobData{
-		IdPrefix:           "prefix",
-		Id:                 "id",
-		Version:            0,
-		Size:               100,
-		CompressedSize:     42,
-		SavedAt:            time.UnixMilli(123456789),
-		IsDeleted:          false,
-		QuotaOwner:         "owner",
-		IsLatest:           true,
-		Datastrip:          "ds0",
-		Offset:             7,
-		DistanceToNonDelta: 2,
-		Encoding:           deltastream.CompressionMethodSpeedFlate,
+		IdPrefix:             "prefix",
+		Id:                   "id",
+		Version:              0,
+		Size:                 100,
+		CompressedSize:       42,
+		SavedAt:              time.UnixMilli(123456789),
+		IsDeleted:            false,
+		QuotaOwner:           "owner",
+		IsLatest:             true,
+		Datastrip:            "ds0",
+		Offset:               7,
+		DistanceToNonDelta:   2,
+		Encoding:             deltastream.CompressionMethodSpeedFlate,
+		HasDeltaEncodingBase: true,
+		DeltaEncodingBase:    965,
 	}
 	err = m.InsertMetadata(w, in)
 	if err != nil {

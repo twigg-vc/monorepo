@@ -18,7 +18,7 @@ type blobMetadataDb struct {
 
 const blobMetadataColumns = `IdPrefix, Id, Version, IsLatest, SavedAt,
 	IsDeleted, Datastrip, Offset, DistanceToNonDelta, CompressedSize,
-	UncompressedSize, Encoding, QuotaOwner`
+	UncompressedSize, Encoding, HasDeltaEncodingBase, DeltaEncodingBase, QuotaOwner`
 
 func (db blobMetadataDb) GetLatestMetadata(readCtx context.Context,
 	idPrefix string, id string) (m blobdb.BlobData, isNotFoundErr bool, err error) {
@@ -39,10 +39,10 @@ func (db blobMetadataDb) GetMetadataByVersion(readCtx context.Context,
 func (db blobMetadataDb) InsertMetadata(writeCtx context.Context, m blobdb.BlobData) error {
 	_, err := db.s.Exec(writeCtx, `
 		INSERT INTO sqlarge_blobs (`+blobMetadataColumns+`)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, m.IdPrefix, m.Id, m.Version, m.IsLatest, m.SavedAt,
 		m.IsDeleted, m.Datastrip, m.Offset, m.DistanceToNonDelta, m.CompressedSize,
-		m.Size, m.Encoding, m.QuotaOwner)
+		m.Size, m.Encoding, m.HasDeltaEncodingBase, m.DeltaEncodingBase, m.QuotaOwner)
 	return err
 }
 
@@ -59,7 +59,7 @@ func (db blobMetadataDb) SetMetadata(writeCtx context.Context,
 func scanBlobMetadata(row *sql.Row) (m blobdb.BlobData, isNotFoundErr bool, err error) {
 	err = row.Scan(&m.IdPrefix, &m.Id, &m.Version, &m.IsLatest, &m.SavedAt,
 		&m.IsDeleted, &m.Datastrip, &m.Offset, &m.DistanceToNonDelta, &m.CompressedSize,
-		&m.Size, &m.Encoding, &m.QuotaOwner)
+		&m.Size, &m.Encoding, &m.HasDeltaEncodingBase, &m.DeltaEncodingBase, &m.QuotaOwner)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = ErrNotFound
 		isNotFoundErr = true
