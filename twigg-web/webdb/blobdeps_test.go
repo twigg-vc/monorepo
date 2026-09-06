@@ -87,7 +87,7 @@ func Test_BlobMetadataDb(t *testing.T) {
 
 	// Clearing isLatest must hide the row from GetLatestMetadata but keep it
 	// reachable by version
-	err = m.SetMetadata(w, "prefix", "id", 0, false)
+	err = m.SetMetadataIsLatest(w, "prefix", "id", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

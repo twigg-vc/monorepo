@@ -46,7 +46,7 @@ func (db blobMetadataDb) InsertMetadata(writeCtx context.Context, m blobdb.BlobD
 	return err
 }
 
-func (db blobMetadataDb) SetMetadata(writeCtx context.Context,
+func (db blobMetadataDb) SetMetadataIsLatest(writeCtx context.Context,
 	idPrefix string, id string, v blobdb.Version, isLatest bool) error {
 	_, err := db.s.Exec(writeCtx, `
 		UPDATE sqlarge_blobs

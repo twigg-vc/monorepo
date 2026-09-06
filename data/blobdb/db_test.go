@@ -78,7 +78,7 @@ func (m *memMetadata) InsertMetadata(ctx context.Context, b blobdb.BlobData) err
 	m.rows = append(m.rows, b)
 	return nil
 }
-func (m *memMetadata) SetMetadata(ctx context.Context, idPrefix string, id string, v blobdb.Version, isLatest bool) error {
+func (m *memMetadata) SetMetadataIsLatest(ctx context.Context, idPrefix string, id string, v blobdb.Version, isLatest bool) error {
 	for i, row := range m.rows {
 		if row.IdPrefix == idPrefix && row.Id == id && row.Version == v {
 			m.rows[i].IsLatest = isLatest
