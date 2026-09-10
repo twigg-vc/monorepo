@@ -38,6 +38,7 @@ hljs.registerLanguage('yaml', yaml);
 
 import less from 'highlight.js/lib/languages/less';
 import { AlignedRow } from './differs';
+import { GetFeatureFlags } from './feature-flags';
 hljs.registerLanguage('less', less);
 
 // Set to true to show the button that asks for a slot on a line
@@ -104,7 +105,11 @@ export class DiffDisplay extends LitElement {
     };
     constructor() {
         super();
-        this.DiffAlgorithm = "myers"
+        if (GetFeatureFlags().UseVSCodeDiff) {
+            this.DiffAlgorithm = "vscode"
+        } else {
+            this.DiffAlgorithm = "myers"
+        }
         this.unifiedDiff = "";
         this.leftFilename = ""
         this.rightFilename = ""
@@ -264,6 +269,14 @@ export class DiffDisplay extends LitElement {
             border-bottom: 1px solid var(--color-border);
         }
 
+        .diff-algorithm-toggle {
+            display: flex;
+            align-items: center;
+            gap: var(--space1);
+            margin: var(--space1) var(--space2);
+            font-size: var(--space3);
+            color: var(--color-text-muted);
+        }
         #no-content-container{
             display: flex;
             justify-content:center;
@@ -288,6 +301,7 @@ export class DiffDisplay extends LitElement {
         const nDigits = getNumOfDigitsOfMaxRow(lastBlock.GetAll());
 
         return html`
+        ${this.renderDiffAlgorithmToggle()}
         <table class="diff-table ${this.theme}" @mousedown=${this.onTableMouseDown}>
             <colgroup>
                 <col style="width:${nDigits + 1}ch;">
@@ -302,6 +316,28 @@ export class DiffDisplay extends LitElement {
 
         ${this.renderSlotsContainer()}
         `;
+    }
+    // Only shown when the UseVSCodeDiff flag is on.
+    private renderDiffAlgorithmToggle() {
+        if (!GetFeatureFlags().UseVSCodeDiff) {
+            return html``;
+        }
+        return html`
+        <div class="diff-algorithm-toggle">
+            <span>Use new diff engine</span>
+            <toggle-switch size="small"
+                ?Checked=${this.DiffAlgorithm === "vscode"}
+                @toggle-switch-fired=${this.onDiffAlgorithmToggled}>
+            </toggle-switch>
+        </div>
+        `;
+    }
+    private onDiffAlgorithmToggled(e: CustomEvent<{ Checked: boolean }>) {
+        if (e.detail.Checked) {
+            this.DiffAlgorithm = "vscode";
+        } else {
+            this.DiffAlgorithm = "myers";
+        }
     }
     private renderSlotsContainer(){
         return html`
