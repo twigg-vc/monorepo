@@ -113,13 +113,120 @@ export class MyersDiffer {
     }
 }
 
-// VSCodeDiffer is WIP. It will (when done) compute diffs using the vendored
-// VSCode diff algorithm.
+// VSCodeDiffer computes diffs using the vendored VSCode diff algorithm.
 export class VSCodeDiffer {
     constructor(){}
     public Diff(leftLines: string[], rightLines: string[]): AlignedRow[] {
-        // WIP - to setup the plumbing for now we just use myers diff as a mock
-        const m = new MyersDiffer()
-        return m.Diff(leftLines, rightLines)
+        const rows: AlignedRow[] = [];
+        // The engine doesn't accept an empty side; that is just one
+        // all-added/all-removed change.
+        if (leftLines.length === 0 || rightLines.length === 0) {
+            this.pushChange(0, leftLines.length, 0, rightLines.length, rows);
+            return rows;
+        }
+        const result = new DefaultLinesDiffComputer().computeDiff(leftLines, rightLines, {
+            ignoreTrimWhitespace: false,
+            computeMoves: false,
+            maxComputationTimeMs: 5000,
+        });
+        // Lay out the rows. The engine's line numbers are 1-based and
+        // end-exclusive; as 0-based indices each change is [from, to).
+        var leftAt = 0;
+        var rightAt = 0;
+        for (const change of result.changes) {
+            const leftFrom = change.original.startLineNumber - 1;
+            const leftTo = change.original.endLineNumberExclusive - 1;
+            const rightFrom = change.modified.startLineNumber - 1;
+            const rightTo = change.modified.endLineNumberExclusive - 1;
+            // Lines before a change are equal on both sides, so they pair up
+            while (leftAt < leftFrom) {
+                rows.push({ Left: leftAt, Right: rightAt, LeftRanges: [], RightRanges: [] });
+                leftAt++;
+                rightAt++;
+            }
+            this.pushChange(leftFrom, leftTo, rightFrom, rightTo, rows);
+            leftAt = leftTo;
+            rightAt = rightTo;
+        }
+        // Push trailing paired lines
+        while (leftAt < leftLines.length) {
+            rows.push({ Left: leftAt, Right: rightAt, LeftRanges: [], RightRanges: [] });
+            leftAt++;
+            rightAt++;
+        }
+        // Then the highlights: split each inner change into one range per
+        // line it touches, keyed by 0-based line index.
+        const leftByLine = new Map<number, CharRange[]>();
+        const rightByLine = new Map<number, CharRange[]>();
+        for (const change of result.changes) {
+            for (const inner of change.innerChanges ?? []) {
+                this.addRangeByLine(inner.originalRange, leftLines, leftByLine);
+                this.addRangeByLine(inner.modifiedRange, rightLines, rightByLine);
+            }
+        }
+        for (const row of rows) {
+            if (row.Left !== undefined) {
+                row.LeftRanges = leftByLine.get(row.Left) ?? [];
+                // On a one-sided row a whole-line range says nothing the
+                // removed/added background doesn't already say.
+                if (row.Right === undefined) {
+                    row.LeftRanges = this.withoutFullLine(row.LeftRanges, leftLines[row.Left]);
+                }
+            }
+            if (row.Right !== undefined) {
+                row.RightRanges = rightByLine.get(row.Right) ?? [];
+                if (row.Left === undefined) {
+                    row.RightRanges = this.withoutFullLine(row.RightRanges, rightLines[row.Right]);
+                }
+            }
+        }
+        return rows;
+    }
+    // pushChange pushes the rows of a changed region: lines paired
+    // positionally, then one-sided rows for what is left over.
+    private pushChange(leftFrom: number, leftTo: number,
+        rightFrom: number, rightTo: number, rows: AlignedRow[]) {
+        const nPaired = Math.min(leftTo - leftFrom, rightTo - rightFrom);
+        for (var i = 0; i < nPaired; i++) {
+            rows.push({ Left: leftFrom + i, Right: rightFrom + i, LeftRanges: [], RightRanges: [] });
+        }
+        for (var l = leftFrom + nPaired; l < leftTo; l++) {
+            rows.push({ Left: l, Right: undefined, LeftRanges: [], RightRanges: [] });
+        }
+        for (var r = rightFrom + nPaired; r < rightTo; r++) {
+            rows.push({ Left: undefined, Right: r, LeftRanges: [], RightRanges: [] });
+        }
+    }
+    // addRangeByLine splits a (possibly multi-line) engine range into one
+    // CharRange per line. Columns are 1-based, and a range may end at column
+    // 1 of the next line (meaning the newline), so pieces are clamped to the
+    // line and empty ones dropped.
+    private addRangeByLine(range: { startLineNumber: number, startColumn: number, endLineNumber: number, endColumn: number },
+        lines: string[], byLine: Map<number, CharRange[]>) {
+        for (var lineNum = range.startLineNumber; lineNum <= range.endLineNumber; lineNum++) {
+            const lineIdx = lineNum - 1;
+            if (lineIdx < 0 || lineIdx >= lines.length) {
+                continue;
+            }
+            const length = lines[lineIdx].length;
+            var start = 0;
+            if (lineNum === range.startLineNumber) {
+                start = Math.min(range.startColumn - 1, length);
+            }
+            var end = length;
+            if (lineNum === range.endLineNumber) {
+                end = Math.min(range.endColumn - 1, length);
+            }
+            if (start >= end) {
+                continue;
+            }
+            const existing = byLine.get(lineIdx) ?? [];
+            existing.push({ Start: start, End: end });
+            byLine.set(lineIdx, existing);
+        }
+    }
+    // withoutFullLine drops the range covering the whole line, if any.
+    private withoutFullLine(ranges: CharRange[], line: string): CharRange[] {
+        return ranges.filter(r => !(r.Start === 0 && r.End === line.length));
     }
 }
