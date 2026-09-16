@@ -552,6 +552,24 @@ export class DiffDisplay extends LitElement {
         };
     }
 
+    // Expands the whole hidden block at once.
+    private expandAll(idx: number) {
+        const block = this.blocks[idx];
+        if (!block.IsHidden()) {
+            throw "tried to expand non context block"
+        };
+        block.ForceShow()
+        this.blocks = [...this.blocks]
+    }
+
+    private onShowMoreClick(e: MouseEvent, idx: number) {
+        if (e.ctrlKey || e.metaKey) {
+            this.expandAll(idx)
+        } else {
+            this.expandBlock(idx)
+        }
+    }
+
     private expandBlock(idx: number) {
         const nExpand = 20;
         const block = this.blocks[idx];
@@ -603,9 +621,9 @@ export class DiffDisplay extends LitElement {
         if (b.IsHidden()){
             return html`
             <tr>
-            <td colspan=4 class="show-more" @click=${()=>this.expandBlock(idx)}>
+            <td colspan=4 class="show-more" @click=${(e: MouseEvent)=>this.onShowMoreClick(e, idx)}>
                 <div class="show-more-btn-wrapper">
-                    <button class="show-more-btn">⋯ View more ⋯</button>
+                    <button class="show-more-btn" title="Click: 20 more lines. Ctrl+click: all">⋯ View more ⋯</button>
                 </div>
             </td>
             </tr>
