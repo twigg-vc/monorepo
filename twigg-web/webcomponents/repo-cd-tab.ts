@@ -4,6 +4,7 @@ import { PipelineRef } from './interfaces';
 import { GetFeatureFlags } from './feature-flags';
 import { PathToPipelineRefs, PathToPipelineRefsAfter } from './routes';
 import { MinDurationTimer } from './min-duration-timer';
+import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 /**
 * "CD" tab of the repo display
@@ -87,7 +88,7 @@ export class RepoCdTab extends LitElement {
         this.failedToLoadpipelineRefs = false;
         const tm = new MinDurationTimer()
         try {
-            const resp = await fetch(PathToPipelineRefs(this.RepoOwnerName, this.RepoName),
+            const resp = await fetchGetWithRetry(PathToPipelineRefs(this.RepoOwnerName, this.RepoName),
                 { method: 'GET' },
             );
             await tm.Wait()
@@ -112,7 +113,7 @@ export class RepoCdTab extends LitElement {
         const tm = new MinDurationTimer()
         try {
             const lastRef = this.pipelineRefs[this.pipelineRefs.length-1]
-            const resp = await fetch(PathToPipelineRefsAfter(this.RepoOwnerName, this.RepoName, lastRef),
+            const resp = await fetchGetWithRetry(PathToPipelineRefsAfter(this.RepoOwnerName, this.RepoName, lastRef),
                 { method: 'GET' },
             );
             await tm.Wait()
