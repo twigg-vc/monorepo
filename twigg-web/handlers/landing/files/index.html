@@ -414,6 +414,11 @@
             display: none;
         }
 
+        /* On mobile the bar only fits one button, so "Get started" moves into the menu */
+        .nav-cta-in-menu {
+            display: none;
+        }
+
         /* Responsive (mobile). !important is needed to beat inline styles. */
         @media (max-width: 720px) {
             .wrap-two-rows-mobile {
@@ -427,8 +432,16 @@
                 display: block;
             }
 
-            /* Pushes the nav's right-hand group (Get started + menu button) over */
-            .wrap-two-rows-mobile .btn-primary {
+            .nav-cta-in-menu {
+                display: block;
+            }
+
+            .nav-cta-inline {
+                display: none;
+            }
+
+            /* Pushes the nav's right-hand group (the CTA buttons + menu button) over */
+            .wrap-two-rows-mobile > .nav-cta-group {
                 margin-left: auto;
             }
 
@@ -492,10 +505,18 @@
                     <a href="#pricing" class="hover-accent" style="color: var(--text-soft); font-weight: var(--weight-medium);">Pricing</a>
                     <a href="#about" class="hover-accent" style="color: var(--text-soft); font-weight: var(--weight-medium);">About us</a>
                     <a href="#critique" class="hover-accent" style="color: var(--text-soft); font-weight: var(--weight-medium);">Critique??</a>
+
+                    <a href="/login" class="hover-fill btn-primary nav-cta-in-menu"
+                        style="padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); font-size: var(--font-sm);">Get started</a>
                 </div>
 
-                <a href="/login" class="hover-fill btn-primary"
-                    style="padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); font-size: var(--font-sm);">Get started</a>
+                <div class="nav-cta-group" style="display: flex; align-items: center; gap: var(--space-2);">
+                    <a href="https://twigg.vc/twigg/monorepo" class="hover-fill btn-primary"
+                        style="padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); font-size: var(--font-sm);">See it live</a>
+
+                    <a href="/login" class="hover-fill btn-primary nav-cta-inline"
+                        style="padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); font-size: var(--font-sm);">Get started</a>
+                </div>
 
                 <button id="menu-button" class="hover-outline btn-outline mobile-menu-button" aria-label="Show menu"
                     style="background: none; padding: var(--space-1) var(--space-2); cursor: pointer; font-family: inherit;">☰</button>
@@ -531,13 +552,18 @@
             <!-- Calls to action -->
             <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3);">
 
-                <a href="/login" class="hover-fill btn-primary"
-                    style="padding: var(--space-3) var(--space-6); border-radius: var(--radius-sm); font-size: var(--font-md);">Get started for free</a>
+                <div style="display: flex; justify-content: center; align-items: center; gap: var(--space-2); flex-wrap: wrap;">
+                    <a href="https://twigg.vc/twigg/monorepo" class="hover-fill btn-primary"
+                        style="padding: var(--space-3) var(--space-6); border-radius: var(--radius-sm); font-size: var(--font-md);">See it live</a>
+
+                    <a href="/login" class="hover-fill btn-primary"
+                        style="padding: var(--space-3) var(--space-6); border-radius: var(--radius-sm); font-size: var(--font-md);">Get started for free</a>
+                </div>
 
                 <div style="display: flex; justify-content: center; align-items: center; gap: var(--space-2); flex-wrap: wrap;">
                     <a href="/docs/v/2" class="hover-outline btn-outline btn-mono">Read the docs</a>
 
-                    <a href="https://github.com/twigg-vc/monorepo" class="hover-outline btn-outline btn-mono">See the source</a>
+                    <a href="https://github.com/twigg-vc/monorepo" class="hover-outline btn-outline btn-mono">★ Star on GitHub</a>
 
                     <a href="https://discord.com/invite/ncPE6cDkC4" class="hover-outline btn-outline btn-mono">Join the community</a>
                 </div>
