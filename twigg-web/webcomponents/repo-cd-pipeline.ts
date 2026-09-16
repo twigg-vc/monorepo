@@ -6,6 +6,7 @@ import { MinDurationTimer } from './min-duration-timer';
 import { GetCsrfHeaders, PathToCancelPipelineStage, PathToManualResumePipelineStage, PathToPipeline, PathToPipelineStageIsCanceled, PathToPipelineStageOutput, PathToPipelineStages } from './routes';
 import { JobLogFetched } from './job-log';
 import { FormatDateTime } from './helpers';
+import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 /**
 * Shows a Pipeline header and all it's stages of a pipeline
@@ -329,7 +330,7 @@ export class RepoCdPipeline extends LitElement {
     // Returns false on any error
     private async getStageIsCanceled(i: number): Promise<boolean> {
         try {
-            const resp = await fetch(PathToPipelineStageIsCanceled(
+            const resp = await fetchGetWithRetry(PathToPipelineStageIsCanceled(
                 this.RepoOwnerName, this.RepoName, this.Pipeline, i),
                 { method: 'GET' },
             );
@@ -368,7 +369,7 @@ export class RepoCdPipeline extends LitElement {
 
         const tm = new MinDurationTimer()
         try {
-            const resp = await fetch(PathToPipelineStages(this.RepoOwnerName, this.RepoName, this.Pipeline),
+            const resp = await fetchGetWithRetry(PathToPipelineStages(this.RepoOwnerName, this.RepoName, this.Pipeline),
                 { method: 'GET' },
             );
             await tm.Wait()
@@ -391,7 +392,7 @@ export class RepoCdPipeline extends LitElement {
         this.refreshPipelineFailed = false
         try{
             const tm = new MinDurationTimer()
-            const resp = await fetch(PathToPipeline(this.RepoOwnerName, this.RepoName, this.Pipeline),
+            const resp = await fetchGetWithRetry(PathToPipeline(this.RepoOwnerName, this.RepoName, this.Pipeline),
                 { method: 'GET' },
             );
             if (!resp.ok) {
