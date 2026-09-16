@@ -4,6 +4,7 @@ import { PipelineRef, Pipeline, Commit } from './interfaces';
 import { GetFeatureFlags } from './feature-flags';
 import { GetCsrfHeaders, PathToManuallyLaunchPipeline, PathToPipelines, PathToPipelinesAfter } from './routes';
 import { MinDurationTimer } from './min-duration-timer';
+import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 /**
 * Shows all the CD pipelines executions given a ref (i.e. its name and name)
@@ -131,7 +132,7 @@ export class RepoCdRef extends LitElement {
         const lastPipeline = this.pipelines[this.pipelines.length-1]
         try {
             const tm = new MinDurationTimer()
-            const resp = await fetch(PathToPipelinesAfter(this.RepoOwnerName, this.RepoName, lastPipeline),
+            const resp = await fetchGetWithRetry(PathToPipelinesAfter(this.RepoOwnerName, this.RepoName, lastPipeline),
                 { method: 'GET' },
             );
             await tm.Wait()
@@ -156,7 +157,7 @@ export class RepoCdRef extends LitElement {
         this.fetchPipelinesFailed = false
         const tm = new MinDurationTimer()
         try {
-            const resp = await fetch(PathToPipelines(this.RepoOwnerName, this.RepoName, this.PipelineRef),
+            const resp = await fetchGetWithRetry(PathToPipelines(this.RepoOwnerName, this.RepoName, this.PipelineRef),
                 { method: 'GET' },
             );
             await tm.Wait()
