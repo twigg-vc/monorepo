@@ -8,6 +8,7 @@
 <p align="center">
   <a href="LICENSE.txt"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue" alt="License: AGPL-3.0"></a>
   <a href="https://twigg.vc/docs/v/2/"><img src="https://img.shields.io/badge/Docs-twigg.vc-7c5cff" alt="Documentation"></a>
+  <a href="https://twigg.vc/twigg/monorepo"><img src="https://img.shields.io/badge/Source-twigg.vc%2Ftwigg%2Fmonorepo-2ea44f" alt="Source repository"></a>
   <a href="https://discord.gg/ncPE6cDkC4"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
 
@@ -36,9 +37,11 @@ Full documentation: [twigg.vc/docs](https://twigg.vc/docs/v/2/)
 
 # Why is this on GitHub?
 Naturally, we eat our own dogfood: Twigg is developed using Twigg.
-The actual development happens on our hosted instance at [twigg.vc](https://twigg.vc).
-However, Twigg doesn't yet support public repositories, so we use GitHub as a 
-read-only mirror.
+The actual development happens on our hosted instance at
+[twigg.vc/twigg/monorepo](https://twigg.vc/twigg/monorepo), a public repository
+where you can see Twigg being used live.
+
+GitHub is kept as a read-only mirror.
 
 # What's in this repo?
 Basically everything but "secrets" (i.e. passwords).
