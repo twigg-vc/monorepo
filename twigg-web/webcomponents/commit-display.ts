@@ -6,6 +6,7 @@ import { NewComment } from './comments';
 import { GetFeatureFlags } from './feature-flags';
 import { FormatDateTime } from "./helpers";
 import { MinDurationTimer } from './min-duration-timer';
+import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 
 export const FirstCommitMsg = "First commit"
@@ -485,7 +486,7 @@ export class CommitDisplay extends LitElement {
         const latestCommit = this.getLatestCommit()
         var errMsg = ""
         try {
-            const resp = await fetch(
+            const resp = await fetchGetWithRetry(
                 UrlToGetReviewers(this.RepoOwnerName, this.RepoName, latestCommit.L),
                 { method: 'GET' }
             )
@@ -1202,7 +1203,7 @@ private renderRenameToWipBtn(message: string): TemplateResult {
         var errMsg = ""
         var newThreads: Thread[] = []
         try {
-            const resp = await fetch(GetThreadsUrl(this.RepoOwnerName,this.RepoName,
+            const resp = await fetchGetWithRetry(GetThreadsUrl(this.RepoOwnerName,this.RepoName,
                 latestCommit.L), {
                 method: 'GET',
             });
@@ -1237,7 +1238,7 @@ private renderRenameToWipBtn(message: string): TemplateResult {
         errMsg = ""
         let comments: Comment[] = [];
         try {
-            const resp = await fetch(GetCommentsUrl(this.RepoOwnerName,this.RepoName,
+            const resp = await fetchGetWithRetry(GetCommentsUrl(this.RepoOwnerName,this.RepoName,
                 latestCommit.L), {
                 method: 'GET',
             });
@@ -1275,7 +1276,7 @@ private renderRenameToWipBtn(message: string): TemplateResult {
         errMsg = ""
         let newJobs: Job[] = [];
         try {
-            const resp = await fetch(GetJobsAfter(this.RepoOwnerName, this.RepoName,
+            const resp = await fetchGetWithRetry(GetJobsAfter(this.RepoOwnerName, this.RepoName,
                 latestCommit.L, /*afterInternalJobId*/0), 
                 {method: 'GET'},
             );
@@ -1302,7 +1303,7 @@ private renderRenameToWipBtn(message: string): TemplateResult {
         var errMsg = ""
         let revData: ReviewData
         try {
-            const resp = await fetch(UrlToGetReviewData(this.RepoOwnerName,this.RepoName,
+            const resp = await fetchGetWithRetry(UrlToGetReviewData(this.RepoOwnerName,this.RepoName,
                 this.getLatestCommit().L), {
                 method: 'GET',
             });
