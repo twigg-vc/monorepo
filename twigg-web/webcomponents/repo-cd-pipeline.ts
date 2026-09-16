@@ -205,13 +205,14 @@ export class RepoCdPipeline extends LitElement {
     `;
     }
     private renderRefreshBtn(){
-        if (this.isLoadingStages || this.isRefreshingPipeline || this.isRefreshingStages) { 
-            return html`` 
+        var spinning = ""
+        if (this.isLoadingStages || this.isRefreshingStages || this.isRefreshingPipeline){
+            spinning = "spinning"
         }
         return html`
             <div
                 title="Refresh data"
-                class="refresh-button" 
+                class="refresh-button ${spinning}" 
                 @click=${(e: Event) => { e.stopPropagation(); this.onRefreshClicked()}}>
                 <twigg-icon icon="Refresh"></twigg-icon>
             </div>
@@ -619,6 +620,12 @@ export class RepoCdPipeline extends LitElement {
         }
         .refresh-button:hover{
             transform: translateY(-2px);
+        }
+        .refresh-button.spinning{
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         .stage-info {
