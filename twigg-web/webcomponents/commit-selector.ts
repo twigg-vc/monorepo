@@ -3,6 +3,7 @@ import { TwiggCss } from './css';
 import { Commit } from './interfaces';
 import { PathToSearchCommits } from './routes';
 import { MinDurationTimer } from './min-duration-timer';
+import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 
 declare global {
@@ -132,7 +133,7 @@ export class CommitSelector extends LitElement {
         this.isOpen = false;
         try {
             const tw = new MinDurationTimer()
-            const resp = await fetch(PathToSearchCommits(
+            const resp = await fetchGetWithRetry(PathToSearchCommits(
                 this.RepoOwnerName,
                 this.RepoName, this.searchQuery),
                 { method: 'GET' }
