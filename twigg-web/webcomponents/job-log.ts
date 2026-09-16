@@ -1,6 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { TwiggCss } from "./css";
 import { MinDurationTimer } from "./min-duration-timer";
+import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 declare global {
     interface HTMLElementEventMap {
@@ -73,7 +74,7 @@ export class JobLog extends LitElement {
         this.isLoadingLog = true;
         const tm = new MinDurationTimer()
         try {
-            const resp = await fetch(this.GetLogUrl);
+            const resp = await fetchGetWithRetry(this.GetLogUrl);
             if (!resp.ok){
                 throw "Bad response status"
             }
