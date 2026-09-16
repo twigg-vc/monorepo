@@ -3,6 +3,7 @@ import { TwiggCss } from './css';
 import { NewRepoUrl, UrlToRepo, ManageSubscriptionPath, PlansPagePath, UserEducationUrl, UserEducationWelcomeWasShownUrl, GetCsrfHeaders } from './routes';
 import { User, UserEducation, Repo, RenderRepo } from './interfaces';
 import { GetFeatureFlags } from './feature-flags';
+import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 /**
  * Shows the home page that displays user data
@@ -94,7 +95,7 @@ export class HomePage extends LitElement {
             return;
         }
         try {
-            const res = await fetch(UserEducationUrl, { method: "GET" });
+            const res = await fetchGetWithRetry(UserEducationUrl, { method: "GET" });
             if (!res.ok) {
                 console.error("failed to load user education", res.status);
                 return;
