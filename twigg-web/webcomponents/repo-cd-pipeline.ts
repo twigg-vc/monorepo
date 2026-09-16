@@ -27,6 +27,7 @@ export class RepoCdPipeline extends LitElement {
         fetchedStages: { type: Boolean, state: true },
         fetchStagesFailed: { type: Boolean, state: true },
         isLoadingStages: { type: Boolean, state: true },
+        isRefreshingStages: { type: Boolean, state: true },
 
         stageIsOpen: { type: Array, state: true },
         stageIsLoading: { type: Array, state: true },
@@ -44,6 +45,7 @@ export class RepoCdPipeline extends LitElement {
     declare private fetchedStages: boolean
     declare private fetchStagesFailed: boolean
     declare private isLoadingStages: boolean
+    declare private isRefreshingStages: boolean
     declare private stageIsOpen: boolean[]
     declare private stageIsLoading: boolean[]
     declare private stageLogCache: string[];
@@ -60,6 +62,7 @@ export class RepoCdPipeline extends LitElement {
         this.fetchedStages = false;
         this.fetchStagesFailed = false;
         this.isLoadingStages = false;
+        this.isRefreshingStages = false;
         this.stageIsOpen = [];
         this.stageIsLoading = [];
         this.stageLogCache = [];
@@ -95,9 +98,6 @@ export class RepoCdPipeline extends LitElement {
         `;
     }
     private renderPipelineHeader(){
-        if (this.isRefreshingPipeline){
-            return html`<simple-loader></simple-loader>`
-        }
         if (this.refreshPipelineFailed) {
             return html`
             <div
@@ -149,7 +149,7 @@ export class RepoCdPipeline extends LitElement {
         this.fetchStagesIfNotFetched()
     }
     private renderStages(){
-        if (this.refreshPipelineFailed || this.isRefreshingPipeline){return html``}
+        if (this.refreshPipelineFailed){return html``}
         if (!this.stagesIsOpen){return html``}
         if (this.isLoadingStages) {
             return html`<simple-loader class="stages-loader"></simple-loader>`
@@ -205,7 +205,9 @@ export class RepoCdPipeline extends LitElement {
     `;
     }
     private renderRefreshBtn(){
-        if (this.isLoadingStages || this.isRefreshingPipeline){return html``}
+        if (this.isLoadingStages || this.isRefreshingPipeline || this.isRefreshingStages) { 
+            return html`` 
+        }
         return html`
             <div
                 title="Refresh data"
@@ -386,6 +388,24 @@ export class RepoCdPipeline extends LitElement {
             this.isLoadingStages = false;
         }
     }
+    // Re-fetches the stages without showing a loader. If fails it ignore errors.
+    private async refreshStagesInTheBackground(){
+        if (this.isRefreshingStages || this.isLoadingStages){return}
+        this.isRefreshingStages = true
+        try {
+            const resp = await fetch(PathToPipelineStages(this.RepoOwnerName, this.RepoName, this.Pipeline),
+                { method: 'GET' },
+            );
+            if (!resp.ok){
+                throw "bad resp status"
+            }
+            this.stages = await resp.json();
+        } catch (error) {
+            console.log("error refreshing stages: ", error)
+        } finally {
+            this.isRefreshingStages = false;
+        }
+    }
     private async refreshPipeline(){
         if (this.isRefreshingPipeline){return}
         this.isRefreshingPipeline = true
@@ -444,8 +464,12 @@ export class RepoCdPipeline extends LitElement {
             }
         }
         if (force || (this.stagesIsOpen && !allStagesAreDone)) {
-            this.fetchedStages = false;
-            promises.push(this.fetchStagesIfNotFetched());
+            if (force){
+                this.fetchedStages = false;
+                promises.push(this.fetchStagesIfNotFetched());
+            }else {
+                promises.push(this.refreshStagesInTheBackground());
+            }
         }
         await Promise.all(promises);
     }
