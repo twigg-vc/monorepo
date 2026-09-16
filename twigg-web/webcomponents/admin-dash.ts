@@ -2,6 +2,7 @@ import { html, css, LitElement } from 'lit';
 import { TwiggCss } from './css';
 import { AdminDashRequeueDeadLetter, GetCsrfHeaders, LogsPath, PprofPath, RequestCountsPath } from './routes';
 import { DeadLetterItem, QueueItem, User } from './interfaces';
+import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 const LogsRefreshIntervalMs = 10_000;
 const ChartsRefreshIntervalMs = 60_000;
@@ -290,7 +291,7 @@ export class AdminDash extends LitElement {
     }
     private async fetchRequestCounts() {
         try {
-            const resp = await fetch(RequestCountsPath);
+            const resp = await fetchGetWithRetry(RequestCountsPath);
             if (!resp.ok) throw new Error(`Failed to fetch metrics: ${resp.statusText}`);
             const data = await resp.json();
             const reqs = data['all-requests-by-url-pattern'] as Record<string, number>;
@@ -305,7 +306,7 @@ export class AdminDash extends LitElement {
     }
     async fetchLogs() {
         try {
-            const res = await fetch(LogsPath + "?numLines="+ String(this.linesToLog));
+            const res = await fetchGetWithRetry(LogsPath + "?numLines="+ String(this.linesToLog));
             const lines = await res.json(); // array of JSON objects from journalctl
             const entries: LogEntry[] = lines.map((l: any) => {
                 var timestamp = 'N/A';
