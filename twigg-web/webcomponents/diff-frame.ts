@@ -4,6 +4,7 @@ import { Commit, FileStatus, Thread, User } from './interfaces'
 import { DiffDisplay, RequestLineSlot } from './diff-display'
 import { IconName } from './icons'
 import { UrlToGetFile, UrlToPostNewThread, UrlToPostNewThreadOnLine } from "./routes"
+import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 /**
 * Element inside which a diff will be displayed.
@@ -319,7 +320,7 @@ export class DiffFrame extends LitElement {
     private async fetchDiff(){
         this.isLoading = true;
         try {
-            const resp = await fetch(this.diffGetUrl, {
+            const resp = await fetchGetWithRetry(this.diffGetUrl, {
                 method: 'GET',
             });
             this.unifiedDiffString = await resp.text();
