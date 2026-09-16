@@ -8,6 +8,7 @@ import { MinDurationTimer } from './min-duration-timer';
 import './commit-graph';
 import { GetFeatureFlags } from './feature-flags';
 import { FormatRelativeTime } from './helpers';
+import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 export type TabName = "commits" | "commits graph" | "CD";
 
@@ -456,7 +457,7 @@ export class RepoDisplay extends LitElement {
             this.isFetchingMorePendingCommits = true
             this.fetchMorePendingCommitsFailed = false
 
-            const res = await fetch(
+            const res = await fetchGetWithRetry(
                 PathToMorePendingCommits(this.RepoOwnerName, this.RepoName, lastCommit.L)
             )
             if (!res.ok) {
@@ -489,7 +490,7 @@ export class RepoDisplay extends LitElement {
             this.fetchMoreSubmittedCommitsFailed = false
             const tm = new MinDurationTimer()
 
-            const res = await fetch(
+            const res = await fetchGetWithRetry(
                 PathToMoreSubmittedCommits(
                     this.RepoOwnerName, this.RepoName, lastCommit.ParentL));
             if (!res.ok) {
@@ -545,7 +546,7 @@ export class RepoDisplay extends LitElement {
             const data: CanSubmitByCommitId = {}
             for (let i = 0; i < commitIdsToFetch.length; i += maxCanSubmitCommitsPerRequest) {
                 const batch = commitIdsToFetch.slice(i, i + maxCanSubmitCommitsPerRequest)
-                const resp = await fetch(
+                const resp = await fetchGetWithRetry(
                     UrlToCanSubmitCommits(this.RepoOwnerName, this.RepoName, batch),
                     { method: 'GET' },
                 )
