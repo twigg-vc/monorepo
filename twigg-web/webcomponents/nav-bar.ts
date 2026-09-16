@@ -6,6 +6,7 @@ import { DocumentationPage, HomeUrl, Logout, PostLoginUrl, TwiggLogoBlackUrl, Tw
 import { Theme, ThemeStoreSingleton } from './theme-store';
 import { GetFeatureFlags } from './feature-flags';
 import { FormatDateTime } from "./helpers";
+import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 type Notification = {
     Id: number;
@@ -113,7 +114,7 @@ export class NavBar extends LitElement {
         }
         this.NotifIsLoading = true;
         try {
-            const res = await fetch(
+            const res = await fetchGetWithRetry(
                 UrlToGetNotifications(lastReadNotificationId),
                 { method: "GET" }
             );
@@ -157,7 +158,7 @@ export class NavBar extends LitElement {
     }
     private async loadUnseenCount() {
         try {
-            const res = await fetch(UrlToGetNotificationsUnseenCount(), { method: "GET" });
+            const res = await fetchGetWithRetry(UrlToGetNotificationsUnseenCount(), { method: "GET" });
             if (!res.ok) {
                 console.error("failed to load unseen count", res.status);
                 return;
