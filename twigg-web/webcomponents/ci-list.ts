@@ -3,6 +3,7 @@ import { TwiggCss } from "./css";
 import { Job } from "./interfaces";
 import { GetJobsAfter, UrlToGetJobLogFile } from "./routes";
 import { MinDurationTimer } from './min-duration-timer';
+import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 const CiJobsPageSize = 100
 
@@ -92,7 +93,7 @@ export class CiList extends LitElement {
 
         try {
             const lastJobId = this.Jobs[this.Jobs.length-1].InternalId
-            const resp = await fetch(GetJobsAfter(
+            const resp = await fetchGetWithRetry(GetJobsAfter(
                 this.RepoOwnerName,
                 this.RepoName,
                 this.CommitServerId,
