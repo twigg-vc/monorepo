@@ -23,6 +23,10 @@ func (hl handler) handleCommitSearch(w http.ResponseWriter,
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	ok := replaceTheSearcherUsername(&f, w, r)
+	if !ok {
+		return
+	}
 	topCommit, err := hl.rSrv.GetRepoTopCommit(dbRead, r.Repo.Id)
 	if err != nil {
 		log.Printf("failed to get repo id=%d top commit: %s", r.Repo.Id, err)
@@ -56,4 +60,26 @@ func (hl handler) handleCommitSearch(w http.ResponseWriter,
 	if err != nil {
 		log.Printf("failed to write the search results: %s", err)
 	}
+}
+
+// A search says "me" for whoever is searching, which only the request knows.
+// On any error, writes an error to the response and returns ok=false.
+func replaceTheSearcherUsername(f *commitsearch.Filter, w http.ResponseWriter,
+	r wrappers.UserWithReadPermissionMuxRequest) (ok bool) {
+	if f.AuthorUsername != commitsearch.MeUsername &&
+		f.ReviewerUsername != commitsearch.MeUsername {
+		return true
+	}
+	if !r.IsLoggedIn {
+		http.Error(w, `"me" needs you to be logged in`, http.StatusBadRequest)
+		return false
+	}
+	username := r.MaybeUserWithReadPermission.Username
+	if f.AuthorUsername == commitsearch.MeUsername {
+		f.AuthorUsername = username
+	}
+	if f.ReviewerUsername == commitsearch.MeUsername {
+		f.ReviewerUsername = username
+	}
+	return true
 }
