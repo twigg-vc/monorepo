@@ -12,6 +12,7 @@ import (
 	"monorepo/twigg-web/handlers/commit"
 	"monorepo/twigg-web/handlers/jobshandler"
 	"monorepo/twigg-web/handlers/notifications"
+	"monorepo/twigg-web/handlers/repository"
 	"monorepo/twigg-web/handlers/usereducation"
 	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/metrics"
@@ -3228,4 +3229,46 @@ func TestGetCanSubmitCommits(t *testing.T) {
 	if resp["2"].CantSubmitReason != "would-cause-rebase-conflict" {
 		t.Fatalf("expected reason 'would-cause-rebase-conflict', got %q", resp["2"].CantSubmitReason)
 	}
+}
+
+func TestCommitSearch(t *testing.T) {
+	srv := GetMockServer(t)
+	b := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, b, "aang@twigg.vc")
+	b.Get(routes.UserSettings)
+	b.Post(routes.GenerateCLIKey, nil)
+
+	tw := cli.NewTestHelper(t)
+	tw.SetServerRootUrl(srv.C.PublicUrl)
+	tw.Run("init")
+	tw.Run("server", "aang/BookOne")
+	tw.Run("key", srv.KeysMock.GetLastRandomCliKey())
+	tw.WriteFile("a.txt", "aaa")
+	tw.Run("commit", "create a.txt")
+	tw.Run("push")
+	tw.CheckOutContains("push succeeded")
+	commitSearchPath := func(query string) string {
+		return "/aang/BookOne/commit-search?" +
+			url.Values{routes.CommitSearchQueryParamName: {query}}.Encode()
+	}
+
+	// Aang has access so it should be able to query
+	b.Get(commitSearchPath("create"))
+	var resp repository.CommitSearchResponse
+	err := json.Unmarshal(b.lastResponse, &resp)
+	if err != nil {
+		t.Fatalf("failed to read the search results: %s", err)
+	}
+	if len(resp.Commits) != 1 {
+		t.Fatalf("found %d commits, want 1", len(resp.Commits))
+	}
+	if resp.Commits[0].Message != "create a.txt" {
+		t.Fatalf("found the commit %q, want create a.txt",
+			resp.Commits[0].Message)
+	}
+
+	// Zuko has no access
+	other := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, other, "zuko@twigg.vc")
+	other.CheckGetErrors(commitSearchPath("create"), http.StatusForbidden)
 }
