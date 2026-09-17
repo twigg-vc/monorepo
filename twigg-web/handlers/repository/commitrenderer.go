@@ -3,11 +3,13 @@ package repository
 import (
 	"context"
 	"log"
+	"monorepo/base/iterator"
 	"monorepo/twigg-web/review"
 	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
 	"net/http"
+	"strings"
 )
 
 // Helper that enriches the commits of one request into what the frontend
@@ -37,6 +39,49 @@ func newCommitRenderer(userSrv UserService, revSrv ReviewService,
 		w:                   w,
 		cachedUsernamesById: map[int64]string{},
 	}
+}
+
+func commitIsArchived(c commit.Commit) bool {
+	return strings.HasPrefix(c.Message, msgPrefixToHidePendingCommit)
+}
+
+// Renders at most pageSize commits of the iterator, skipping the ones for
+// which filterOutFunc=true (filterOutFunc can be nil).
+// hasMore is true when the iterator holds more than
+// pageSize commits. On any error, writes an error to the response and
+// returns ok=false.
+func (cr *commitRenderer) renderCommits(commits iterator.I[commit.Commit],
+	pageSize int, filterOutFunc func(c commit.Commit) bool) (
+	fcs []twiggwc.FrontendCommit, hasMore bool, ok bool) {
+	fcs = make([]twiggwc.FrontendCommit, 0, pageSize)
+	for commits.Next() {
+		if len(fcs) >= pageSize {
+			hasMore = true
+			break
+		}
+		c, err := commits.Get()
+		if err != nil {
+			log.Printf("failed to get a commit of the page: %s", err)
+			http.Error(cr.w, "failed to get commit", http.StatusInternalServerError)
+			return nil, false, false
+		}
+		if filterOutFunc != nil && filterOutFunc(c) {
+			continue
+		}
+		fc, ok := cr.render(c)
+		if !ok {
+			return nil, false, false
+		}
+		fcs = append(fcs, fc)
+	}
+	err := commits.Err()
+	if err != nil {
+		log.Printf("failed to iterate on the commits of the page: %s", err)
+		http.Error(cr.w, "failed to iterate on commits",
+			http.StatusInternalServerError)
+		return nil, false, false
+	}
+	return fcs, hasMore, true
 }
 
 // The root commit has no author and submitted commits are always

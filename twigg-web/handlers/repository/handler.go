@@ -50,32 +50,10 @@ func (hl handler) handleGet(w http.ResponseWriter,
 			http.StatusInternalServerError)
 		return
 	}
-	pendingFrontendCommit := []twiggwc.FrontendCommit{}
-	var haveMorePendingCommitsToFetch bool
-	for pending.Next() {
-		if len(pendingFrontendCommit) >= maxPendingCommitsPageSize {
-			haveMorePendingCommitsToFetch = true
-			break
-		}
-		c, err := pending.Get()
-		if err != nil {
-			http.Error(w, "failed to get pending commit",
-				http.StatusInternalServerError)
-			return
-		}
-		if strings.HasPrefix(c.Message, msgPrefixToHidePendingCommit) {
-			continue
-		}
-		fc, ok := cr.render(c)
-		if !ok {
-			return
-		}
-		pendingFrontendCommit = append(pendingFrontendCommit, fc)
-	}
-	err = pending.Err()
-	if err != nil {
-		http.Error(w, "failed to iterate on pending commits",
-			http.StatusInternalServerError)
+	pendingFrontendCommit, haveMorePendingCommitsToFetch, ok := cr.renderCommits(
+		pending, maxPendingCommitsPageSize,
+		/*filterOutFunc=*/ commitIsArchived)
+	if !ok {
 		return
 	}
 
@@ -149,32 +127,10 @@ func (hl handler) handleGetMorePending(w http.ResponseWriter, r wrappers.UserWit
 		return
 	}
 	cr := newCommitRenderer(hl.userSrv, hl.revSrv, r, topCommit.ServerL, dbRead, w)
-	pendingFrontendCommits := make([]twiggwc.FrontendCommit, 0, maxPendingCommitsPageSize)
-	var haveMorePendingCommitsToFetch bool
-	for pending.Next() {
-		if len(pendingFrontendCommits) >= maxPendingCommitsPageSize {
-			haveMorePendingCommitsToFetch = true
-			break
-		}
-		c, err := pending.Get()
-		if err != nil {
-			log.Printf("failed to get pending commit: %s", err)
-			http.Error(w, "failed to get pending commit", http.StatusInternalServerError)
-			return
-		}
-		if strings.HasPrefix(c.Message, msgPrefixToHidePendingCommit) {
-			continue
-		}
-		fc, ok := cr.render(c)
-		if !ok {
-			return
-		}
-		pendingFrontendCommits = append(pendingFrontendCommits, fc)
-	}
-	err = pending.Err()
-	if err != nil {
-		log.Printf("failed to iterate on pending commits: %s", err)
-		http.Error(w, "failed to iterate on pending commits", http.StatusInternalServerError)
+	pendingFrontendCommits, haveMorePendingCommitsToFetch, ok := cr.renderCommits(
+		pending, maxPendingCommitsPageSize,
+		/*filterOutFunc=*/ commitIsArchived)
+	if !ok {
 		return
 	}
 
