@@ -89,8 +89,11 @@ func (db webDb) SetCommit(ctx context.Context, quotaOwner string, repoId uint64,
 			INSERT INTO twigg_pending_commits (repoId, commitId, authorId)
 			VALUES (?, ?, ?) ON CONFLICT(repoId, commitId, authorId) DO NOTHING
 		`, repoId, c.L, c.AuthorUserId)
+		if err != nil {
+			return
+		}
 	}
-	return
+	return db.indexCommitForSearch(ctx, repoId, c)
 }
 
 func (db webDb) GetLatestCommitByLocalId(ctx context.Context, repoId uint64, L uint64) (c commit.Commit, isNotFoundErr bool, err error) {
