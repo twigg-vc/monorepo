@@ -16,6 +16,20 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter) (
 		WHERE s.repoId = ?`)
 	args := []any{f.RepoId}
 
+	if f.State == commitsearch.StatePending {
+		q.WriteString(` AND s.isSubmitted = 0`)
+	}
+	if f.State == commitsearch.StateSubmitted {
+		q.WriteString(` AND s.isSubmitted = 1`)
+	}
+	if f.Wip != commitsearch.PresenceIgnore {
+		q.WriteString(` AND s.isWip = ?`)
+		args = append(args, f.Wip == commitsearch.PresenceRequire)
+	}
+	if f.Archived != commitsearch.PresenceIgnore {
+		q.WriteString(` AND s.isArchived = ?`)
+		args = append(args, f.Archived == commitsearch.PresenceRequire)
+	}
 	if f.HasAfterCommitId {
 		q.WriteString(` AND s.commitId < ?`)
 		args = append(args, f.AfterCommitId)
