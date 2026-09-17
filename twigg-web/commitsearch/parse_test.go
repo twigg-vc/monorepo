@@ -2,6 +2,7 @@ package commitsearch_test
 
 import (
 	"monorepo/twigg-web/commitsearch"
+	"monorepo/twigg-web/review"
 	"testing"
 )
 
@@ -35,15 +36,69 @@ func Test_ParseQuery_ReadsTheWordsAsTheMessage(t *testing.T) {
 	}
 }
 
-func Test_ParseQuery_HidesArchivedCommits(t *testing.T) {
-	f, err := commitsearch.ParseQuery(parsedRepoId, "queue")
+func Test_ParseQuery_HidesArchivedCommitsUnlessAsked(t *testing.T) {
+	cases := map[string]commitsearch.Presence{
+		"queue":        commitsearch.PresenceExclude,
+		"is:archived":  commitsearch.PresenceRequire,
+		"-is:archived": commitsearch.PresenceExclude,
+	}
+	for query, want := range cases {
+		f, err := commitsearch.ParseQuery(parsedRepoId, query)
+		if err != nil {
+			t.Fatalf("parsing %q failed: %s", query, err)
+		}
+		if f.Archived != want {
+			t.Fatalf("parsing %q read archived %q, want %q",
+				query, f.Archived, want)
+		}
+	}
+}
+
+func Test_ParseQuery_ReadsTheStateTerms(t *testing.T) {
+	cases := map[string]commitsearch.State{
+		"is:pending":   commitsearch.StatePending,
+		"is:submitted": commitsearch.StateSubmitted,
+		"is:PENDING":   commitsearch.StatePending,
+	}
+	for query, want := range cases {
+		f, err := commitsearch.ParseQuery(parsedRepoId, query)
+		if err != nil {
+			t.Fatalf("parsing %q failed: %s", query, err)
+		}
+		if f.State != want {
+			t.Fatalf("parsing %q read the state %q, want %q",
+				query, f.State, want)
+		}
+	}
+}
+
+func Test_ParseQuery_ReadsTheReviewStatusTerms(t *testing.T) {
+	cases := map[string]review.ReviewStatus{
+		"is:ready":                   review.ReviewStatus_Ready,
+		"is:missing-lgtm":            review.ReviewStatus_MissingLgtm,
+		"is:unresolved":              review.ReviewStatus_Unresolved,
+		"is:missing-owners-approval": review.ReviewStatus_MissingOwnersApproval,
+	}
+	for query, want := range cases {
+		f, err := commitsearch.ParseQuery(parsedRepoId, query)
+		if err != nil {
+			t.Fatalf("parsing %q failed: %s", query, err)
+		}
+		if !f.HasReviewStatus || f.ReviewStatus != want {
+			t.Fatalf("parsing %q read the status %v (set %v), want %v",
+				query, f.ReviewStatus, f.HasReviewStatus, want)
+		}
+	}
+}
+
+func Test_ParseQuery_ExcludesWipCommits(t *testing.T) {
+	f, err := commitsearch.ParseQuery(parsedRepoId, "-is:wip")
 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if f.Archived != commitsearch.PresenceExclude {
-		t.Fatalf("archived is %q, want %q", f.Archived,
-			commitsearch.PresenceExclude)
+	if f.Wip != commitsearch.PresenceExclude {
+		t.Fatalf("wip is %q, want %q", f.Wip, commitsearch.PresenceExclude)
 	}
 }
 
@@ -70,13 +125,19 @@ func Test_ParseQuery_ReadsTheAuthorAndTheReviewer(t *testing.T) {
 // wins instead of the search contradicting itself.
 func Test_ParseQuery_KeepsTheLastValueOfARepeatedTerm(t *testing.T) {
 	f, err := commitsearch.ParseQuery(parsedRepoId,
-		"author:aang author:katara")
+		"author:aang author:katara is:pending is:submitted is:wip -is:wip")
 
 	if err != nil {
 		t.Fatalf("parsing failed: %s", err)
 	}
 	if f.AuthorUsername != "katara" {
 		t.Fatalf("read the author %q, want katara", f.AuthorUsername)
+	}
+	if f.State != commitsearch.StateSubmitted {
+		t.Fatalf("read the state %q, want submitted", f.State)
+	}
+	if f.Wip != commitsearch.PresenceExclude {
+		t.Fatalf("read wip %q, want excluded", f.Wip)
 	}
 }
 
@@ -87,6 +148,9 @@ func Test_ParseQuery_FailsOnASearchItCanNotRun(t *testing.T) {
 		`-"a b"`,
 		`-author:aang`,
 		`-message:queue`,
+		`-is:pending`,
+		`-is:ready`,
+		`is:nope`,
 		// the tokenizer refuses these before the words are read
 		`nope:1`,
 		`an "unclosed quote`,
