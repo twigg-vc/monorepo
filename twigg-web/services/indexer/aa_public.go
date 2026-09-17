@@ -2,15 +2,14 @@ package indexer
 
 import (
 	"context"
-	"monorepo/twigg-web/commitsearch"
 	"sync"
 	"time"
 )
 
 type Db interface {
 	BeginWrite() (writeCtx context.Context, closeTx func(), commitTx func() error, err error)
-	IndexCommitsForSearch(w context.Context, after commitsearch.IndexCursor,
-		limit int) (next commitsearch.IndexCursor, done bool, err error)
+	IndexCommitsForSearch(w context.Context, after string,
+		limit int) (next string, done bool, err error)
 }
 
 type CommitSearch struct {
@@ -32,7 +31,7 @@ func NewCommitSearch(db Db, interval time.Duration,
 		db:        db,
 		interval:  interval,
 		batchSize: batchSize,
-		cursor:    commitsearch.NewIndexCursor(),
+		cursor:    "",
 		stopCh:    make(chan struct{}),
 		wg:        sync.WaitGroup{},
 	}}

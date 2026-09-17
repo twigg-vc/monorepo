@@ -1,20 +1,6 @@
 // Package commitsearch holds the entities of a commit search.
 package commitsearch
 
-import "monorepo/twigg/commit"
-
-// How far an index sweep got. Repo ids are autoincremented, so no commit has
-// repo id 0 and the zero value starts a new sweep.
-type IndexCursor struct {
-	RepoId   uint64
-	CommitId commit.LocalId
-}
-
-// Returns the cursor of a sweep that starts at the first commit.
-func NewIndexCursor() IndexCursor {
-	return IndexCursor{}
-}
-
 // Whether the search covers pending commits, submitted commits or both.
 type State string
 
@@ -40,18 +26,12 @@ type Filter struct {
 	State    State
 	Wip      Presence
 	Archived Presence
-	// Only returns commits older than AfterCommitId. Used to paginate.
-	HasAfterCommitId bool
-	AfterCommitId    commit.LocalId
-	// Max number of commits returned
-	Limit int
 }
 
 // Returns a filter that matches every non-archived commit of a repo.
-func NewFilter(repoId uint64, limit int) Filter {
+func NewFilter(repoId uint64) Filter {
 	return Filter{
 		RepoId:   repoId,
 		Archived: PresenceExclude,
-		Limit:    limit,
 	}
 }

@@ -2,7 +2,6 @@ package indexer
 
 import (
 	"log"
-	"monorepo/twigg-web/commitsearch"
 	"sync"
 	"time"
 )
@@ -11,7 +10,7 @@ type commitSearch struct {
 	db        Db
 	interval  time.Duration
 	batchSize int
-	cursor    commitsearch.IndexCursor
+	cursor    string
 	isDone    bool
 	stopCh    chan struct{}
 	wg        sync.WaitGroup

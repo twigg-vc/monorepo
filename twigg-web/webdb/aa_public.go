@@ -316,10 +316,12 @@ func (db WebDb) GetReviewData(ctx context.Context, repoId uint64, cId commit.Loc
 	return db.db.GetReviewData(ctx, repoId, cId)
 }
 
-// Returns the commits of a repo that match the filter, newest first.
-func (db WebDb) SearchCommits(r context.Context, f commitsearch.Filter) (
-	iterator.I[commit.Commit], error) {
-	return db.db.searchCommits(r, f)
+// Returns the commits of a repo that match the filter, newest first, and the
+// cursor of the commits after them. An empty cursor reads the first ones, and
+// an empty page means there are no more.
+func (db WebDb) SearchCommits(r context.Context, f commitsearch.Filter, cursor string, limit int) (
+	[]commit.Commit, string, error) {
+	return db.db.searchCommits(r, f, cursor, limit)
 }
 
 // Indexes at most limit commits for search from their blobs, starting after
@@ -327,8 +329,8 @@ func (db WebDb) SearchCommits(r context.Context, f commitsearch.Filter) (
 // Indexing a commit that is already indexed leaves the same row, so a sweep
 // can run while commits are being written.
 func (db WebDb) IndexCommitsForSearch(w context.Context,
-	after commitsearch.IndexCursor, limit int) (
-	next commitsearch.IndexCursor, done bool, err error) {
+	after string, limit int) (
+	next string, done bool, err error) {
 	return db.db.indexCommitsForSearch(w, after, limit)
 }
 

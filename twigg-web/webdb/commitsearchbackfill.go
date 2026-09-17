@@ -2,12 +2,15 @@ package webdb
 
 import (
 	"context"
-	"monorepo/twigg-web/commitsearch"
+	"encoding/base64"
+	"fmt"
+	"monorepo/twigg-web/services/gobencoding"
+	"monorepo/twigg/commit"
 )
 
 func (db webDb) indexCommitsForSearch(w context.Context,
-	after commitsearch.IndexCursor, limit int) (
-	next commitsearch.IndexCursor, done bool, err error) {
+	after string, limit int) (
+	next string, done bool, err error) {
 	// The batch is read before any of it is written because the rows of a
 	// query can't be iterated while the same transaction writes.
 	batch, err := db.getBatchOfCommitsToIndex(w, after, limit)
@@ -21,12 +24,16 @@ func (db webDb) indexCommitsForSearch(w context.Context,
 	if err != nil {
 		return after, false, err
 	}
-	return batch[len(batch)-1], false, nil
+	return batch[len(batch)-1].encode(), false, nil
 }
 
 func (db webDb) getBatchOfCommitsToIndex(w context.Context,
-	after commitsearch.IndexCursor, limit int) (
-	batch []commitsearch.IndexCursor, err error) {
+	encodedAfter string, limit int) (
+	batch []indexCommitsForSearchCursor, err error) {
+	after, err := decodeIndexCommitsForSearchCursor(encodedAfter)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := db.s.Query(w, `
 		SELECT DISTINCT repoId, commitId FROM twigg_commits
 		WHERE (repoId, commitId) > (?, ?)
@@ -38,7 +45,7 @@ func (db webDb) getBatchOfCommitsToIndex(w context.Context,
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id commitsearch.IndexCursor
+		var id indexCommitsForSearchCursor
 		err = rows.Scan(&id.RepoId, &id.CommitId)
 		if err != nil {
 			return nil, err
@@ -49,7 +56,7 @@ func (db webDb) getBatchOfCommitsToIndex(w context.Context,
 }
 
 func (db webDb) indexCommitBatch(w context.Context,
-	batch []commitsearch.IndexCursor) error {
+	batch []indexCommitsForSearchCursor) error {
 	for _, id := range batch {
 		err := db.indexCommitFromBlobs(w, id)
 		if err != nil {
@@ -60,7 +67,7 @@ func (db webDb) indexCommitBatch(w context.Context,
 }
 
 func (db webDb) indexCommitFromBlobs(w context.Context,
-	id commitsearch.IndexCursor) error {
+	id indexCommitsForSearchCursor) error {
 	// Only repairs a row holding a version that no commit has.
 	const deleteIndexedCommitRows = false
 	if deleteIndexedCommitRows {
@@ -99,4 +106,27 @@ func (db webDb) indexCommitFromBlobs(w context.Context,
 		return err
 	}
 	return db.indexReviewForSearch(w, id.RepoId, id.CommitId, d)
+}
+
+type indexCommitsForSearchCursor struct {
+	RepoId   uint64
+	CommitId commit.LocalId
+}
+
+func (c indexCommitsForSearchCursor) encode() string {
+	return base64.RawURLEncoding.EncodeToString(gobencoding.Encode(c))
+}
+func decodeIndexCommitsForSearchCursor(cursor string) (indexCommitsForSearchCursor, error) {
+	if cursor == "" {
+		return indexCommitsForSearchCursor{}, nil
+	}
+	encoded, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil {
+		return indexCommitsForSearchCursor{}, fmt.Errorf("bad cursor: %w", err)
+	}
+	c, err := gobencoding.Decode[indexCommitsForSearchCursor](encoded)
+	if err != nil {
+		return indexCommitsForSearchCursor{}, fmt.Errorf("bad cursor: %w", err)
+	}
+	return c, nil
 }

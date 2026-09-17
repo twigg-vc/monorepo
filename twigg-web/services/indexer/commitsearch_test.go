@@ -2,7 +2,6 @@ package indexer_test
 
 import (
 	"context"
-	"monorepo/twigg-web/commitsearch"
 	"monorepo/twigg-web/services/indexer"
 	"reflect"
 	"testing"
@@ -12,8 +11,8 @@ import (
 func Test_CommitSearch_DoesNotIndexWithoutAnInterval(t *testing.T) {
 	db := newDbMock()
 	calls := 0
-	db.indexCommitsForSearch = func(after commitsearch.IndexCursor, limit int) (
-		next commitsearch.IndexCursor, done bool, err error) {
+	db.indexCommitsForSearch = func(after string, limit int) (
+		next string, done bool, err error) {
 		calls += 1
 		return
 	}
@@ -30,27 +29,27 @@ func Test_CommitSearch_DoesNotIndexWithoutAnInterval(t *testing.T) {
 
 func Test_CommitSearch_IndexesEveryInterval(t *testing.T) {
 	db := newDbMock()
-	gotIndexCalls := []commitsearch.IndexCursor{}
+	gotIndexCalls := []string{}
 	// Mock that indexing service will say to call:
 	// [0, 1], [0, 2], [1, 0]
 	// After the last one is called, it'll say it's done
-	mockNextToIndex := map[commitsearch.IndexCursor]commitsearch.IndexCursor{
-		{RepoId: 0, CommitId: 0}: {RepoId: 0, CommitId: 1},
-		{RepoId: 0, CommitId: 1}: {RepoId: 0, CommitId: 2},
-		{RepoId: 0, CommitId: 2}: {RepoId: 1, CommitId: 0},
+	mockNextToIndex := map[string]string{
+		"0/0": "0/1",
+		"0/1": "0/2",
+		"0/2": "1/0",
 	}
-	expectedIndexCalls := []commitsearch.IndexCursor{
-		{RepoId: 0, CommitId: 0},
-		{RepoId: 0, CommitId: 1},
-		{RepoId: 0, CommitId: 2},
-		{RepoId: 1, CommitId: 0},
+	expectedIndexCalls := []string{
+		"0/0",
+		"0/1",
+		"0/2",
+		"1/0",
 	}
-	db.indexCommitsForSearch = func(after commitsearch.IndexCursor, limit int) (
-		commitsearch.IndexCursor, bool, error) {
+	db.indexCommitsForSearch = func(after string, limit int) (
+		string, bool, error) {
 		gotIndexCalls = append(gotIndexCalls, after)
 		next, ok := mockNextToIndex[after]
 		if !ok {
-			return commitsearch.IndexCursor{}, true, nil
+			return "", true, nil
 		}
 		return next, false, nil
 	}
@@ -70,8 +69,8 @@ func Test_CommitSearch_IndexesEveryInterval(t *testing.T) {
 type dbMock struct {
 	calls                 int
 	beginWrite            func() (context.Context, func(), func() error, error)
-	indexCommitsForSearch func(after commitsearch.IndexCursor, limit int) (
-		next commitsearch.IndexCursor, done bool, err error)
+	indexCommitsForSearch func(after string, limit int) (
+		next string, done bool, err error)
 }
 
 func newDbMock() *dbMock {
@@ -79,8 +78,8 @@ func newDbMock() *dbMock {
 		beginWrite: func() (context.Context, func(), func() error, error) {
 			return nil, func() {}, func() error { return nil }, nil
 		},
-		indexCommitsForSearch: func(after commitsearch.IndexCursor, limit int) (
-			commitsearch.IndexCursor, bool, error) {
+		indexCommitsForSearch: func(after string, limit int) (
+			string, bool, error) {
 			return after, false, nil
 		},
 	}
@@ -91,7 +90,7 @@ func (m *dbMock) BeginWrite() (context.Context, func(), func() error, error) {
 }
 
 func (m *dbMock) IndexCommitsForSearch(w context.Context,
-	after commitsearch.IndexCursor, limit int) (
-	commitsearch.IndexCursor, bool, error) {
+	after string, limit int) (
+	string, bool, error) {
 	return m.indexCommitsForSearch(after, limit)
 }

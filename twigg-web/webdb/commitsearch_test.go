@@ -42,13 +42,17 @@ func setUpSearchableCommits(t *testing.T, db webdb.WebDb, w context.Context) {
 }
 
 func searchLocalIds(t *testing.T, db webdb.WebDb, w context.Context,
-	f commitsearch.Filter) []uint64 {
+	f commitsearch.Filter, cursor string, limit int) ([]uint64, string) {
 	t.Helper()
-	it, err := db.SearchCommits(w, f)
+	commits, next, err := db.SearchCommits(w, f, cursor, limit)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return collectLocalIds(t, it)
+	ids := []uint64{}
+	for _, c := range commits {
+		ids = append(ids, c.L)
+	}
+	return ids, next
 }
 
 func newSearchTestDb(t *testing.T) (webdb.WebDb, context.Context) {
@@ -63,44 +67,34 @@ func newSearchTestDb(t *testing.T) (webdb.WebDb, context.Context) {
 	return db, w
 }
 
-func Test_SearchCommits_ReturnsTheRepoCommitsNewestFirst(t *testing.T) {
+func Test_SearchCommits_ReturnsTheRepoCommitsNewestFirstAndPaginateCursor(t *testing.T) {
 	db, w := newSearchTestDb(t)
 
-	got := searchLocalIds(t, db, w, commitsearch.NewFilter(searchRepoId, 10))
-
-	if !reflect.DeepEqual(got, []uint64{4, 3, 2, 1}) {
-		t.Fatalf("found %v, want [4 3 2 1]", got)
+	got, next := searchLocalIds(t, db, w, commitsearch.NewFilter(searchRepoId), "", 2)
+	if !reflect.DeepEqual(got, []uint64{4, 3}) {
+		t.Fatalf("found %v, want [4 3]", got)
 	}
-}
-
-func Test_SearchCommits_PaginatesWithTheLimitAndTheCursor(t *testing.T) {
-	db, w := newSearchTestDb(t)
-
-	f := commitsearch.NewFilter(searchRepoId, 2)
-	firstPage := searchLocalIds(t, db, w, f)
-	if !reflect.DeepEqual(firstPage, []uint64{4, 3}) {
-		t.Fatalf("first page is %v, want [4 3]", firstPage)
+	got2, next2 := searchLocalIds(t, db, w, commitsearch.NewFilter(searchRepoId), next, 2)
+	if !reflect.DeepEqual(got2, []uint64{2, 1}) {
+		t.Fatalf("found %v, want [2 1]", got2)
 	}
-
-	f.HasAfterCommitId = true
-	f.AfterCommitId = firstPage[len(firstPage)-1]
-	secondPage := searchLocalIds(t, db, w, f)
-	if !reflect.DeepEqual(secondPage, []uint64{2, 1}) {
-		t.Fatalf("second page is %v, want [2 1]", secondPage)
+	got3, _ := searchLocalIds(t, db, w, commitsearch.NewFilter(searchRepoId), next2, 2)
+	if len(got3) != 0 {
+		t.Fatalf("found %v, want empty slice", got)
 	}
 }
 
 func Test_SearchCommits_FiltersByState(t *testing.T) {
 	db, w := newSearchTestDb(t)
 
-	f := commitsearch.NewFilter(searchRepoId, 10)
+	f := commitsearch.NewFilter(searchRepoId)
 	f.State = commitsearch.StatePending
-	if got := searchLocalIds(t, db, w, f); !reflect.DeepEqual(got, []uint64{4, 2, 1}) {
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{4, 2, 1}) {
 		t.Fatalf("pending commits are %v, want [4 2 1]", got)
 	}
 
 	f.State = commitsearch.StateSubmitted
-	if got := searchLocalIds(t, db, w, f); !reflect.DeepEqual(got, []uint64{3}) {
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{3}) {
 		t.Fatalf("submitted commits are %v, want [3]", got)
 	}
 }
@@ -108,21 +102,21 @@ func Test_SearchCommits_FiltersByState(t *testing.T) {
 func Test_SearchCommits_FiltersWipAndArchivedCommits(t *testing.T) {
 	db, w := newSearchTestDb(t)
 
-	f := commitsearch.NewFilter(searchRepoId, 10)
+	f := commitsearch.NewFilter(searchRepoId)
 	f.Wip = commitsearch.PresenceRequire
-	if got := searchLocalIds(t, db, w, f); !reflect.DeepEqual(got, []uint64{4}) {
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{4}) {
 		t.Fatalf("wip commits are %v, want [4]", got)
 	}
 
-	f = commitsearch.NewFilter(searchRepoId, 10)
+	f = commitsearch.NewFilter(searchRepoId)
 	f.Wip = commitsearch.PresenceExclude
-	if got := searchLocalIds(t, db, w, f); !reflect.DeepEqual(got, []uint64{3, 2, 1}) {
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{3, 2, 1}) {
 		t.Fatalf("not wip commits are %v, want [3 2 1]", got)
 	}
 
-	f = commitsearch.NewFilter(searchRepoId, 10)
+	f = commitsearch.NewFilter(searchRepoId)
 	f.Archived = commitsearch.PresenceRequire
-	if got := searchLocalIds(t, db, w, f); !reflect.DeepEqual(got, []uint64{5}) {
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{5}) {
 		t.Fatalf("archived commits are %v, want [5]", got)
 	}
 }
