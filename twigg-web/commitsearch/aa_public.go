@@ -48,3 +48,32 @@ func NewFilter(repoId uint64) Filter {
 		Archived: PresenceExclude,
 	}
 }
+
+// Tokenizer is a parser for textual key-value queries like the following:
+// `"val" key:val key2:"quoted val" -key3:val non keyed text`
+// note that it supports negating keys, quoted values and also non-keyed values
+type Tokenizer struct {
+	tk tokenizer
+}
+
+// A query longer than maxQueryLen characters is refused, unless maxQueryLen
+// is not positive. Keys are matched ignoring case.
+func NewTokenizer(keys []string, maxQueryLen int) Tokenizer {
+	return Tokenizer{
+		tk: tokenizer{
+			maxLen: maxQueryLen,
+			keys:   keys,
+		},
+	}
+}
+
+type Token struct {
+	Key       string // empty for text-only
+	Value     string
+	IsNegated bool // true for `-key:value` or `-"text value"`
+	IsQuoted  bool // true for `key:"value"` or `"text value"`
+}
+
+func (t Tokenizer) Parse(q string) ([]Token, error) {
+	return t.tk.Parse(q)
+}
