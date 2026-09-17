@@ -3,22 +3,30 @@ package repository
 import (
 	"context"
 	"log"
+	"monorepo/twigg-web/wrappers"
 	"net/http"
 )
 
 // Helper that enriches the commits of one request into what the frontend
 // expects. Not thread safe.
 type commitRenderer struct {
-	userSrv             UserService
-	dbRead              context.Context
-	w                   http.ResponseWriter
-	cachedUsernamesById map[int64]string
+	userSrv                 UserService
+	revSrv                  ReviewService
+	r                       wrappers.UserWithReadPermissionMuxRequest
+	dbRead                  context.Context
+	w                       http.ResponseWriter
+	cachedUsernamesById     map[int64]string
+	cachedSupremeLeaders    []string
+	hasCachedSupremeLeaders bool
 }
 
-func newCommitRenderer(userSrv UserService, dbRead context.Context,
+func newCommitRenderer(userSrv UserService, revSrv ReviewService,
+	r wrappers.UserWithReadPermissionMuxRequest, dbRead context.Context,
 	w http.ResponseWriter) *commitRenderer {
 	return &commitRenderer{
 		userSrv:             userSrv,
+		revSrv:              revSrv,
+		r:                   r,
 		dbRead:              dbRead,
 		w:                   w,
 		cachedUsernamesById: map[int64]string{},
@@ -44,4 +52,22 @@ func (cr *commitRenderer) getAuthorUsername(authorId int64) (username string, ok
 	}
 	cr.cachedUsernamesById[authorId] = author.Username
 	return author.Username, true
+}
+
+// On any error, writes an error to the response and returns ok=false.
+func (cr *commitRenderer) getSupremeLeaders() (supremeLeaders []string, ok bool) {
+	if cr.hasCachedSupremeLeaders {
+		return cr.cachedSupremeLeaders, true
+	}
+	supremeLeaders, err := cr.revSrv.ResolveSupremeLeaders(cr.dbRead, cr.r.RepoOwnerUsr)
+	if err != nil {
+		log.Printf("failed to resolve the supreme leaders of %s: %s",
+			cr.r.RepoOwnerUsr.Username, err)
+		http.Error(cr.w, "internal err resolving supreme leaders",
+			http.StatusInternalServerError)
+		return nil, false
+	}
+	cr.cachedSupremeLeaders = supremeLeaders
+	cr.hasCachedSupremeLeaders = true
+	return supremeLeaders, true
 }

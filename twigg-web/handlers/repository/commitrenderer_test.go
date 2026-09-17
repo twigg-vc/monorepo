@@ -6,6 +6,7 @@ import (
 	"monorepo/twigg-web/user"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -16,7 +17,7 @@ func TestCommitRenderer_GetAuthorUsernameReadsEachAuthorOnce(t *testing.T) {
 			8: {Username: "twigger"},
 		},
 	}
-	cr := newCommitRenderer(userS, nil, httptest.NewRecorder())
+	cr := newCommitRenderer(userS, nil, newMockReq(nil, nil), nil, httptest.NewRecorder())
 
 	for _, want := range []struct {
 		authorId int64
@@ -38,7 +39,7 @@ func TestCommitRenderer_GetAuthorUsernameReadsEachAuthorOnce(t *testing.T) {
 func TestCommitRenderer_GetAuthorUsernameFailsOnUnknownAuthor(t *testing.T) {
 	userS := &countingUserServiceMock{usersById: map[int64]user.User{}}
 	w := httptest.NewRecorder()
-	cr := newCommitRenderer(userS, nil, w)
+	cr := newCommitRenderer(userS, nil, newMockReq(nil, nil), nil, w)
 
 	_, ok := cr.getAuthorUsername(7)
 
@@ -53,12 +54,56 @@ func TestCommitRenderer_GetAuthorUsernameFailsOnUnknownAuthor(t *testing.T) {
 func TestCommitRenderer_GetAuthorUsernameFailsOnUserServiceError(t *testing.T) {
 	userS := &countingUserServiceMock{err: errors.New("boom")}
 	w := httptest.NewRecorder()
-	cr := newCommitRenderer(userS, nil, w)
+	cr := newCommitRenderer(userS, nil, newMockReq(nil, nil), nil, w)
 
 	_, ok := cr.getAuthorUsername(7)
 
 	if ok {
 		t.Fatalf("getAuthorUsername is ok, want not ok")
+	}
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status is %d, want %d", w.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestCommitRenderer_GetSupremeLeadersResolvesThemOnce(t *testing.T) {
+	var resolveCalls int
+	revS := &reviewServiceMock{}
+	revS.resolveSupremeLeaders = func(ownerUsr user.User) ([]string, error) {
+		resolveCalls++
+		return []string{ownerUsr.Username, "leader"}, nil
+	}
+	req := newMockReq(nil, nil)
+	req.RepoOwnerUsr = user.User{Username: "owner"}
+	cr := newCommitRenderer(nil, revS, req, nil, httptest.NewRecorder())
+
+	for range 3 {
+		got, ok := cr.getSupremeLeaders()
+		if !ok {
+			t.Fatalf("getSupremeLeaders is not ok")
+		}
+		want := []string{"owner", "leader"}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("getSupremeLeaders() = %v, want %v", got, want)
+		}
+	}
+	if resolveCalls != 1 {
+		t.Fatalf("resolved the supreme leaders %d times, want 1", resolveCalls)
+	}
+}
+
+func TestCommitRenderer_GetSupremeLeadersFailsOnReviewServiceError(t *testing.T) {
+	revS := &reviewServiceMock{}
+	revS.resolveSupremeLeaders = func(user.User) ([]string, error) {
+		return nil, errors.New("boom")
+	}
+	w := httptest.NewRecorder()
+	cr := newCommitRenderer(nil, revS, newMockReq(nil, nil), nil, w)
+
+	_, ok := cr.getSupremeLeaders()
+
+	if ok {
+		t.Fatalf("getSupremeLeaders is ok, want not ok")
 	}
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("status is %d, want %d", w.Code, http.StatusInternalServerError)
