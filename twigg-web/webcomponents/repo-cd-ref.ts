@@ -20,6 +20,7 @@ export class RepoCdRef extends LitElement {
         fetchedPipelines: { type: Boolean, state: true },
         fetchPipelinesFailed: { type: Boolean, state: true },
         isLoadingPipelines: { type: Boolean, state: true },
+        isRefreshingPipelines: { type: Boolean, state: true },
         hasMorePipelines: { type: Boolean, state: true },
         isLoadingMorePipelines: { type: Boolean, state: true },
         isLaunchingNew: { type: Boolean, state: true },
@@ -36,6 +37,7 @@ export class RepoCdRef extends LitElement {
     declare private fetchedPipelines: boolean;
     declare private fetchPipelinesFailed: boolean;
     declare private isLoadingPipelines: boolean;
+    declare private isRefreshingPipelines: boolean;
     declare private hasMorePipelines: boolean;
     declare private isLoadingMorePipelines: boolean;
     declare private isLaunchingNew: boolean;
@@ -51,6 +53,7 @@ export class RepoCdRef extends LitElement {
         this.fetchedPipelines = false;
         this.fetchPipelinesFailed = false;
         this.isLoadingPipelines = false;
+        this.isRefreshingPipelines = false;
         this.hasMorePipelines = true;
         this.isLoadingMorePipelines = false;
         this.isLaunchingNew = false;
@@ -150,6 +153,26 @@ export class RepoCdRef extends LitElement {
             this.isLoadingMorePipelines = false;
         }
     }
+    // Re-fetches the pipelines without showing a loader.
+    private async refreshPipelines() {
+        if (this.isRefreshingPipelines || this.isLoadingPipelines){return}
+        this.isRefreshingPipelines = true
+        try {
+            const resp = await fetch(PathToPipelines(this.RepoOwnerName, this.RepoName, this.PipelineRef),
+                { method: 'GET' },
+            );
+            if (!resp.ok){
+                throw "Bad resp"
+            }
+            this.pipelines = await resp.json();
+        } catch (error) {
+            console.log("error refreshing pipelines: ", error)
+            this.fetchedPipelines = false
+            this.fetchPipelinesFailed = true
+        } finally {
+            this.isRefreshingPipelines = false;
+        }
+    }
     private async fetchPipelinesIfNotFetched() {
         if (this.fetchedPipelines || this.isLoadingPipelines){return}
         this.fetchedPipelines = true
@@ -190,8 +213,7 @@ export class RepoCdRef extends LitElement {
                 throw "Bad resp"
             }
             this.closeModal()
-            this.fetchedPipelines = false
-            this.fetchPipelinesIfNotFetched()
+            this.refreshPipelines()
         } catch(e){
             alert("Failed to launch :(")
         }finally{
