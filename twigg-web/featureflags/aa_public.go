@@ -25,7 +25,8 @@ func GetFlags(configName string, repoOwnerUsername string, currentUsername strin
 			EnabledForReposOfTwiggers(repoOwnerUsername) ||
 			EnabledForReposOfFriends(repoOwnerUsername),
 		UseVSCodeDiff: EnabledOutsideProd(configName) ||
-			EnabledForReposOfTwiggers(repoOwnerUsername),
+			EnabledForReposOfTwiggers(repoOwnerUsername) ||
+			EnabledForTwiggers(currentUsername),
 	}
 }
 
