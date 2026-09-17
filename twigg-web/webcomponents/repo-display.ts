@@ -6,6 +6,7 @@ import { Commit } from './interfaces'
 import { UrlToRepo, PathToRepoSettings, UrlToCommit, PathToMoreSubmittedCommits, UrlToCanSubmitCommits, PathToMorePendingCommits } from './routes';
 import { MinDurationTimer } from './min-duration-timer';
 import './commit-graph';
+import './commit-search';
 import { GetFeatureFlags } from './feature-flags';
 import { FormatRelativeTime } from './helpers';
 import { fetchGetWithRetry } from './fetch-get-with-retry'
@@ -170,17 +171,7 @@ export class RepoDisplay extends LitElement {
         switch (this.TabName) {
             case "commits":
                 return html`
-                    <section class="commit-section card">
-                        <h2 style="padding-top: var(--space6)">
-                            Pending Commits
-                        </h2>
-                        <div class="commit-list">
-                            ${this.renderPendingCommitsList()}
-                        </div>
-                        <div class="view-more-btn-container">
-                            ${this.renderFetchMorePendingCommitsBtn()}
-                        </div>
-                    </section>
+                    ${this.renderPendingCommitsSection()}
 
                     <section class="commit-section card">
                         <h2>Submitted Commits</h2>
@@ -265,6 +256,34 @@ export class RepoDisplay extends LitElement {
         return this.SubmittedCommits[this.SubmittedCommits.length - 1].L != 0
     }
 
+
+    // The commit search replaces the pending commits while its flag is on.
+    private renderPendingCommitsSection() {
+        if (GetFeatureFlags().SearchCommitsUi) {
+            return html`
+                <section class="commit-section card">
+                    <h2 style="padding-top: var(--space6)">Commits</h2>
+                    <commit-search
+                        RepoOwnerName=${this.RepoOwnerName}
+                        RepoName=${this.RepoName}>
+                    </commit-search>
+                </section>
+            `
+        }
+        return html`
+            <section class="commit-section card">
+                <h2 style="padding-top: var(--space6)">
+                    Pending Commits
+                </h2>
+                <div class="commit-list">
+                    ${this.renderPendingCommitsList()}
+                </div>
+                <div class="view-more-btn-container">
+                    ${this.renderFetchMorePendingCommitsBtn()}
+                </div>
+            </section>
+        `
+    }
 
     private renderPendingCommitsList() {
         if (this.PendingCommits.length === 0) {
