@@ -54,6 +54,10 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 		}
 	}
 
+	if f.AuthorId != 0 {
+		q.WriteString(` AND s.authorId = ?`)
+		args = append(args, f.AuthorId)
+	}
 	if f.State == commitsearch.StatePending {
 		q.WriteString(` AND s.isSubmitted = 0`)
 	}

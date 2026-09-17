@@ -22,8 +22,10 @@ const (
 // Filter of a commit search. Each optional field is ignored when it holds
 // its zero value.
 type Filter struct {
-	RepoId   uint64
-	Message  string
+	RepoId  uint64
+	Message string
+	// Id of the commit author. 0 matches any author.
+	AuthorId int64
 	State    State
 	Wip      Presence
 	Archived Presence

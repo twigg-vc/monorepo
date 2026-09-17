@@ -168,3 +168,18 @@ func Test_SearchCommits_MatchesTheSearchOperatorsLiterally(t *testing.T) {
 		}
 	}
 }
+
+func Test_SearchCommits_FiltersByAuthor(t *testing.T) {
+	db, w := newSearchTestDb(t)
+
+	f := commitsearch.NewFilter(searchRepoId)
+	f.AuthorId = 1
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{3, 1}) {
+		t.Fatalf("commits of author 1 are %v, want [3 1]", got)
+	}
+
+	f.AuthorId = 2
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{4, 2}) {
+		t.Fatalf("commits of author 2 are %v, want [4 2]", got)
+	}
+}
