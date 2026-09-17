@@ -3,7 +3,9 @@ package repository
 import (
 	"context"
 	"log"
+	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/wrappers"
+	"monorepo/twigg/commit"
 	"net/http"
 )
 
@@ -13,6 +15,7 @@ type commitRenderer struct {
 	userSrv                 UserService
 	revSrv                  ReviewService
 	r                       wrappers.UserWithReadPermissionMuxRequest
+	repoTopServerId         commit.LocalId
 	dbRead                  context.Context
 	w                       http.ResponseWriter
 	cachedUsernamesById     map[int64]string
@@ -21,12 +24,14 @@ type commitRenderer struct {
 }
 
 func newCommitRenderer(userSrv UserService, revSrv ReviewService,
-	r wrappers.UserWithReadPermissionMuxRequest, dbRead context.Context,
+	r wrappers.UserWithReadPermissionMuxRequest,
+	repoTopServerId commit.LocalId, dbRead context.Context,
 	w http.ResponseWriter) *commitRenderer {
 	return &commitRenderer{
 		userSrv:             userSrv,
 		revSrv:              revSrv,
 		r:                   r,
+		repoTopServerId:     repoTopServerId,
 		dbRead:              dbRead,
 		w:                   w,
 		cachedUsernamesById: map[int64]string{},
@@ -70,4 +75,27 @@ func (cr *commitRenderer) getSupremeLeaders() (supremeLeaders []string, ok bool)
 	cr.cachedSupremeLeaders = supremeLeaders
 	cr.hasCachedSupremeLeaders = true
 	return supremeLeaders, true
+}
+
+// On any error, writes an error to the response and returns ok=false.
+func (cr *commitRenderer) getReviewStatus(cId commit.LocalId) (
+	s review.ReviewStatus, ok bool) {
+	supremeLeaders, ok := cr.getSupremeLeaders()
+	if !ok {
+		return s, false
+	}
+	// isNotFound errors are ignored bc they mean the data was not saved yet.
+	// The returned reviewData will have a valid review status.
+	d, isNotFoundErr, err := cr.revSrv.GetData(
+		cr.dbRead, cr.r.Repo.Id, cId,
+		/*checkOwners=*/ true,
+		/*cIdToReadOwners=*/ cr.repoTopServerId,
+		supremeLeaders)
+	if err != nil && !isNotFoundErr {
+		log.Printf("failed to get the review data of commit %d: %s", cId, err)
+		http.Error(cr.w, "failed to get review data",
+			http.StatusInternalServerError)
+		return s, false
+	}
+	return d.ReviewStatus, true
 }

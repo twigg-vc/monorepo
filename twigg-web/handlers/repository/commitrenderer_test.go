@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/user"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +18,7 @@ func TestCommitRenderer_GetAuthorUsernameReadsEachAuthorOnce(t *testing.T) {
 			8: {Username: "twigger"},
 		},
 	}
-	cr := newCommitRenderer(userS, nil, newMockReq(nil, nil), nil, httptest.NewRecorder())
+	cr := newCommitRenderer(userS, nil, newMockReq(nil, nil), 0, nil, httptest.NewRecorder())
 
 	for _, want := range []struct {
 		authorId int64
@@ -39,7 +40,7 @@ func TestCommitRenderer_GetAuthorUsernameReadsEachAuthorOnce(t *testing.T) {
 func TestCommitRenderer_GetAuthorUsernameFailsOnUnknownAuthor(t *testing.T) {
 	userS := &countingUserServiceMock{usersById: map[int64]user.User{}}
 	w := httptest.NewRecorder()
-	cr := newCommitRenderer(userS, nil, newMockReq(nil, nil), nil, w)
+	cr := newCommitRenderer(userS, nil, newMockReq(nil, nil), 0, nil, w)
 
 	_, ok := cr.getAuthorUsername(7)
 
@@ -54,7 +55,7 @@ func TestCommitRenderer_GetAuthorUsernameFailsOnUnknownAuthor(t *testing.T) {
 func TestCommitRenderer_GetAuthorUsernameFailsOnUserServiceError(t *testing.T) {
 	userS := &countingUserServiceMock{err: errors.New("boom")}
 	w := httptest.NewRecorder()
-	cr := newCommitRenderer(userS, nil, newMockReq(nil, nil), nil, w)
+	cr := newCommitRenderer(userS, nil, newMockReq(nil, nil), 0, nil, w)
 
 	_, ok := cr.getAuthorUsername(7)
 
@@ -75,7 +76,7 @@ func TestCommitRenderer_GetSupremeLeadersResolvesThemOnce(t *testing.T) {
 	}
 	req := newMockReq(nil, nil)
 	req.RepoOwnerUsr = user.User{Username: "owner"}
-	cr := newCommitRenderer(nil, revS, req, nil, httptest.NewRecorder())
+	cr := newCommitRenderer(nil, revS, req, 0, nil, httptest.NewRecorder())
 
 	for range 3 {
 		got, ok := cr.getSupremeLeaders()
@@ -98,12 +99,84 @@ func TestCommitRenderer_GetSupremeLeadersFailsOnReviewServiceError(t *testing.T)
 		return nil, errors.New("boom")
 	}
 	w := httptest.NewRecorder()
-	cr := newCommitRenderer(nil, revS, newMockReq(nil, nil), nil, w)
+	cr := newCommitRenderer(nil, revS, newMockReq(nil, nil), 0, nil, w)
 
 	_, ok := cr.getSupremeLeaders()
 
 	if ok {
 		t.Fatalf("getSupremeLeaders is ok, want not ok")
+	}
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status is %d, want %d", w.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestCommitRenderer_GetReviewStatusPassesTheSupremeLeaders(t *testing.T) {
+	revS := &reviewServiceMock{}
+	revS.resolveSupremeLeaders = func(user.User) ([]string, error) {
+		return []string{"leader"}, nil
+	}
+	var gotSupremeLeaders []string
+	revS.getData = func(supremeLeaders []string) (review.Data, bool, error) {
+		gotSupremeLeaders = supremeLeaders
+		return review.Data{ReviewStatus: review.ReviewStatus_Ready}, false, nil
+	}
+	cr := newCommitRenderer(nil, revS, newMockReq(nil, nil), 0, nil,
+		httptest.NewRecorder())
+
+	got, ok := cr.getReviewStatus(3)
+
+	if !ok {
+		t.Fatalf("getReviewStatus is not ok")
+	}
+	if got != review.ReviewStatus_Ready {
+		t.Fatalf("getReviewStatus() = %v, want %v", got, review.ReviewStatus_Ready)
+	}
+	if !reflect.DeepEqual(gotSupremeLeaders, []string{"leader"}) {
+		t.Fatalf("passed the supreme leaders %v, want [leader]", gotSupremeLeaders)
+	}
+}
+
+func TestCommitRenderer_GetReviewStatusAcceptsMissingReviewData(t *testing.T) {
+	revS := &reviewServiceMock{}
+	revS.resolveSupremeLeaders = func(user.User) ([]string, error) {
+		return nil, nil
+	}
+	revS.getData = func([]string) (review.Data, bool, error) {
+		return review.Data{ReviewStatus: review.ReviewStatus_MissingLgtm},
+			true, errors.New("no review data")
+	}
+	w := httptest.NewRecorder()
+	cr := newCommitRenderer(nil, revS, newMockReq(nil, nil), 0, nil, w)
+
+	got, ok := cr.getReviewStatus(3)
+
+	if !ok {
+		t.Fatalf("getReviewStatus is not ok")
+	}
+	if got != review.ReviewStatus_MissingLgtm {
+		t.Fatalf("getReviewStatus() = %v, want %v", got, review.ReviewStatus_MissingLgtm)
+	}
+	if w.Code != http.StatusOK {
+		t.Fatalf("status is %d, want %d", w.Code, http.StatusOK)
+	}
+}
+
+func TestCommitRenderer_GetReviewStatusFailsOnGetDataError(t *testing.T) {
+	revS := &reviewServiceMock{}
+	revS.resolveSupremeLeaders = func(user.User) ([]string, error) {
+		return nil, nil
+	}
+	revS.getData = func([]string) (review.Data, bool, error) {
+		return review.Data{}, false, errors.New("boom")
+	}
+	w := httptest.NewRecorder()
+	cr := newCommitRenderer(nil, revS, newMockReq(nil, nil), 0, nil, w)
+
+	_, ok := cr.getReviewStatus(3)
+
+	if ok {
+		t.Fatalf("getReviewStatus is ok, want not ok")
 	}
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("status is %d, want %d", w.Code, http.StatusInternalServerError)
