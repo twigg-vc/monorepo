@@ -120,3 +120,51 @@ func Test_SearchCommits_FiltersWipAndArchivedCommits(t *testing.T) {
 		t.Fatalf("archived commits are %v, want [5]", got)
 	}
 }
+
+func Test_SearchCommits_FiltersByMessageText(t *testing.T) {
+	db, w := newSearchTestDb(t)
+
+	f := commitsearch.NewFilter(searchRepoId)
+	f.Message = "user"
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{3, 2, 1}) {
+		t.Fatalf("commits about the user are %v, want [3 2 1]", got)
+	}
+
+	f.Message = "methods USER"
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{2}) {
+		t.Fatalf("commits about the user methods are %v, want [2]", got)
+	}
+}
+
+func Test_SearchCommits_PaginatesATextSearchWithTheTextIndexRow(t *testing.T) {
+	db, w := newSearchTestDb(t)
+	f := commitsearch.NewFilter(searchRepoId)
+	f.Message = "user"
+
+	got, next := searchLocalIds(t, db, w, f, "", 2)
+	if !reflect.DeepEqual(got, []uint64{3, 2}) {
+		t.Fatalf("first page is %v, want [3 2]", got)
+	}
+
+	got2, next2 := searchLocalIds(t, db, w, f, next, 2)
+	if !reflect.DeepEqual(got2, []uint64{1}) {
+		t.Fatalf("second page is %v, want [1]", got2)
+	}
+
+	got3, _ := searchLocalIds(t, db, w, f, next2, 2)
+	if len(got3) != 0 {
+		t.Fatalf("last page is %v, want it empty", got3)
+	}
+}
+
+func Test_SearchCommits_MatchesTheSearchOperatorsLiterally(t *testing.T) {
+	db, w := newSearchTestDb(t)
+
+	f := commitsearch.NewFilter(searchRepoId)
+	for _, text := range []string{`AND`, `OR NOT`, `"`, `(`, `user*`, `^`, `   `} {
+		f.Message = text
+		if _, _, err := db.SearchCommits(w, f, "", 100); err != nil {
+			t.Fatalf("searching %q failed: %s", text, err)
+		}
+	}
+}

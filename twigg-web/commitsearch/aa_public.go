@@ -23,6 +23,7 @@ const (
 // its zero value.
 type Filter struct {
 	RepoId   uint64
+	Message  string
 	State    State
 	Wip      Presence
 	Archived Presence
