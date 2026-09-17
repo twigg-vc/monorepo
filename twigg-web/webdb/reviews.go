@@ -45,7 +45,10 @@ func (db webDb) GetReviewData(ctx context.Context, repoId uint64, cId commit.Loc
 func (db webDb) SetReviewData(writeCtx context.Context, quotaOwner string, repoId uint64, cId commit.LocalId, d review.Data) error {
 	_, err := db.setBlob(writeCtx, quotaOwner,
 		reviewDataBlobIdPrefix, reviewDataBlobId(repoId, cId), gobencoding.StructWriterTo(d))
-	return err
+	if err != nil {
+		return err
+	}
+	return db.indexReviewForSearch(writeCtx, repoId, cId, d)
 }
 
 func (db webDb) GetReviewThread(ctx context.Context, threadId int64) (review.Thread, error) {

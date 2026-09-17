@@ -28,3 +28,34 @@ func (db webDb) indexCommitForSearch(w context.Context, repoId uint64,
 		review.MessageIsWip(c.Message), review.MessageIsArchived(c.Message))
 	return err
 }
+
+// The reviewers of a commit are replaced, not merged.
+func (db webDb) indexReviewForSearch(w context.Context, repoId uint64,
+	cId commit.LocalId, d review.Data) error {
+	_, err := db.s.Exec(w, `
+		INSERT INTO reviews (repoId, commitId, reviewStatus)
+		VALUES (?, ?, ?)
+		ON CONFLICT(repoId, commitId) DO UPDATE SET
+			reviewStatus = EXCLUDED.reviewStatus
+	`, repoId, cId, uint32(d.ReviewStatus))
+	if err != nil {
+		return err
+	}
+	_, err = db.s.Exec(w, `
+		DELETE FROM review_reviewers WHERE repoId = ? AND commitId = ?
+	`, repoId, cId)
+	if err != nil {
+		return err
+	}
+	for _, userId := range d.ReviewersUserIds {
+		_, err = db.s.Exec(w, `
+			INSERT INTO review_reviewers (repoId, commitId, userId)
+			VALUES (?, ?, ?)
+			ON CONFLICT(repoId, commitId, userId) DO NOTHING
+		`, repoId, cId, userId)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
