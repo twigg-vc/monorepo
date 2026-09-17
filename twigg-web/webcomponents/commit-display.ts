@@ -1,6 +1,6 @@
 import { html, css, LitElement, TemplateResult } from 'lit';
 import { TwiggCss } from './css';
-import { Thread, Commit, Comment, ServerThread, ReviewData, User, Job } from './interfaces'
+import { Thread, Commit, Comment, ServerThread, ReviewData, User, Job, JobStatus } from './interfaces'
 import { GetCommentsUrl, GetCsrfHeaders, GetThreadsUrl, UrlToCommit, UrlToCommitVersion, UrlToGetReviewData, UrlToPostNewThread, UrlToRepo, PathToPostRollback, GetJobsAfter, UrlToPostAddReviewers, UrlToGetReviewers, UrlToPostRemoveReviewers, UrlToPostRenameCommit } from './routes';
 import { NewComment } from './comments';
 import { GetFeatureFlags } from './feature-flags';
@@ -793,6 +793,7 @@ private renderRenameToWipBtn(message: string): TemplateResult {
                 >
                     <twigg-icon class="tab-icon" icon="Beaker"></twigg-icon>
                     <span class="tab-text">CI</span> 
+                    ${this.renderCiTabLed()}
                 </div>
             </div>
             <div class="tabs-content">
@@ -800,6 +801,24 @@ private renderRenameToWipBtn(message: string): TemplateResult {
             </div>
         </div>
         `;
+    }
+    // Small LED with the overall CI status of the latest
+    // version.
+    private renderCiTabLed(){
+        const verdict = this.getLatestCiSummary().Verdict
+        if (verdict == "none") {
+            return html``
+        } 
+        
+        var status: JobStatus
+        if (verdict == "succeeded") {
+            status = "success"
+        } else if (verdict == "failed") {
+            status = "fail"
+        } else {
+            status = "running"
+        }
+        return html`<status-led class="tab-led" .Status=${status}></status-led>`
     }
     private renderTabContent(){
         switch (this.TabName) {
@@ -1684,6 +1703,11 @@ private renderRenameToWipBtn(message: string): TemplateResult {
         }
         .tabs-content{
             width: 100%;
+        }
+        .tab-led{
+            position: absolute;
+            top: var(--space1);
+            right: var(--space1);
         }
         .tab-text{
             margin-left: var(--space2);
