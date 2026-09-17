@@ -130,6 +130,9 @@ export class CommitSearch extends LitElement {
         return html`
             <a href=${UrlToCommit(this.RepoOwnerName, this.RepoName, commit.L, "feed")}>
                 <div class="commit twigg-lift">
+                    <span class="commit-size-tag-span">
+                        <commit-size-tag .Commit=${commit}></commit-size-tag>
+                    </span>
                     <span class="commit-author" ?hidden=${commit.L === 0}>
                         <username-tag username=${commit.AuthorUsername}></username-tag>
                     </span>
@@ -205,6 +208,10 @@ export class CommitSearch extends LitElement {
             align-items: center;
             gap: var(--space2);
             padding: var(--space2);
+        }
+        .commit-size-tag-span {
+            font-size: var(--space4);
+            padding-right: var(--space2);
         }
         .commit-message {
             flex-grow: 1;
