@@ -7,6 +7,7 @@ import (
 	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/user"
+	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
 	"net/http"
 	"net/http/httptest"
@@ -37,13 +38,16 @@ func newCommitSearchHandler(searchDb *commitSearchDbMock) handler {
 	return NewHandler(repoS, revS, userS, searchDb)
 }
 
-func searchRequest(query, cursor string) url.Values {
+// A request of a repo whose owner has the commit search.
+func newSearchReq(query, cursor string) wrappers.UserWithReadPermissionMuxRequest {
 	q := url.Values{}
 	q.Set(routes.CommitSearchQueryParamName, query)
 	if cursor != "" {
 		q.Set(routes.CommitSearchCursorParamName, cursor)
 	}
-	return q
+	req := newMockReq(nil, q)
+	req.Flags.SearchCommitsUi = true
+	return req
 }
 
 func Test_HandleCommitSearch_AnswersWithTheCommitsAndTheNextCursor(t *testing.T) {
@@ -55,7 +59,7 @@ func Test_HandleCommitSearch_AnswersWithTheCommitsAndTheNextCursor(t *testing.T)
 	h := newCommitSearchHandler(searchDb)
 	w := httptest.NewRecorder()
 
-	h.handleCommitSearch(w, newMockReq(nil, searchRequest("queue", "")), nil)
+	h.handleCommitSearch(w, newSearchReq("queue", ""), nil)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status is %d, want %d: %s", w.Code, http.StatusOK, w.Body)
@@ -90,7 +94,7 @@ func Test_HandleCommitSearch_SearchesWhatTheQueryAsksFor(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	h.handleCommitSearch(w,
-		newMockReq(nil, searchRequest("is:pending author:aang queue", "a-cursor")), nil)
+		newSearchReq("is:pending author:aang queue", "a-cursor"), nil)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status is %d, want %d: %s", w.Code, http.StatusOK, w.Body)
@@ -118,7 +122,7 @@ func Test_HandleCommitSearch_AnswersAQueryItCanNotParseWithItsReason(t *testing.
 	h := newCommitSearchHandler(searchDb)
 	w := httptest.NewRecorder()
 
-	h.handleCommitSearch(w, newMockReq(nil, searchRequest("is:nope", "")), nil)
+	h.handleCommitSearch(w, newSearchReq("is:nope", ""), nil)
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status is %d, want %d", w.Code, http.StatusBadRequest)
@@ -138,7 +142,7 @@ func Test_HandleCommitSearch_FailsWhenTheSearchOfTheDbFails(t *testing.T) {
 	h := newCommitSearchHandler(searchDb)
 	w := httptest.NewRecorder()
 
-	h.handleCommitSearch(w, newMockReq(nil, searchRequest("queue", "")), nil)
+	h.handleCommitSearch(w, newSearchReq("queue", ""), nil)
 
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("status is %d, want %d", w.Code, http.StatusInternalServerError)
@@ -154,7 +158,7 @@ func Test_HandleCommitSearch_SearchesTheCommitsOfWhoeverIsSearching(t *testing.T
 		return nil, "", nil
 	}
 	h := newCommitSearchHandler(searchDb)
-	req := newMockReq(nil, searchRequest("author:me reviewer:me", ""))
+	req := newSearchReq("author:me reviewer:me", "")
 	req.IsLoggedIn = true
 	req.MaybeUserWithReadPermission = &user.User{Username: "katara"}
 	w := httptest.NewRecorder()
@@ -181,9 +185,28 @@ func Test_HandleCommitSearch_FailsOnMeWhenNobodyIsLoggedIn(t *testing.T) {
 	h := newCommitSearchHandler(searchDb)
 	w := httptest.NewRecorder()
 
-	h.handleCommitSearch(w, newMockReq(nil, searchRequest("author:me", "")), nil)
+	h.handleCommitSearch(w, newSearchReq("author:me", ""), nil)
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status is %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func Test_HandleCommitSearch_IsNotFoundWithoutTheFeatureFlag(t *testing.T) {
+	searchDb := &commitSearchDbMock{}
+	searchDb.searchCommits = func(commitsearch.Filter, string, int) (
+		[]commit.Commit, string, error) {
+		t.Fatal("searched with the commit search turned off")
+		return nil, "", nil
+	}
+	h := newCommitSearchHandler(searchDb)
+	req := newSearchReq("queue", "")
+	req.Flags.SearchCommitsUi = false
+	w := httptest.NewRecorder()
+
+	h.handleCommitSearch(w, req, nil)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status is %d, want %d", w.Code, http.StatusNotFound)
 	}
 }

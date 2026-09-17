@@ -11,6 +11,7 @@ type Flags struct {
 	EnableUserEducation          bool
 	DummyFlag                    bool // Example flag just to serve as an example
 	UseVSCodeDiff                bool // If set, the diff viewer uses the vendored VS Code diff engine
+	SearchCommitsUi              bool // If set, the repo page searches its commits
 }
 
 func GetFlags(configName string, repoOwnerUsername string, currentUsername string) Flags {
@@ -27,6 +28,8 @@ func GetFlags(configName string, repoOwnerUsername string, currentUsername strin
 		UseVSCodeDiff: EnabledOutsideProd(configName) ||
 			EnabledForReposOfTwiggers(repoOwnerUsername) ||
 			EnabledForTwiggers(currentUsername),
+		SearchCommitsUi: EnabledOutsideProd(configName) ||
+			EnabledForReposOfTwiggers(repoOwnerUsername),
 	}
 }
 

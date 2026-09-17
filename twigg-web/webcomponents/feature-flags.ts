@@ -8,6 +8,7 @@ export type FeatureFlags = {
     EnableUserEducation: boolean
     DummyFlag: boolean
     UseVSCodeDiff: boolean
+    SearchCommitsUi: boolean
 }
 export function GetFeatureFlags(): FeatureFlags{
     return featureFlags

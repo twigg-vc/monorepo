@@ -15,6 +15,10 @@ const commitSearchPageSize = 25
 
 func (hl handler) handleCommitSearch(w http.ResponseWriter,
 	r wrappers.UserWithReadPermissionMuxRequest, dbRead context.Context) {
+	if !r.Flags.SearchCommitsUi {
+		http.NotFound(w, r.Request)
+		return
+	}
 	params := r.Request.URL.Query()
 	f, err := commitsearch.ParseQuery(r.Repo.Id,
 		params.Get(routes.CommitSearchQueryParamName))
