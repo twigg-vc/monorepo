@@ -6,6 +6,7 @@ import { NewComment } from './comments';
 import { GetFeatureFlags } from './feature-flags';
 import { FormatDateTime } from "./helpers";
 import { MinDurationTimer } from './min-duration-timer';
+import { SummarizeCi, CiSummary } from './ci-summary';
 import { fetchGetWithRetry } from './fetch-get-with-retry'
 
 
@@ -115,6 +116,7 @@ export class CommitDisplay extends LitElement {
         threads_: { type: Array, state: true },
         isLoadingThreads_: { type: Boolean, state: true },
         showRollbackModal: { type: Boolean, state: true },
+        showSubmitCiModal: { type: Boolean, state: true },
 
         ShowCiTab: { type: Boolean },
 
@@ -154,6 +156,7 @@ export class CommitDisplay extends LitElement {
         this.threads_ = []
         this.isLoadingThreads_ = false
         this.showRollbackModal = false
+        this.showSubmitCiModal = false
         this.TabName = "feed"
         this.LatestParentIsSubmitted = false
         this.Reviewers = [];
@@ -179,6 +182,7 @@ export class CommitDisplay extends LitElement {
     declare private threads_: Thread[]
     declare private isLoadingThreads_: boolean
     declare private showRollbackModal: boolean
+    declare private showSubmitCiModal: boolean
     declare private TabName: TabName
     declare private addReviewerError: string
     declare private addReviewerLoading: boolean
@@ -940,6 +944,13 @@ private renderRenameToWipBtn(message: string): TemplateResult {
             </lgtm-btn>
         `
     }
+    private renderSubmitBtn(onClick: () => void){
+        return html`
+            <button ?disabled=${this.isLoadingSubmitOrRollbackBtn} class="submit-btn" @click=${onClick}>
+                <twigg-icon .icon=${"Rebase"}>Submit</twigg-icon>
+            </button>
+        `
+    }
     private renderSubmitOrRollbackBtn(){
         const latest = this.getLatestCommit()
         if (this.isLoadingSubmitOrRollbackBtn){
@@ -979,9 +990,7 @@ private renderRenameToWipBtn(message: string): TemplateResult {
         }
         return html`
         <div class="submit-container">
-            <button class="submit-btn" @click=${this.onSubmitClicked}>
-                <twigg-icon .icon=${"Rebase"}>Submit</twigg-icon>
-            </button>
+            ${this.renderSubmitBtn(this.onSubmitClicked)}
             ${this.submitError ? html`
                 <span class="submit-error">${this.submitError}</span>
             ` : ''}
@@ -1095,6 +1104,49 @@ private renderRenameToWipBtn(message: string): TemplateResult {
             `
         }
         return html``
+    }
+
+    // Asks for confirmation before submitting a commit whose latest CI
+    // runs didn't succeed (or are still running).
+    private renderSubmitCiModal(){
+        if (!this.showSubmitCiModal){
+            return html``
+        }
+        var title = "CI failed"
+        const summary = this.getLatestCiSummary()
+        if (summary.Verdict == "unfinished") {
+            title = "CI hasn't finished"
+        }
+        return html`
+            <div class="modal-backdrop" @click=${this.closeSubmitCiModal}>
+                <div class="modal" @click=${(e: Event) => e.stopPropagation()}>
+                    <h3>${title}</h3>
+                    <p>These CI jobs haven't succeeded:</p>
+                    <ul class="submit-ci-modal-list">
+                        ${summary.NotSuccessful.map(job => html`
+                            <li>${job.Path}/${job.Name}: <b>${job.Status}</b></li>
+                        `)}
+                    </ul>
+                    <p>Submit anyway?</p>
+                    <div class="modal-buttons">
+                        <button class="cancel-rollback-btn" @click=${this.closeSubmitCiModal}>
+                            <twigg-icon .icon=${"XMark"}>Cancel</twigg-icon>
+                        </button>
+                        ${this.renderSubmitBtn(this.submit)}
+                    </div>
+                    ${this.submitError ? html`
+                        <span class="reviewer-modal-error">${this.submitError}</span>
+                    ` : ''}
+                </div>
+            </div>
+        `
+    }
+    private closeSubmitCiModal() {
+        this.showSubmitCiModal = false
+        this.submitError = ""
+    }
+    private getLatestCiSummary(): CiSummary {
+        return SummarizeCi(this.Jobs, this.getLatestCommit().Version)
     }
 
     private getLatestCommit(): Commit{
@@ -1744,6 +1796,9 @@ private renderRenameToWipBtn(message: string): TemplateResult {
             color: var(--color-text-muted);
         }
         
+        .submit-ci-modal-list{
+            text-align: left;
+        }
         .cancel-rollback-btn{
             color: var(--color-status-text);
             font-size: var(--space4);
