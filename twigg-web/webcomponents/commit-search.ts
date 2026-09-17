@@ -1,7 +1,7 @@
 import { html, LitElement, css } from 'lit';
 import { TwiggCss } from './css';
 import { Commit } from './interfaces';
-import { FirstCommitMsg } from './commit-display';
+import { FirstCommitMsg, IsWipCommit } from './commit-display';
 import { PathToCommitSearch, UrlToCommit } from './routes';
 import { FormatRelativeTime } from './helpers';
 import { fetchGetWithRetry } from './fetch-get-with-retry';
@@ -26,6 +26,7 @@ export class CommitSearch extends LitElement {
         commits: { state: true },
         isSearching: { state: true },
         searchError: { state: true },
+        isLoadingWillConflict: { state: true },
     }
     declare RepoOwnerName: string
     declare RepoName: string
@@ -33,6 +34,7 @@ export class CommitSearch extends LitElement {
     declare private commits: Commit[]
     declare private isSearching: boolean
     declare private searchError: string
+    declare private isLoadingWillConflict: boolean
     private debounceTimer: ReturnType<typeof setTimeout> | null = null
 
     constructor() {
@@ -43,6 +45,7 @@ export class CommitSearch extends LitElement {
         this.commits = []
         this.isSearching = false
         this.searchError = ""
+        this.isLoadingWillConflict = false
     }
 
     connectedCallback() {
@@ -121,6 +124,9 @@ export class CommitSearch extends LitElement {
         if (commit.L === 0) {
             message = FirstCommitMsg
         }
+        const isWip = commit.L != 0 && !commit.IsSubmitted && IsWipCommit(message)
+        const lastUpdated = FormatRelativeTime(commit.CreatedOn);
+        const submitWillConflict = false // TODO: implementation in progress
         return html`
             <a href=${UrlToCommit(this.RepoOwnerName, this.RepoName, commit.L, "feed")}>
                 <div class="commit twigg-lift">
@@ -129,12 +135,45 @@ export class CommitSearch extends LitElement {
                     </span>
                     <commit-number .Number=${commit.L}></commit-number>
                     <span class="commit-message">${message}</span>
-                    <span class="commit-last-updated" ?hidden=${commit.L === 0}>
-                        ${FormatRelativeTime(commit.CreatedOn)}
+                    <span class="commit-last-updated" ?hidden=${commit.L == 0}>
+                        ${!commit.IsSubmitted ? "Last updated: " : "Submitted: "}
+                        ${lastUpdated}
                     </span>
+                    <div>
+                        ${this.renderCommitStatus(commit, submitWillConflict, isWip)}
+                    </div>
                 </div>
             </a>
         `
+    }
+    private renderCommitStatus(commit, submitWillConflict, isWip) {
+        if (commit.IsSubmitted) {
+            return null
+        }
+        if (this.isLoadingWillConflict) {
+            return html`<simple-loader></simple-loader>`
+        }
+        if (commit.HasRebaseConflicts) {
+            return html`<commit-status Status="has-conflict" TooltipSide="left"></commit-status>`
+        }
+
+        if (isWip && commit.ReviewStatus === "ready") {
+            return html`<commit-status Status="WIP"></commit-status>`
+        }
+
+        if (isWip) {
+            return html`
+            <commit-status Status="WIP"></commit-status>
+            <commit-status .Status=${commit.ReviewStatus}></commit-status>
+        `
+        }
+        if (submitWillConflict) {
+            return html`
+            <commit-status Status="will-conflict"  TooltipSide="left"></commit-status>
+            <commit-status .Status=${commit.ReviewStatus}></commit-status>
+        `
+        }
+        return html`<commit-status .Status=${commit.ReviewStatus}></commit-status>`
     }
 
     static styles = [TwiggCss, css`
