@@ -4,6 +4,7 @@ import (
 	"context"
 	"monorepo/twigg-web/commitsearch"
 	"monorepo/twigg/commit"
+	"reflect"
 	"testing"
 )
 
@@ -59,5 +60,36 @@ func Test_IndexCommitsForSearch_IndexesEveryCommitInBatches(t *testing.T) {
 	}
 	if got := countIndexedCommits(t, db, w); got != 3 {
 		t.Fatalf("indexed %d commits, want 3", got)
+	}
+}
+
+func Test_IndexCommitsForSearch_IndexesTheTextOfEveryVersion(t *testing.T) {
+	db, w := newIndexTestDb(t)
+	for _, c := range []commit.Commit{
+		{L: 1, Version: 0, AuthorUserId: 3, Message: "first try"},
+		{L: 1, Version: 1, AuthorUserId: 3, Message: "second try"},
+	} {
+		if err := db.SetCommit(w, "owner", indexedRepoId, c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Makes the commit look like it predates the index.
+	_, err := db.db.s.Exec(w, `DELETE FROM commit_search_text`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cursor commitsearch.IndexCursor
+	var done bool
+	for !done {
+		cursor, done, err = db.IndexCommitsForSearch(w, cursor, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	got := readIndexedText(t, db, w, 1)
+	if !reflect.DeepEqual(got, []string{"first try", "second try"}) {
+		t.Fatalf("indexed text is %v, want [first try, second try]", got)
 	}
 }

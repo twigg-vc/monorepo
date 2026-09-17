@@ -71,11 +71,22 @@ func (db webDb) indexCommitFromBlobs(w context.Context,
 			return err
 		}
 	}
-	c, _, err := db.GetLatestCommitByLocalId(w, id.RepoId, id.CommitId)
+	latest, _, err := db.GetLatestCommitByLocalId(w, id.RepoId, id.CommitId)
 	if err != nil {
 		return err
 	}
-	err = db.indexCommitForSearch(w, id.RepoId, c)
+	// Versions start at 0 and increase by 1.
+	for v := uint64(0); v < latest.Version; v++ {
+		c, _, err := db.GetCommitVersionByLocalId(w, id.RepoId, id.CommitId, v)
+		if err != nil {
+			return err
+		}
+		err = db.indexCommitForSearch(w, id.RepoId, c)
+		if err != nil {
+			return err
+		}
+	}
+	err = db.indexCommitForSearch(w, id.RepoId, latest)
 	if err != nil {
 		return err
 	}
