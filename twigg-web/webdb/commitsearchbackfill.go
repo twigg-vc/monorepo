@@ -1,10 +1,13 @@
 package webdb
 
-import "context"
+import (
+	"context"
+	"monorepo/twigg-web/commitsearch"
+)
 
 func (db webDb) indexCommitsForSearch(w context.Context,
-	after IndexCommitsForSearchCursor, limit int) (
-	next IndexCommitsForSearchCursor, done bool, err error) {
+	after commitsearch.IndexCursor, limit int) (
+	next commitsearch.IndexCursor, done bool, err error) {
 	// The batch is read before any of it is written because the rows of a
 	// query can't be iterated while the same transaction writes.
 	batch, err := db.getBatchOfCommitsToIndex(w, after, limit)
@@ -22,8 +25,8 @@ func (db webDb) indexCommitsForSearch(w context.Context,
 }
 
 func (db webDb) getBatchOfCommitsToIndex(w context.Context,
-	after IndexCommitsForSearchCursor, limit int) (
-	batch []IndexCommitsForSearchCursor, err error) {
+	after commitsearch.IndexCursor, limit int) (
+	batch []commitsearch.IndexCursor, err error) {
 	rows, err := db.s.Query(w, `
 		SELECT DISTINCT repoId, commitId FROM twigg_commits
 		WHERE (repoId, commitId) > (?, ?)
@@ -35,7 +38,7 @@ func (db webDb) getBatchOfCommitsToIndex(w context.Context,
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id IndexCommitsForSearchCursor
+		var id commitsearch.IndexCursor
 		err = rows.Scan(&id.RepoId, &id.CommitId)
 		if err != nil {
 			return nil, err
@@ -46,7 +49,7 @@ func (db webDb) getBatchOfCommitsToIndex(w context.Context,
 }
 
 func (db webDb) indexCommitBatch(w context.Context,
-	batch []IndexCommitsForSearchCursor) error {
+	batch []commitsearch.IndexCursor) error {
 	for _, id := range batch {
 		err := db.indexCommitFromBlobs(w, id)
 		if err != nil {
@@ -57,7 +60,7 @@ func (db webDb) indexCommitBatch(w context.Context,
 }
 
 func (db webDb) indexCommitFromBlobs(w context.Context,
-	id IndexCommitsForSearchCursor) error {
+	id commitsearch.IndexCursor) error {
 	// Only repairs a row holding a version that no commit has.
 	const deleteIndexedCommitRows = false
 	if deleteIndexedCommitRows {

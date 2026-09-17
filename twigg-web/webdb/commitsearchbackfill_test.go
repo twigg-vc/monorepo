@@ -2,6 +2,7 @@ package webdb
 
 import (
 	"context"
+	"monorepo/twigg-web/commitsearch"
 	"monorepo/twigg/commit"
 	"testing"
 )
@@ -39,7 +40,7 @@ func Test_IndexCommitsForSearch_IndexesEveryCommitInBatches(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var cursor IndexCommitsForSearchCursor
+	var cursor commitsearch.IndexCursor
 	var done bool
 	var batches int
 	for {

@@ -5,6 +5,7 @@ import (
 	"io"
 	"monorepo/base/iterator"
 	"monorepo/data/blobdb"
+	"monorepo/twigg-web/commitsearch"
 	"monorepo/twigg-web/education"
 	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/notification"
@@ -315,20 +316,13 @@ func (db WebDb) GetReviewData(ctx context.Context, repoId uint64, cId commit.Loc
 	return db.db.GetReviewData(ctx, repoId, cId)
 }
 
-// How far a commit search index sweep got. Its zero value starts a new
-// sweep: repo ids are autoincremented, so no commit has repo id 0.
-type IndexCommitsForSearchCursor struct {
-	RepoId   uint64
-	CommitId commit.LocalId
-}
-
 // Indexes at most limit commits for search from their blobs, starting after
 // the cursor. done is true once the sweep read the last commit.
 // Indexing a commit that is already indexed leaves the same row, so a sweep
 // can run while commits are being written.
 func (db WebDb) IndexCommitsForSearch(w context.Context,
-	after IndexCommitsForSearchCursor, limit int) (
-	next IndexCommitsForSearchCursor, done bool, err error) {
+	after commitsearch.IndexCursor, limit int) (
+	next commitsearch.IndexCursor, done bool, err error) {
 	return db.db.indexCommitsForSearch(w, after, limit)
 }
 
