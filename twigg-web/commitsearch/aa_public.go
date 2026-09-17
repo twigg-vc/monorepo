@@ -77,3 +77,13 @@ type Token struct {
 func (t Tokenizer) Parse(q string) ([]Token, error) {
 	return t.tk.Parse(q)
 }
+
+// The username that stands for whoever is searching. The caller replaces it
+// with their own, since only it knows who is logged in.
+const MeUsername = "me"
+
+// Parses what was typed in a search bar, such as `is:pending author:me queue`.
+// Returns an error whose text is meant to be shown to the user.
+func ParseQuery(repoId uint64, q string) (Filter, error) {
+	return parseQuery(repoId, q)
+}
