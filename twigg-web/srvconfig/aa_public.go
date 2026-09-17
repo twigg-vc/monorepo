@@ -59,6 +59,9 @@ type SrvConfig struct {
 	QueueRunnerSleep time.Duration
 	// Specifies how many queue tasks can run in parallel
 	QueueConcurrency int
+	// How often a batch of commits is indexed for search.
+	// 0 disables the indexer.
+	CommitSearchIndexerInterval time.Duration
 
 	// If set, db blob quota usage will not be enforced
 	DisableQuotaEnforcement bool
@@ -247,32 +250,33 @@ func LocalConfig(Port int,
 	StorageFolderAbsPath string,
 	TwiggServerKey, TrackServerUrl, TrackServerKey string) SrvConfig {
 	return SrvConfig{
-		Name:                     "local",
-		PublicUrl:                fmt.Sprintf("http://localhost:%d", Port),
-		Port:                     Port,
-		StorageFolderAbsPath:     StorageFolderAbsPath,
-		StorageBlockSize:         4 * 1024 * 1024 * 1024, // 4 GB
-		BlobStorageCacheCapacity: 1,
-		TrackServerUrl:           TrackServerUrl,
-		TrackServerKey:           TrackServerKey,
-		TwiggServerKey:           TwiggServerKey,
-		TwiggTokenSigningKey:     []byte("mock-token-sig-key"),
-		RateLimitMaxQps:          200,
-		RateLimitMaxQpsBurst:     100,
-		DisableQuotaEnforcement:  false,
-		MockAuthUser:             true,
-		StripeMode:               StripeMode_test,
-		StripeSecretKey:          GetEnvOr("TWIGG_STRIPE_SECRET_KEY", ""),
-		StripeEndpointSecret:     GetEnvOr("TWIGG_STRIPE_ENDPOINT_SECRET", ""),
-		GoogleClientId:           GetEnvOr("TWIGG_GOOGLE_CLIENT_ID", ""),
-		GoogleClientSecret:       GetEnvOr("TWIGG_GOOGLE_CLIENT_SECRET", ""),
-		MsAzureOAuthClientId:     GetEnvOr("TWIGG_MS_AZURE_CLIENT_ID", ""),
-		MsAzureOAuthClientSecret: GetEnvOr("TWIGG_MS_AZURE_CLIENT_SECRET", ""),
-		AllowPasswordLogin:       true,
-		PasswordSalt:             "salty",
-		QueueRunnerSleep:         10 * time.Second,
-		QueueConcurrency:         5,
-		AdminEmails:              []string{"aang@twigg.vc"},
+		Name:                        "local",
+		PublicUrl:                   fmt.Sprintf("http://localhost:%d", Port),
+		Port:                        Port,
+		StorageFolderAbsPath:        StorageFolderAbsPath,
+		StorageBlockSize:            4 * 1024 * 1024 * 1024, // 4 GB
+		BlobStorageCacheCapacity:    1,
+		TrackServerUrl:              TrackServerUrl,
+		TrackServerKey:              TrackServerKey,
+		TwiggServerKey:              TwiggServerKey,
+		TwiggTokenSigningKey:        []byte("mock-token-sig-key"),
+		RateLimitMaxQps:             200,
+		RateLimitMaxQpsBurst:        100,
+		DisableQuotaEnforcement:     false,
+		MockAuthUser:                true,
+		StripeMode:                  StripeMode_test,
+		StripeSecretKey:             GetEnvOr("TWIGG_STRIPE_SECRET_KEY", ""),
+		StripeEndpointSecret:        GetEnvOr("TWIGG_STRIPE_ENDPOINT_SECRET", ""),
+		GoogleClientId:              GetEnvOr("TWIGG_GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:          GetEnvOr("TWIGG_GOOGLE_CLIENT_SECRET", ""),
+		MsAzureOAuthClientId:        GetEnvOr("TWIGG_MS_AZURE_CLIENT_ID", ""),
+		MsAzureOAuthClientSecret:    GetEnvOr("TWIGG_MS_AZURE_CLIENT_SECRET", ""),
+		AllowPasswordLogin:          true,
+		PasswordSalt:                "salty",
+		QueueRunnerSleep:            10 * time.Second,
+		QueueConcurrency:            5,
+		CommitSearchIndexerInterval: 10 * time.Second,
+		AdminEmails:                 []string{"aang@twigg.vc"},
 		SeedUsers: []seed.SeedUser{
 			{
 				Username: "aang",
@@ -357,6 +361,7 @@ func HomelabConfig(Port int,
 		PasswordSalt:                      GetEnvOrDie("TWIGG_PASSWORD_SALT"),
 		QueueRunnerSleep:                  10 * time.Second,
 		QueueConcurrency:                  1,
+		CommitSearchIndexerInterval:       10 * time.Second,
 		AdminEmails: []string{
 			"andre@twigg.vc", "joao@twigg.vc", "marcos@twigg.vc"},
 	}

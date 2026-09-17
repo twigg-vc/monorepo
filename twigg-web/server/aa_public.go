@@ -38,6 +38,7 @@ import (
 	"monorepo/twigg-web/services/cansubcache"
 	"monorepo/twigg-web/services/cicdparser"
 	"monorepo/twigg-web/services/cicdpublisher"
+	"monorepo/twigg-web/services/indexer"
 	jobsservice "monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/services/keys"
 	"monorepo/twigg-web/services/memlogger"
@@ -159,6 +160,10 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 	// Create Services
 	const memLoggerInterval = 60 * time.Minute // Log memory use every 60 min
 	memLogger := memlogger.New(memLoggerInterval, mService)
+
+	const commitSearchIndexerBatchSize = 100
+	commitSearchIndexer := indexer.NewCommitSearch(sDb,
+		s.C.CommitSearchIndexerInterval, commitSearchIndexerBatchSize)
 
 	masterKey := s.C.MasterKey()
 	secretsSrv, err := secrets.NewService(sDb, masterKey)
@@ -349,6 +354,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 		panic(fmt.Sprintf("failed to start listening: %s", err))
 	}
 	memLogger.Start()
+	commitSearchIndexer.Start()
 
 	go func() {
 		log.Printf("TwiggWeb Build Version: %s\n", buildmeta.Version)
@@ -371,6 +377,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 	log.Println("Starting graceful shutdown...")
 	trackQueue.Stop()
 	memLogger.Stop()
+	commitSearchIndexer.Stop()
 	s.QueueRunner.Stop()
 
 	// --- Create a context with timeout for graceful shutdown ---
