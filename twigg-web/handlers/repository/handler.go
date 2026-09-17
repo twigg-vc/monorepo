@@ -27,7 +27,6 @@ type handler struct {
 	userSrv UserService
 }
 
-const msgPrefixToHidePendingCommit = "#ARCHIVED"
 const maxPendingCommitsPageSize = 20
 
 func (hl handler) handleGet(w http.ResponseWriter,

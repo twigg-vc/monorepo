@@ -9,7 +9,6 @@ import (
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
 	"net/http"
-	"strings"
 )
 
 // Helper that enriches the commits of one request into what the frontend
@@ -42,7 +41,7 @@ func newCommitRenderer(userSrv UserService, revSrv ReviewService,
 }
 
 func commitIsArchived(c commit.Commit) bool {
-	return strings.HasPrefix(c.Message, msgPrefixToHidePendingCommit)
+	return review.MessageIsArchived(c.Message)
 }
 
 // Renders at most pageSize commits of the iterator, skipping the ones for

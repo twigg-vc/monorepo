@@ -499,7 +499,7 @@ func TestHandleGetMorePending_FiltersHiddenMessages(t *testing.T) {
 	}
 
 	commits := []commit.Commit{
-		{L: 1, ServerL: 1, Message: msgPrefixToHidePendingCommit + " hidden"},
+		{L: 1, ServerL: 1, Message: review.ArchivedMessagePrefix + " hidden"},
 		{L: 2, ServerL: 2, Message: "visible"},
 	}
 

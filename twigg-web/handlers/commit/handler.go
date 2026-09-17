@@ -25,7 +25,6 @@ import (
 	"monorepo/twigg/server"
 	"monorepo/twigg/tree"
 	"net/http"
-	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -1340,7 +1339,7 @@ func (hl handler) handlePostSubmit(w http.ResponseWriter,
 		http.Error(w, "internal err getting c", http.StatusInternalServerError)
 		return
 	}
-	if isWipCommit(c.Message) {
+	if review.MessageIsWip(c.Message) {
 		http.Error(w, "can't submit WIP commits", http.StatusBadRequest)
 		return
 	}
@@ -1539,18 +1538,6 @@ func (hl handler) handlePostRename(w http.ResponseWriter,
 	shouldCommit = true
 	w.WriteHeader(http.StatusNoContent)
 	return
-}
-
-// isWipCommit returns true if the commit title marks the commit as WIP.
-// Same logic in the frontend.
-var wipRegex = regexp.MustCompile(`(?i)^wip($|[^a-z0-9])`)
-
-func isWipCommit(message string) bool {
-	if strings.TrimSpace(message) == "" {
-		return false
-	}
-
-	return wipRegex.MatchString(strings.TrimSpace(message))
 }
 
 func (hl handler) handlePostAddLgtm(w http.ResponseWriter,

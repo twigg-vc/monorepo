@@ -3,6 +3,19 @@ package review
 
 import "time"
 
+// The prefix a commit message gets to mark the commit as archived.
+const ArchivedMessagePrefix = archivedMessagePrefix
+
+// Same logic in the frontend's IsWipCommit.
+func MessageIsWip(message string) bool {
+	return messageIsWip(message)
+}
+
+// Same logic in the frontend's IsArchivedCommit.
+func MessageIsArchived(message string) bool {
+	return messageIsArchived(message)
+}
+
 // Data of the review of a commit
 type Data struct {
 	// Description of the commit being reviewed
