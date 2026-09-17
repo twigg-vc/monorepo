@@ -1025,13 +1025,13 @@ func TestAddReviewerMaxLimit(t *testing.T) {
 	const repoId = uint64(2)
 	const commitId = uint64(456)
 
-	originalMaxReviewers := MaxReviewers
+	originalMaxReviewers := review.MaxReviewers
 	t.Cleanup(func() {
-		MaxReviewers = originalMaxReviewers
+		review.MaxReviewers = originalMaxReviewers
 	})
-	MaxReviewers = 20
+	review.MaxReviewers = 20
 	// Fill up to MaxReviewers
-	for i := 0; i < MaxReviewers; i++ {
+	for i := 0; i < review.MaxReviewers; i++ {
 		if err := s.AddReviewer(w, quotaOwner, repoId, commitId, int64(i+1)); err != nil {
 			t.Fatalf("failed adding reviewer %d: %v", i+1, err)
 		}
@@ -1039,7 +1039,7 @@ func TestAddReviewerMaxLimit(t *testing.T) {
 
 	// Next add must fail
 	if err := s.AddReviewer(w, quotaOwner, repoId, commitId, 999999); err == nil {
-		t.Fatalf("expected error when adding reviewer past MaxReviewers=%d", MaxReviewers)
+		t.Fatalf("expected error when adding reviewer past MaxReviewers=%d", review.MaxReviewers)
 	}
 
 	d, _, err := s.GetData(w, repoId, commitId, false, 0, []string{})
@@ -1048,8 +1048,8 @@ func TestAddReviewerMaxLimit(t *testing.T) {
 	}
 	// `MaxReviewers+1` because in the service we have:
 	// That mens when len(d.ReviewersUserIds) == MaxReviewers it can be added one more reviewer
-	if len(d.ReviewersUserIds) != MaxReviewers {
-		t.Fatalf("expected %d reviewers, got %d", MaxReviewers, len(d.ReviewersUserIds))
+	if len(d.ReviewersUserIds) != review.MaxReviewers {
+		t.Fatalf("expected %d reviewers, got %d", review.MaxReviewers, len(d.ReviewersUserIds))
 	}
 }
 

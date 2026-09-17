@@ -2,6 +2,7 @@ package webdb
 
 import (
 	"context"
+	"fmt"
 	"monorepo/twigg-web/review"
 	"monorepo/twigg/commit"
 )
@@ -32,6 +33,10 @@ func (db webDb) indexCommitForSearch(w context.Context, repoId uint64,
 // The reviewers of a commit are replaced, not merged.
 func (db webDb) indexReviewForSearch(w context.Context, repoId uint64,
 	cId commit.LocalId, d review.Data) error {
+	// this never happens. just checking bc we iterate on d.ReviewersUserIds
+	if len(d.ReviewersUserIds) > review.MaxReviewers {
+		panic(fmt.Sprintf("commit has %d reviewers", len(d.ReviewersUserIds)))
+	}
 	_, err := db.s.Exec(w, `
 		INSERT INTO reviews (repoId, commitId, reviewStatus)
 		VALUES (?, ?, ?)

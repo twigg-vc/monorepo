@@ -476,8 +476,8 @@ func (s service) AddReviewer(
 		}
 	}
 
-	if len(d.ReviewersUserIds) >= MaxReviewers {
-		return fmt.Errorf("max reviewers limit (%d) reached", MaxReviewers)
+	if len(d.ReviewersUserIds) >= review.MaxReviewers {
+		return fmt.Errorf("max reviewers limit (%d) reached", review.MaxReviewers)
 	}
 
 	d.ReviewersUserIds = append(d.ReviewersUserIds, userId)

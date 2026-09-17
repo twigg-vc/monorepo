@@ -110,3 +110,5 @@ const (
 	ReviewStatus_Ready
 	ReviewStatus_Unresolved
 )
+
+var MaxReviewers = 100

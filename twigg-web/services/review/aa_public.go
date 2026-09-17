@@ -110,5 +110,3 @@ const (
 	MaxDescriptionLength = 5_000
 	MaxCommentLine       = 10_000_000
 )
-
-var MaxReviewers = 100
