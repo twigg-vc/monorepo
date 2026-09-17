@@ -1,6 +1,8 @@
 // Package commitsearch holds the entities of a commit search.
 package commitsearch
 
+import "monorepo/twigg-web/review"
+
 // Whether the search covers pending commits, submitted commits or both.
 type State string
 
@@ -28,9 +30,13 @@ type Filter struct {
 	AuthorId int64
 	// Id of a user in the commit reviewers. 0 matches any reviewer.
 	ReviewerId int64
-	State      State
-	Wip        Presence
-	Archived   Presence
+	// Only applies when HasReviewStatus is true. A submitted commit has no
+	// review status, so it only ever matches pending commits.
+	HasReviewStatus bool
+	ReviewStatus    review.ReviewStatus
+	State           State
+	Wip             Presence
+	Archived        Presence
 }
 
 // Returns a filter that matches every non-archived commit of a repo.

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"monorepo/twigg-web/commitsearch"
+	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/services/gobencoding"
 	"monorepo/twigg/commit"
 	"strings"
@@ -64,6 +65,15 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 			WHERE rr.repoId = s.repoId AND rr.commitId = s.commitId
 				AND rr.userId = ?)`)
 		args = append(args, f.ReviewerId)
+	}
+	if f.HasReviewStatus {
+		// A commit nobody reviewed yet has no reviews row, and its status is
+		// the zero value: ReviewStatus_MissingLgtm.
+		q.WriteString(` AND s.isSubmitted = 0 AND COALESCE((
+			SELECT r.reviewStatus FROM reviews r
+			WHERE r.repoId = s.repoId AND r.commitId = s.commitId), ?) = ?`)
+		args = append(args, uint32(review.ReviewStatus_MissingLgtm),
+			uint32(f.ReviewStatus))
 	}
 	if f.State == commitsearch.StatePending {
 		q.WriteString(` AND s.isSubmitted = 0`)
