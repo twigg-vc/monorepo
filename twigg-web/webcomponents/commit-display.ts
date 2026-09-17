@@ -1141,7 +1141,10 @@ private renderRenameToWipBtn(message: string): TemplateResult {
             th.CommitVersion, -1)
     }
 
-    private async onSubmitClicked(){
+    private onSubmitClicked(){
+        this.submit()
+    }
+    private async submit(){
         // Note: dont reset isLoadingSubmitOrRollbackBtn on success. Else we 
         // experience flickering bc we redirect the page on submit.
         // Just set it to false on errors
