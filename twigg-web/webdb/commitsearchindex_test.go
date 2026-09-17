@@ -16,7 +16,6 @@ type indexedCommit struct {
 	authorId           int64
 	isSubmitted        bool
 	createdOnUnixMilli int64
-	message            string
 	isWip              bool
 	isArchived         bool
 }
@@ -42,10 +41,10 @@ func readIndexedCommit(t *testing.T, db WebDb, w context.Context,
 	var c indexedCommit
 	err := db.db.s.QueryRow(w, `
 		SELECT commitVersion, authorId, isSubmitted, createdOnUnixMilli,
-			message, isWip, isArchived
+			isWip, isArchived
 		FROM twigg_commit_search WHERE repoId = ? AND commitId = ?
 	`, indexedRepoId, cId).Scan(&c.version, &c.authorId, &c.isSubmitted,
-		&c.createdOnUnixMilli, &c.message, &c.isWip, &c.isArchived)
+		&c.createdOnUnixMilli, &c.isWip, &c.isArchived)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +67,6 @@ func Test_SetCommit_IndexesTheSearchableColumns(t *testing.T) {
 	want := indexedCommit{
 		version: 0, authorId: 3, isSubmitted: true,
 		createdOnUnixMilli: createdOn.UnixMilli(),
-		message:            "wip: refactor the queue",
 		isWip:              true, isArchived: false,
 	}
 	if got != want {
@@ -91,8 +89,72 @@ func Test_SetCommit_IgnoresAnOlderCommitVersion(t *testing.T) {
 	}
 
 	got := readIndexedCommit(t, db, w, 1)
-	if got.version != 2 || got.message != "newer" {
-		t.Fatalf("indexed v%d %q, want v2 \"newer\"", got.version, got.message)
+	if got.version != 2 {
+		t.Fatalf("indexed v%d, want v2", got.version)
+	}
+	text := readIndexedText(t, db, w, 1)
+	if !reflect.DeepEqual(text, []string{"older", "newer"}) {
+		t.Fatalf("indexed text is %v, want [older newer]", text)
+	}
+}
+
+func readIndexedText(t *testing.T, db WebDb, w context.Context,
+	cId commit.LocalId) []string {
+	t.Helper()
+	rows, err := db.db.s.Query(w, `
+		SELECT message FROM commit_search_text
+		WHERE repoId = ? AND commitId = ? ORDER BY commitVersion
+	`, indexedRepoId, cId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	messages := []string{}
+	for rows.Next() {
+		var message string
+		if err := rows.Scan(&message); err != nil {
+			t.Fatal(err)
+		}
+		messages = append(messages, message)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return messages
+}
+
+func Test_SetCommit_IndexesTheMessageTextOfEveryVersion(t *testing.T) {
+	db, w := newIndexTestDb(t)
+
+	for _, c := range []commit.Commit{
+		{L: 1, Version: 0, AuthorUserId: 3, Message: "first"},
+		{L: 1, Version: 1, AuthorUserId: 3, Message: "second"},
+	} {
+		if err := db.SetCommit(w, "owner", indexedRepoId, c); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	got := readIndexedText(t, db, w, 1)
+	if !reflect.DeepEqual(got, []string{"first", "second"}) {
+		t.Fatalf("indexed text is %v, want [first second]", got)
+	}
+}
+
+func Test_SetCommit_IndexesTheMessageTextOfAVersionOnce(t *testing.T) {
+	db, w := newIndexTestDb(t)
+
+	for range 2 {
+		err := db.SetCommit(w, "owner", indexedRepoId,
+			commit.Commit{L: 1, Version: 0, AuthorUserId: 3, Message: "only"})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	got := readIndexedText(t, db, w, 1)
+	if !reflect.DeepEqual(got, []string{"only"}) {
+		t.Fatalf("indexed text is %v, want [only]", got)
 	}
 }
 

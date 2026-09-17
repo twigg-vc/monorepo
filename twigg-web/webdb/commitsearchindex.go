@@ -13,20 +13,40 @@ func (db webDb) indexCommitForSearch(w context.Context, repoId uint64,
 	_, err := db.s.Exec(w, `
 		INSERT INTO twigg_commit_search
 			(repoId, commitId, commitVersion, authorId, isSubmitted,
-			createdOnUnixMilli, message, isWip, isArchived)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			createdOnUnixMilli, isWip, isArchived)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(repoId, commitId) DO UPDATE SET
 			commitVersion = EXCLUDED.commitVersion,
 			authorId = EXCLUDED.authorId,
 			isSubmitted = EXCLUDED.isSubmitted,
 			createdOnUnixMilli = EXCLUDED.createdOnUnixMilli,
-			message = EXCLUDED.message,
 			isWip = EXCLUDED.isWip,
 			isArchived = EXCLUDED.isArchived
 		WHERE EXCLUDED.commitVersion >= twigg_commit_search.commitVersion
 	`, repoId, c.L, c.Version, c.AuthorUserId, c.IsSubmitted,
-		c.CreatedOn.UnixMilli(), c.Message,
+		c.CreatedOn.UnixMilli(),
 		review.MessageIsWip(c.Message), review.MessageIsArchived(c.Message))
+	if err != nil {
+		return err
+	}
+	return db.indexCommitTextForSearch(w, repoId, c.L, c.Version, c.Message)
+}
+
+// The message of a commit is only stored in the text index, one row per
+// version so that the message of an older version is searchable too.
+func (db webDb) indexCommitTextForSearch(w context.Context, repoId uint64,
+	cId commit.LocalId, cVersion uint64, message string) error {
+	_, err := db.s.Exec(w, `
+		DELETE FROM commit_search_text
+		WHERE repoId = ? AND commitId = ? AND commitVersion = ?
+	`, repoId, cId, cVersion)
+	if err != nil {
+		return err
+	}
+	_, err = db.s.Exec(w, `
+		INSERT INTO commit_search_text (message, repoId, commitId, commitVersion)
+		VALUES (?, ?, ?, ?)
+	`, message, repoId, cId, cVersion)
 	return err
 }
 
