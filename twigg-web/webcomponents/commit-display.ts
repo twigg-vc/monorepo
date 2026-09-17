@@ -284,6 +284,7 @@ export class CommitDisplay extends LitElement {
         ${this.renderTabs()}
         
         ${this.renderRollbackModal()}
+        ${this.renderSubmitCiModal()}
 
         ${this.renderAddReviewerModal()}
 
@@ -1194,6 +1195,11 @@ private renderRenameToWipBtn(message: string): TemplateResult {
     }
 
     private onSubmitClicked(){
+        const verdict = this.getLatestCiSummary().Verdict
+        if (verdict == "failed" || verdict == "unfinished") {
+            this.showSubmitCiModal = true
+            return
+        }
         this.submit()
     }
     private async submit(){
