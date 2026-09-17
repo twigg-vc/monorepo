@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"monorepo/twigg-web/cacheheaders"
-	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/routes"
 	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
@@ -39,8 +38,8 @@ func (hl handler) handleGet(w http.ResponseWriter,
 			http.StatusInternalServerError)
 		return
 	}
-	submittedFrontendCommits, ok := hl.getSubmittedCommits(
-		topComit.ServerL, topComit, w, r, dbRead)
+	cr := newCommitRenderer(hl.userSrv, hl.revSrv, r, topComit.ServerL, dbRead, w)
+	submittedFrontendCommits, ok := hl.getSubmittedCommits(cr, topComit)
 	if !ok {
 		return
 	}
@@ -67,7 +66,7 @@ func (hl handler) handleGet(w http.ResponseWriter,
 		if strings.HasPrefix(c.Message, msgPrefixToHidePendingCommit) {
 			continue
 		}
-		fc, ok := hl.getFrontendCommit(topComit.ServerL, c, dbRead, w, r)
+		fc, ok := cr.render(c)
 		if !ok {
 			return
 		}
@@ -112,7 +111,8 @@ func (hl handler) handleGetMoreSubmitted(w http.ResponseWriter,
 		http.Error(w, "failed to read commit", http.StatusBadRequest)
 		return
 	}
-	submitted, ok := hl.getSubmittedCommits(topComit.ServerL, c, w, r, dbRead)
+	cr := newCommitRenderer(hl.userSrv, hl.revSrv, r, topComit.ServerL, dbRead, w)
+	submitted, ok := hl.getSubmittedCommits(cr, c)
 	if !ok {
 		return
 	}
@@ -148,6 +148,7 @@ func (hl handler) handleGetMorePending(w http.ResponseWriter, r wrappers.UserWit
 		http.Error(w, "failed to get pending commits", http.StatusInternalServerError)
 		return
 	}
+	cr := newCommitRenderer(hl.userSrv, hl.revSrv, r, topCommit.ServerL, dbRead, w)
 	pendingFrontendCommits := make([]twiggwc.FrontendCommit, 0, maxPendingCommitsPageSize)
 	var haveMorePendingCommitsToFetch bool
 	for pending.Next() {
@@ -164,7 +165,7 @@ func (hl handler) handleGetMorePending(w http.ResponseWriter, r wrappers.UserWit
 		if strings.HasPrefix(c.Message, msgPrefixToHidePendingCommit) {
 			continue
 		}
-		fc, ok := hl.getFrontendCommit(topCommit.ServerL, c, dbRead, w, r)
+		fc, ok := cr.render(c)
 		if !ok {
 			return
 		}
@@ -253,6 +254,7 @@ func (hl handler) HandleSearchCommits(w http.ResponseWriter,
 		http.Error(w, "failed to get repo top commit", http.StatusInternalServerError)
 		return
 	}
+	cr := newCommitRenderer(hl.userSrv, hl.revSrv, r, topComit.ServerL, dbRead, w)
 	var commits []twiggwc.FrontendCommit
 	if hasCid {
 		var c commit.Commit
@@ -271,14 +273,14 @@ func (hl handler) HandleSearchCommits(w http.ResponseWriter,
 				return
 			}
 		}
-		fc, ok := hl.getFrontendCommit(topComit.ServerL, c, dbRead, w, r)
+		fc, ok := cr.render(c)
 		if !ok {
 			return
 		}
 		commits = []twiggwc.FrontendCommit{fc}
 	} else {
 		var ok bool
-		commits, ok = hl.getSubmittedCommits(topComit.ServerL, topComit, w, r, dbRead)
+		commits, ok = hl.getSubmittedCommits(cr, topComit)
 		if !ok {
 			return
 		}
@@ -335,56 +337,11 @@ func (hl handler) parseHandleSearchCommitsQuery(w http.ResponseWriter,
 	return true, id, false, 0, true
 }
 
-// Helper to read the additional data required by the frontend commit.
-// Always returns ReviewStatus_Ready status for submitted commits.
-// On any error, writes an error to the response and returns ok=false.
-func (hl handler) getFrontendCommit(repoTopServerId commit.LocalId,
-	c commit.Commit,
-	dbRead context.Context, w http.ResponseWriter,
-	r wrappers.UserWithReadPermissionMuxRequest) (fc twiggwc.FrontendCommit, ok bool) {
-	var commitAuthorUsername string
-	if c.L == 0 {
-		commitAuthorUsername = ""
-	} else {
-		commitAuthor, _, err := hl.userSrv.Get(dbRead, c.AuthorUserId)
-		if err != nil {
-			http.Error(w, "failed to get commit author",
-				http.StatusInternalServerError)
-			return
-		}
-		commitAuthorUsername = commitAuthor.Username
-	}
-	var revStatus review.ReviewStatus
-	if c.IsSubmitted {
-		revStatus = review.ReviewStatus_Ready
-	} else {
-		// isNotFound errors are ignored bc they mean the data was not saved yet.
-		// The returned reviewData will have a valid review status.
-		supremeLeaders, err := hl.revSrv.ResolveSupremeLeaders(dbRead, r.RepoOwnerUsr)
-		if err != nil {
-			http.Error(w, "internal err resolving supreme leaders", http.StatusInternalServerError)
-			return
-		}
-		latestCommitReviewData, isNotFoundErr, err := hl.revSrv.GetData(
-			dbRead, r.Repo.Id, c.L,
-			/*checkOwners=*/ true,
-			/*cIdToCheckOwners*/ repoTopServerId,
-			supremeLeaders)
-		if err != nil && !isNotFoundErr {
-			http.Error(w, "failed to get review data", http.StatusInternalServerError)
-			return
-		}
-		revStatus = latestCommitReviewData.ReviewStatus
-	}
-	ok = true
-	return twiggwc.CommitToFrontend(c, commitAuthorUsername, revStatus), true
-}
-
 // Helper to get submitted commits startingAt (inclusive)
-func (hl handler) getSubmittedCommits(repoTopServerId commit.LocalId, startingAt commit.Commit, w http.ResponseWriter,
-	r wrappers.UserWithReadPermissionMuxRequest, dbRead context.Context) (submittedFrontendCommits []twiggwc.FrontendCommit, ok bool) {
+func (hl handler) getSubmittedCommits(cr *commitRenderer, startingAt commit.Commit) (
+	submittedFrontendCommits []twiggwc.FrontendCommit, ok bool) {
 	const maxSubmittedCommitsToShow = 10
-	fc, ok := hl.getFrontendCommit(repoTopServerId, startingAt, dbRead, w, r)
+	fc, ok := cr.render(startingAt)
 	if !ok {
 		return
 	}
@@ -395,16 +352,17 @@ func (hl handler) getSubmittedCommits(repoTopServerId commit.LocalId, startingAt
 		var c commit.Commit
 		var err error
 		c, err = hl.rSrv.GetRepoCommit(
-			dbRead,
-			r.Repo.Id,
+			cr.dbRead,
+			cr.r.Repo.Id,
 			submittedFrontendCommits[len(submittedFrontendCommits)-1].ParentL,
 		)
 		if err != nil {
-			http.Error(w, "failed to get submitted commit",
+			log.Printf("failed to get submitted commit: %s", err)
+			http.Error(cr.w, "failed to get submitted commit",
 				http.StatusInternalServerError)
 			return
 		}
-		fc, ok = hl.getFrontendCommit(repoTopServerId, c, dbRead, w, r)
+		fc, ok = cr.render(c)
 		if !ok {
 			return
 		}
