@@ -7,7 +7,14 @@ import (
 
 const maxQueryLength = 500
 
-var queryTokenizer = NewTokenizer(nil, maxQueryLength)
+const (
+	keyAuthor   = "author"
+	keyReviewer = "reviewer"
+	keyMessage  = "message"
+)
+
+var queryTokenizer = NewTokenizer(
+	[]string{keyAuthor, keyReviewer, keyMessage}, maxQueryLength)
 
 func parseQuery(repoId uint64, q string) (f Filter, err error) {
 	f = NewFilter(repoId)
@@ -20,10 +27,29 @@ func parseQuery(repoId uint64, q string) (f Filter, err error) {
 		if t.IsNegated {
 			return f, notExcludableErr(t.Value)
 		}
-		words = append(words, t.Value)
+		if t.Key == "" {
+			words = append(words, t.Value)
+			continue
+		}
+		applyTerm(&f, &words, t)
 	}
 	f.Message = strings.Join(words, " ")
 	return f, nil
+}
+
+// A term given twice keeps the last value, which is what a search bar that
+// appends a term to what is already written needs.
+func applyTerm(f *Filter, words *[]string, t Token) {
+	switch t.Key {
+	case keyMessage:
+		*words = append(*words, t.Value)
+	case keyAuthor:
+		f.AuthorUsername = t.Value
+	case keyReviewer:
+		f.ReviewerUsername = t.Value
+	default:
+		panic(fmt.Sprintf("the tokenizer read the unknown key %q", t.Key))
+	}
 }
 
 func notExcludableErr(what string) error {
