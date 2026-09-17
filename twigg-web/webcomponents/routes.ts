@@ -127,6 +127,15 @@ export function PathToSearchCommits(owner: string, repoName: string,
 }
 
 
+export function PathToCommitSearch(owner: string, repoName: string,
+    query: string, cursor: string): string {
+    const params = new URLSearchParams({ q: query })
+    if (cursor !== "") {
+        params.set("cursor", cursor)
+    }
+    return `${UrlToRepo(owner, repoName)}/commit-search?${params.toString()}`
+}
+
 export function PathToRepoSettings(
     repoOwnerName: string, repoDisplayName: string): string{
     return `${UrlToRepo(repoOwnerName, repoDisplayName)}/settings`
