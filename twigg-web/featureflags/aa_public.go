@@ -34,7 +34,7 @@ func EnabledOutsideProd(configName string) bool {
 }
 
 func EnabledForReposOfTwiggers(repoOwnerUsername string) bool {
-	return repoOwnerUsername == "andre" || repoOwnerUsername == "joao" || repoOwnerUsername == "marlon"
+	return repoOwnerUsername == "twigg" || repoOwnerUsername == "andre" || repoOwnerUsername == "joao" || repoOwnerUsername == "marlon"
 }
 func EnabledForTwiggers(currentUsername string) bool {
 	return currentUsername == "andre" || currentUsername == "joao" || currentUsername == "marlon"
