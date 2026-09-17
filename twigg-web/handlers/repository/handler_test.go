@@ -188,7 +188,7 @@ func TestHandleGet_SupremeLeadersPassedToGetData(t *testing.T) {
 		t.Fatalf("expected supreme leaders [alice bob] to be passed to GetData, got %v", capturedLeaders)
 	}
 }
-func TestHandleSearchCommitsInvalidQueries(t *testing.T) {
+func TestHandleGetCommitByIdInvalidQueries(t *testing.T) {
 	repoS := repoServiceMock{}
 	revS := reviewServiceMock{}
 	userS := userServiceMock{}
@@ -200,7 +200,7 @@ func TestHandleSearchCommitsInvalidQueries(t *testing.T) {
 		q.Set(routes.RepoSearchCommitsSeachQueryQueryParamName, searchQuery)
 		pathValues := map[string]string{}
 		req := newMockReq(pathValues, q)
-		h.HandleSearchCommits(w, req, nil)
+		h.handleGetCommitById(w, req, nil)
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("expected bad req got %d", w.Code)
 		}
@@ -213,7 +213,7 @@ func TestHandleSearchCommitsInvalidQueries(t *testing.T) {
 	checkBadQuery("1v-9")
 }
 
-func TestHandleSearchCommitsGetsLatest(t *testing.T) {
+func TestHandleGetCommitByIdGetsLatest(t *testing.T) {
 	repoS := &repoServiceMock{}
 	revS := &reviewServiceMock{}
 	userS := &userServiceMock{}
@@ -281,7 +281,7 @@ func TestHandleSearchCommitsGetsLatest(t *testing.T) {
 		q.Set(routes.RepoSearchCommitsSeachQueryQueryParamName, query)
 		pathValues := map[string]string{}
 		req := newMockReq(pathValues, q)
-		h.HandleSearchCommits(w, req, nil)
+		h.handleGetCommitById(w, req, nil)
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected ok req got %d", w.Code)
 		}

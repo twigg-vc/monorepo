@@ -23,7 +23,7 @@ func AddHandlers(
 	readMux.HandleFuncR("GET "+routes.RepoLoadMorePending,
 		h.handleGetMorePending)
 	readMux.HandleFuncR("GET "+routes.RepoSearchCommitsPattern,
-		h.HandleSearchCommits)
+		h.handleGetCommitById)
 	readMux.HandleFuncR("GET "+routes.RepoTwiggDocPattern,
 		h.handleGetTwiggDoc)
 }

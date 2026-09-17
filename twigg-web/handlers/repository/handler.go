@@ -198,9 +198,9 @@ func (hl handler) handleGetTwiggDoc(w http.ResponseWriter,
 	_ = hl.rSrv.GetRepoFile(dbRead, r.Repo.Id, targetCommit, filePath, w)
 }
 
-func (hl handler) HandleSearchCommits(w http.ResponseWriter,
+func (hl handler) handleGetCommitById(w http.ResponseWriter,
 	r wrappers.UserWithReadPermissionMuxRequest, dbRead context.Context) {
-	hasCid, cId, hasCv, cV, ok := hl.parseHandleSearchCommitsQuery(w, r)
+	hasCid, cId, hasCv, cV, ok := hl.parseGetCommitByIdQuery(w, r)
 	if !ok {
 		return
 	}
@@ -259,9 +259,9 @@ func (hl handler) HandleSearchCommits(w http.ResponseWriter,
 // (?P<id>\d+)   -> Required digits for Commit ID
 // (?:v(?P<v>\d+))? -> Optional 'v' followed by digits for Version
 // $             -> End of string
-var searchCommitQueryRegex = regexp.MustCompile(`^(?:c/|c)?(?P<id>\d+)(?:v(?P<v>\d+))?$`)
+var commitIdQueryRegex = regexp.MustCompile(`^(?:c/|c)?(?P<id>\d+)(?:v(?P<v>\d+))?$`)
 
-func (hl handler) parseHandleSearchCommitsQuery(w http.ResponseWriter,
+func (hl handler) parseGetCommitByIdQuery(w http.ResponseWriter,
 	r wrappers.UserWithReadPermissionMuxRequest) (
 	hasCommitId bool, commitId uint64, hasCommitVersion bool, commitVersion uint64, ok bool) {
 
@@ -269,7 +269,7 @@ func (hl handler) parseHandleSearchCommitsQuery(w http.ResponseWriter,
 	if query == "" {
 		return false, 0, false, 0, true
 	}
-	matches := searchCommitQueryRegex.FindStringSubmatch(query)
+	matches := commitIdQueryRegex.FindStringSubmatch(query)
 	if matches == nil {
 		http.Error(w, fmt.Sprintf("invalid search format: %s", query), http.StatusBadRequest)
 		return false, 0, false, 0, false
