@@ -22,9 +22,10 @@ import (
 var docsify embed.FS
 
 type handler struct {
-	rSrv    RepoService
-	revSrv  ReviewService
-	userSrv UserService
+	rSrv     RepoService
+	revSrv   ReviewService
+	userSrv  UserService
+	searchDb CommitSearchDb
 }
 
 const maxPendingCommitsPageSize = 20

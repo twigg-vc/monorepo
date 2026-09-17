@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"monorepo/base/iterator"
+	"monorepo/twigg-web/commitsearch"
 	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/user"
@@ -15,8 +16,9 @@ func AddHandlers(
 	rSrv RepoService,
 	revSrv ReviewService,
 	userSrv UserService,
+	searchDb CommitSearchDb,
 	readMux wrappers.UserWithReadPermissionMux) {
-	h := NewHandler(rSrv, revSrv, userSrv)
+	h := NewHandler(rSrv, revSrv, userSrv, searchDb)
 	readMux.HandleFuncR("GET "+routes.RepoPattern, h.handleGet)
 	readMux.HandleFuncR("GET "+routes.RepoLoadMoreSubmitted,
 		h.handleGetMoreSubmitted)
@@ -30,12 +32,19 @@ func AddHandlers(
 
 func NewHandler(rSrv RepoService,
 	revSrv ReviewService,
-	userSrv UserService) handler {
+	userSrv UserService,
+	searchDb CommitSearchDb) handler {
 	return handler{
-		rSrv:    rSrv,
-		revSrv:  revSrv,
-		userSrv: userSrv,
+		rSrv:     rSrv,
+		revSrv:   revSrv,
+		userSrv:  userSrv,
+		searchDb: searchDb,
 	}
+}
+
+type CommitSearchDb interface {
+	SearchCommits(r context.Context, f commitsearch.Filter, cursor string,
+		limit int) (commits []commit.Commit, nextCursor string, err error)
 }
 
 type RepoService interface {

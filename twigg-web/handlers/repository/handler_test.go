@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"monorepo/base/iterator"
+	"monorepo/twigg-web/commitsearch"
 	"monorepo/twigg-web/featureflags"
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/review"
@@ -26,7 +27,7 @@ func TestHandleGet_RendersHaveMorePendingCommits(t *testing.T) {
 	repoS := &repoServiceMock{}
 	revS := &reviewServiceMock{}
 	userS := &userServiceMock{}
-	h := NewHandler(repoS, revS, userS)
+	h := NewHandler(repoS, revS, userS, &commitSearchDbMock{})
 
 	// Top commit
 	repoS.getRepoTopCommit = func() (commit.Commit, error) {
@@ -72,7 +73,7 @@ func TestHandleGet_DoesNotRendersHaveMorePendingCommits(t *testing.T) {
 	repoS := &repoServiceMock{}
 	revS := &reviewServiceMock{}
 	userS := &userServiceMock{}
-	h := NewHandler(repoS, revS, userS)
+	h := NewHandler(repoS, revS, userS, &commitSearchDbMock{})
 
 	// Top commit
 	repoS.getRepoTopCommit = func() (commit.Commit, error) {
@@ -118,7 +119,7 @@ func TestHandleGet_NoMorePendingCommits(t *testing.T) {
 	repoS := &repoServiceMock{}
 	revS := &reviewServiceMock{}
 	userS := &userServiceMock{}
-	h := NewHandler(repoS, revS, userS)
+	h := NewHandler(repoS, revS, userS, &commitSearchDbMock{})
 
 	repoS.getRepoTopCommit = func() (commit.Commit, error) {
 		return commit.Commit{ServerL: 10}, nil
@@ -155,7 +156,7 @@ func TestHandleGet_SupremeLeadersPassedToGetData(t *testing.T) {
 	repoS := &repoServiceMock{}
 	revS := &reviewServiceMock{}
 	userS := &userServiceMock{}
-	h := NewHandler(repoS, revS, userS)
+	h := NewHandler(repoS, revS, userS, &commitSearchDbMock{})
 
 	repoS.getRepoTopCommit = func() (commit.Commit, error) {
 		return commit.Commit{}, nil
@@ -192,7 +193,7 @@ func TestHandleGetCommitByIdInvalidQueries(t *testing.T) {
 	repoS := repoServiceMock{}
 	revS := reviewServiceMock{}
 	userS := userServiceMock{}
-	h := NewHandler(repoS, revS, userS)
+	h := NewHandler(repoS, revS, userS, &commitSearchDbMock{})
 
 	checkBadQuery := func(searchQuery string) {
 		w := httptest.NewRecorder()
@@ -217,7 +218,7 @@ func TestHandleGetCommitByIdGetsLatest(t *testing.T) {
 	repoS := &repoServiceMock{}
 	revS := &reviewServiceMock{}
 	userS := &userServiceMock{}
-	h := NewHandler(repoS, revS, userS)
+	h := NewHandler(repoS, revS, userS, &commitSearchDbMock{})
 
 	// Mock:
 	// c2v0* c2v1
@@ -363,7 +364,7 @@ func TestHandleGetMorePending_BadAfterId(t *testing.T) {
 	repoS := &repoServiceMock{}
 	revS := &reviewServiceMock{}
 	userS := &userServiceMock{}
-	h := NewHandler(repoS, revS, userS)
+	h := NewHandler(repoS, revS, userS, &commitSearchDbMock{})
 
 	w := httptest.NewRecorder()
 	q := url.Values{}
@@ -383,7 +384,7 @@ func TestHandleGetMorePending_GetTopCommitError(t *testing.T) {
 			return commit.Commit{}, errors.New("boom!")
 		},
 	}
-	h := NewHandler(repoS, reviewServiceMock{}, userServiceMock{})
+	h := NewHandler(repoS, reviewServiceMock{}, userServiceMock{}, &commitSearchDbMock{})
 
 	w := httptest.NewRecorder()
 	q := url.Values{}
@@ -406,7 +407,7 @@ func TestHandleGetMorePending_GetPendingError(t *testing.T) {
 			return nil, errors.New("krakatoa")
 		},
 	}
-	h := NewHandler(repoS, reviewServiceMock{}, userServiceMock{})
+	h := NewHandler(repoS, reviewServiceMock{}, userServiceMock{}, &commitSearchDbMock{})
 
 	w := httptest.NewRecorder()
 	q := url.Values{}
@@ -424,7 +425,7 @@ func TestHandleGetMorePending_Success(t *testing.T) {
 	repoS := &repoServiceMock{}
 	revS := &reviewServiceMock{}
 	userS := &userServiceMock{}
-	h := NewHandler(repoS, revS, userS)
+	h := NewHandler(repoS, revS, userS, &commitSearchDbMock{})
 
 	repoS.getRepoTopCommit = func() (commit.Commit, error) {
 		return commit.Commit{ServerL: 10}, nil
@@ -492,7 +493,7 @@ func TestHandleGetMorePending_FiltersHiddenMessages(t *testing.T) {
 	repoS := &repoServiceMock{}
 	revS := &reviewServiceMock{}
 	userS := &userServiceMock{}
-	h := NewHandler(repoS, revS, userS)
+	h := NewHandler(repoS, revS, userS, &commitSearchDbMock{})
 
 	repoS.getRepoTopCommit = func() (commit.Commit, error) {
 		return commit.Commit{ServerL: 10}, nil
@@ -542,7 +543,7 @@ func TestHandleGetMorePending_HaveMorePendingCommitsToFetchTrue(t *testing.T) {
 	repoS := &repoServiceMock{}
 	revS := &reviewServiceMock{}
 	userS := &userServiceMock{}
-	h := NewHandler(repoS, revS, userS)
+	h := NewHandler(repoS, revS, userS, &commitSearchDbMock{})
 
 	repoS.getRepoTopCommit = func() (commit.Commit, error) {
 		return commit.Commit{ServerL: 100}, nil
@@ -601,7 +602,7 @@ func TestHandleGetMorePending_HaveMorePendingCommitsToFetchFalse(t *testing.T) {
 	repoS := &repoServiceMock{}
 	revS := &reviewServiceMock{}
 	userS := &userServiceMock{}
-	h := NewHandler(repoS, revS, userS)
+	h := NewHandler(repoS, revS, userS, &commitSearchDbMock{})
 
 	repoS.getRepoTopCommit = func() (commit.Commit, error) {
 		return commit.Commit{ServerL: 100}, nil
@@ -660,7 +661,7 @@ func TestHandleGetMorePending_IteratorError(t *testing.T) {
 	repoS := &repoServiceMock{}
 	userS := &userServiceMock{}
 	revS := &reviewServiceMock{}
-	h := NewHandler(repoS, revS, userS)
+	h := NewHandler(repoS, revS, userS, &commitSearchDbMock{})
 
 	userS.get = func() (u user.User, isNotFoundErr bool, err error) {
 		return user.User{Username: "me"}, false, nil
@@ -749,6 +750,17 @@ func (m reviewServiceMock) GetData(r context.Context, repoId uint64, cId commit.
 
 func (m reviewServiceMock) ResolveSupremeLeaders(db context.Context, ownerUsr user.User) ([]string, error) {
 	return m.resolveSupremeLeaders(ownerUsr)
+}
+
+type commitSearchDbMock struct {
+	searchCommits func(f commitsearch.Filter, cursor string, limit int) (
+		commits []commit.Commit, nextCursor string, err error)
+}
+
+func (m *commitSearchDbMock) SearchCommits(r context.Context,
+	f commitsearch.Filter, cursor string, limit int) (
+	[]commit.Commit, string, error) {
+	return m.searchCommits(f, cursor, limit)
 }
 
 type userServiceMock struct {

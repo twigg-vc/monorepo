@@ -322,7 +322,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 	}
 	newrepo.AddHandlers(canCreateRepo, rSrv, sDb, userWithSubMux)
 	reposettings.AddHandlers(userRepoMux, cliKeyAuthMux, userSrv, sDb, rSrv, s.QueueRunner, mirrorSrv, secretsSrv)
-	repository.AddHandlers(rSrv, revSrv, userSrv, userWithReadPermMux)
+	repository.AddHandlers(rSrv, revSrv, userSrv, sDb, userWithReadPermMux)
 	twigg.AddHandlers(sDb, userSrv, rSrv, ciQueue, s.mux, s.C.Name, tokenSigner, nil)
 	commit.AddHandlers(rt, sDb, rSrv, revSrv, userSrv, jobsService,
 		ciQueue, ciCdFileParser, trackClient, userRepoMux, userWithReadPermMux,
