@@ -26,10 +26,12 @@ const (
 type Filter struct {
 	RepoId  uint64
 	Message string
-	// Id of the commit author. 0 matches any author.
-	AuthorId int64
-	// Id of a user in the commit reviewers. 0 matches any reviewer.
-	ReviewerId int64
+	// Username of the commit author. Empty matches any author, and a
+	// username nobody has matches no commit.
+	AuthorUsername string
+	// Username of a user in the commit reviewers. Empty matches any
+	// reviewer, and a username nobody has matches no commit.
+	ReviewerUsername string
 	// Only applies when HasReviewStatus is true. A submitted commit has no
 	// review status, so it only ever matches pending commits.
 	HasReviewStatus bool

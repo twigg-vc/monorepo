@@ -55,16 +55,18 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 		}
 	}
 
-	if f.AuthorId != 0 {
-		q.WriteString(` AND s.authorId = ?`)
-		args = append(args, f.AuthorId)
+	if f.AuthorUsername != "" {
+		q.WriteString(` AND s.authorId = (
+			SELECT u.id FROM users2 u WHERE u.username = ?)`)
+		args = append(args, f.AuthorUsername)
 	}
-	if f.ReviewerId != 0 {
+	if f.ReviewerUsername != "" {
 		q.WriteString(` AND EXISTS (
 			SELECT 1 FROM review_reviewers rr
 			WHERE rr.repoId = s.repoId AND rr.commitId = s.commitId
-				AND rr.userId = ?)`)
-		args = append(args, f.ReviewerId)
+				AND rr.userId = (
+					SELECT u.id FROM users2 u WHERE u.username = ?))`)
+		args = append(args, f.ReviewerUsername)
 	}
 	if f.HasReviewStatus {
 		// A commit nobody reviewed yet has no reviews row, and its status is
