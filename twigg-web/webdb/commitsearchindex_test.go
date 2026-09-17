@@ -2,7 +2,9 @@ package webdb
 
 import (
 	"context"
+	"monorepo/twigg-web/review"
 	"monorepo/twigg/commit"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -91,5 +93,78 @@ func Test_SetCommit_IgnoresAnOlderCommitVersion(t *testing.T) {
 	got := readIndexedCommit(t, db, w, 1)
 	if got.version != 2 || got.message != "newer" {
 		t.Fatalf("indexed v%d %q, want v2 \"newer\"", got.version, got.message)
+	}
+}
+
+func readIndexedReview(t *testing.T, db WebDb, w context.Context,
+	cId commit.LocalId) (reviewStatus uint32, reviewerIds []int64) {
+	t.Helper()
+	err := db.db.s.QueryRow(w, `
+		SELECT reviewStatus FROM reviews WHERE repoId = ? AND commitId = ?
+	`, indexedRepoId, cId).Scan(&reviewStatus)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := db.db.s.Query(w, `
+		SELECT userId FROM review_reviewers
+		WHERE repoId = ? AND commitId = ? ORDER BY userId
+	`, indexedRepoId, cId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var userId int64
+		if err := rows.Scan(&userId); err != nil {
+			t.Fatal(err)
+		}
+		reviewerIds = append(reviewerIds, userId)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return reviewStatus, reviewerIds
+}
+
+func Test_SetReviewData_IndexesTheStatusAndTheReviewers(t *testing.T) {
+	db, w := newIndexTestDb(t)
+
+	err := db.SetReviewData(w, "owner", indexedRepoId, 1, review.Data{
+		ReviewStatus:     review.ReviewStatus_Unresolved,
+		ReviewersUserIds: []int64{5, 9},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gotStatus, gotReviewers := readIndexedReview(t, db, w, 1)
+	if gotStatus != uint32(review.ReviewStatus_Unresolved) {
+		t.Fatalf("indexed status %d, want %d", gotStatus,
+			review.ReviewStatus_Unresolved)
+	}
+	if !reflect.DeepEqual(gotReviewers, []int64{5, 9}) {
+		t.Fatalf("indexed reviewers %v, want [5 9]", gotReviewers)
+	}
+}
+
+func Test_SetReviewData_ReplacesTheReviewers(t *testing.T) {
+	db, w := newIndexTestDb(t)
+	err := db.SetReviewData(w, "owner", indexedRepoId, 1, review.Data{
+		ReviewersUserIds: []int64{5, 9},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.SetReviewData(w, "owner", indexedRepoId, 1, review.Data{
+		ReviewersUserIds: []int64{9, 12},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, gotReviewers := readIndexedReview(t, db, w, 1)
+	if !reflect.DeepEqual(gotReviewers, []int64{9, 12}) {
+		t.Fatalf("indexed reviewers %v, want [9 12]", gotReviewers)
 	}
 }
