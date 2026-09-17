@@ -315,6 +315,23 @@ func (db WebDb) GetReviewData(ctx context.Context, repoId uint64, cId commit.Loc
 	return db.db.GetReviewData(ctx, repoId, cId)
 }
 
+// How far a commit search index sweep got. Its zero value starts a new
+// sweep: repo ids are autoincremented, so no commit has repo id 0.
+type IndexCommitsForSearchCursor struct {
+	RepoId   uint64
+	CommitId commit.LocalId
+}
+
+// Indexes at most limit commits for search from their blobs, starting after
+// the cursor. done is true once the sweep read the last commit.
+// Indexing a commit that is already indexed leaves the same row, so a sweep
+// can run while commits are being written.
+func (db WebDb) IndexCommitsForSearch(w context.Context,
+	after IndexCommitsForSearchCursor, limit int) (
+	next IndexCommitsForSearchCursor, done bool, err error) {
+	return db.db.indexCommitsForSearch(w, after, limit)
+}
+
 // Sets the review data of the commit, overwriting any previous one.
 func (db WebDb) SetReviewData(writeCtx context.Context, quotaOwner string, repoId uint64, cId commit.LocalId, d review.Data) error {
 	return db.db.SetReviewData(writeCtx, quotaOwner, repoId, cId, d)
