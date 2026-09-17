@@ -3271,4 +3271,9 @@ func TestCommitSearch(t *testing.T) {
 	other := NewTestBrowser(srv.C.PublicUrl, t)
 	MockUserOAuthSignIn(srv, other, "zuko@twigg.vc")
 	other.CheckGetErrors(commitSearchPath("create"), http.StatusForbidden)
+
+	// Once the repo is public anyone reads it and searches its commits
+	b.Post("/aang/BookOne/settings/set-public", nil)
+	other.Get("/aang/BookOne")
+	other.Get(commitSearchPath("create"))
 }
