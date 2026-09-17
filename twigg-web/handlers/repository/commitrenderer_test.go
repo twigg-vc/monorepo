@@ -5,6 +5,7 @@ import (
 	"errors"
 	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/user"
+	"monorepo/twigg/commit"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -180,6 +181,68 @@ func TestCommitRenderer_GetReviewStatusFailsOnGetDataError(t *testing.T) {
 	}
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("status is %d, want %d", w.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestCommitRenderer_RenderReadsTheAuthorAndTheReviewStatus(t *testing.T) {
+	userS := &countingUserServiceMock{
+		usersById: map[int64]user.User{7: {Username: "leader"}},
+	}
+	revS := &reviewServiceMock{}
+	revS.resolveSupremeLeaders = func(user.User) ([]string, error) {
+		return nil, nil
+	}
+	revS.getData = func([]string) (review.Data, bool, error) {
+		return review.Data{ReviewStatus: review.ReviewStatus_MissingLgtm}, false, nil
+	}
+	cr := newCommitRenderer(userS, revS, newMockReq(nil, nil), 0, nil,
+		httptest.NewRecorder())
+
+	fc, ok := cr.render(commit.Commit{L: 3, AuthorUserId: 7})
+
+	if !ok {
+		t.Fatalf("render is not ok")
+	}
+	if fc.AuthorUsername != "leader" {
+		t.Fatalf("author username is %q, want %q", fc.AuthorUsername, "leader")
+	}
+	if fc.ReviewStatus != "missing-lgtm" {
+		t.Fatalf("review status is %q, want %q", fc.ReviewStatus, "missing-lgtm")
+	}
+}
+
+func TestCommitRenderer_RenderReadsNoReviewOfASubmittedCommit(t *testing.T) {
+	userS := &countingUserServiceMock{
+		usersById: map[int64]user.User{7: {Username: "leader"}},
+	}
+	cr := newCommitRenderer(userS, &reviewServiceMock{}, newMockReq(nil, nil), 0,
+		nil, httptest.NewRecorder())
+
+	fc, ok := cr.render(commit.Commit{L: 3, AuthorUserId: 7, IsSubmitted: true})
+
+	if !ok {
+		t.Fatalf("render is not ok")
+	}
+	if fc.ReviewStatus != "ready" {
+		t.Fatalf("review status is %q, want %q", fc.ReviewStatus, "ready")
+	}
+}
+
+func TestCommitRenderer_RenderReadsNoAuthorOfTheRootCommit(t *testing.T) {
+	userS := &countingUserServiceMock{usersById: map[int64]user.User{}}
+	cr := newCommitRenderer(userS, &reviewServiceMock{}, newMockReq(nil, nil), 0,
+		nil, httptest.NewRecorder())
+
+	fc, ok := cr.render(commit.Commit{L: 0, AuthorUserId: 7, IsSubmitted: true})
+
+	if !ok {
+		t.Fatalf("render is not ok")
+	}
+	if fc.AuthorUsername != "" {
+		t.Fatalf("author username is %q, want it empty", fc.AuthorUsername)
+	}
+	if userS.getCalls != 0 {
+		t.Fatalf("read the users %d times, want 0", userS.getCalls)
 	}
 }
 

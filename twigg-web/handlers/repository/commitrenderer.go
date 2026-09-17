@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"monorepo/twigg-web/review"
+	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
 	"net/http"
@@ -36,6 +37,27 @@ func newCommitRenderer(userSrv UserService, revSrv ReviewService,
 		w:                   w,
 		cachedUsernamesById: map[int64]string{},
 	}
+}
+
+// The root commit has no author and submitted commits are always
+// ReviewStatus_Ready.
+// On any error, writes an error to the response and returns ok=false.
+func (cr *commitRenderer) render(c commit.Commit) (fc twiggwc.FrontendCommit, ok bool) {
+	var authorUsername string
+	if c.L != 0 {
+		authorUsername, ok = cr.getAuthorUsername(c.AuthorUserId)
+		if !ok {
+			return fc, false
+		}
+	}
+	reviewStatus := review.ReviewStatus_Ready
+	if !c.IsSubmitted {
+		reviewStatus, ok = cr.getReviewStatus(c.L)
+		if !ok {
+			return fc, false
+		}
+	}
+	return twiggwc.CommitToFrontend(c, authorUsername, reviewStatus), true
 }
 
 // On any error, writes an error to the response and returns ok=false.
