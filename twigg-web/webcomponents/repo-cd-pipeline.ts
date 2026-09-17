@@ -477,6 +477,8 @@ export class RepoCdPipeline extends LitElement {
     private startPolling() {
         const pollPeriodMs = 30000 // 30 seconds
         this.pollInterval = window.setInterval(() => {
+            // Don't poll while the browser tab is in the background.
+            if (document.hidden) { return }
             this.refreshRelevantData(/*force=*/false);
         }, pollPeriodMs);
     }
