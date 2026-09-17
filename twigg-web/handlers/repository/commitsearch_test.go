@@ -144,3 +144,46 @@ func Test_HandleCommitSearch_FailsWhenTheSearchOfTheDbFails(t *testing.T) {
 		t.Fatalf("status is %d, want %d", w.Code, http.StatusInternalServerError)
 	}
 }
+
+func Test_HandleCommitSearch_SearchesTheCommitsOfWhoeverIsSearching(t *testing.T) {
+	var gotFilter commitsearch.Filter
+	searchDb := &commitSearchDbMock{}
+	searchDb.searchCommits = func(f commitsearch.Filter, _ string, _ int) (
+		[]commit.Commit, string, error) {
+		gotFilter = f
+		return nil, "", nil
+	}
+	h := newCommitSearchHandler(searchDb)
+	req := newMockReq(nil, searchRequest("author:me reviewer:me", ""))
+	req.IsLoggedIn = true
+	req.MaybeUserWithReadPermission = &user.User{Username: "katara"}
+	w := httptest.NewRecorder()
+
+	h.handleCommitSearch(w, req, nil)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status is %d, want %d: %s", w.Code, http.StatusOK, w.Body)
+	}
+	if gotFilter.AuthorUsername != "katara" ||
+		gotFilter.ReviewerUsername != "katara" {
+		t.Fatalf("searched the author %q and the reviewer %q, want katara",
+			gotFilter.AuthorUsername, gotFilter.ReviewerUsername)
+	}
+}
+
+func Test_HandleCommitSearch_FailsOnMeWhenNobodyIsLoggedIn(t *testing.T) {
+	searchDb := &commitSearchDbMock{}
+	searchDb.searchCommits = func(commitsearch.Filter, string, int) (
+		[]commit.Commit, string, error) {
+		t.Fatal("searched without knowing who me is")
+		return nil, "", nil
+	}
+	h := newCommitSearchHandler(searchDb)
+	w := httptest.NewRecorder()
+
+	h.handleCommitSearch(w, newMockReq(nil, searchRequest("author:me", "")), nil)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status is %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
