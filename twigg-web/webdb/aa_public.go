@@ -316,6 +316,12 @@ func (db WebDb) GetReviewData(ctx context.Context, repoId uint64, cId commit.Loc
 	return db.db.GetReviewData(ctx, repoId, cId)
 }
 
+// Returns the commits of a repo that match the filter, newest first.
+func (db WebDb) SearchCommits(r context.Context, f commitsearch.Filter) (
+	iterator.I[commit.Commit], error) {
+	return db.db.searchCommits(r, f)
+}
+
 // Indexes at most limit commits for search from their blobs, starting after
 // the cursor. done is true once the sweep read the last commit.
 // Indexing a commit that is already indexed leaves the same row, so a sweep

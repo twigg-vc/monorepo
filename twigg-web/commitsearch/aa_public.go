@@ -14,3 +14,19 @@ type IndexCursor struct {
 func NewIndexCursor() IndexCursor {
 	return IndexCursor{}
 }
+
+// Filter of a commit search. Each optional field is ignored when it holds
+// its zero value.
+type Filter struct {
+	RepoId uint64
+	// Only returns commits older than AfterCommitId. Used to paginate.
+	HasAfterCommitId bool
+	AfterCommitId    commit.LocalId
+	// Max number of commits returned
+	Limit int
+}
+
+// Returns a filter that matches every commit of a repo.
+func NewFilter(repoId uint64, limit int) Filter {
+	return Filter{RepoId: repoId, Limit: limit}
+}
