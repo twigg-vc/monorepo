@@ -34,12 +34,12 @@ func Test_CommitSearch_IndexesEveryInterval(t *testing.T) {
 	// [0, 1], [0, 2], [1, 0]
 	// After the last one is called, it'll say it's done
 	mockNextToIndex := map[string]string{
-		"0/0": "0/1",
+		"":    "0/1",
 		"0/1": "0/2",
 		"0/2": "1/0",
 	}
 	expectedIndexCalls := []string{
-		"0/0",
+		"",
 		"0/1",
 		"0/2",
 		"1/0",
@@ -58,8 +58,12 @@ func Test_CommitSearch_IndexesEveryInterval(t *testing.T) {
 	defer cs.Stop()
 
 	// Check the index calls
+	start := time.Now()
 	for len(gotIndexCalls) != len(expectedIndexCalls) {
 		time.Sleep(time.Millisecond)
+		if time.Since(start) > time.Second {
+			t.Fatal("spent too long waiting for index")
+		}
 	}
 	if !reflect.DeepEqual(gotIndexCalls, expectedIndexCalls) {
 		t.Fatalf("unexpected index calls: %v", gotIndexCalls)
