@@ -1,0 +1,85 @@
+package repository
+
+import (
+	"context"
+	"errors"
+	"monorepo/twigg-web/user"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+func TestCommitRenderer_GetAuthorUsernameReadsEachAuthorOnce(t *testing.T) {
+	userS := &countingUserServiceMock{
+		usersById: map[int64]user.User{
+			7: {Username: "leader"},
+			8: {Username: "twigger"},
+		},
+	}
+	cr := newCommitRenderer(userS, nil, httptest.NewRecorder())
+
+	for _, want := range []struct {
+		authorId int64
+		username string
+	}{{7, "leader"}, {8, "twigger"}, {7, "leader"}, {8, "twigger"}} {
+		got, ok := cr.getAuthorUsername(want.authorId)
+		if !ok {
+			t.Fatalf("getAuthorUsername(%d) is not ok", want.authorId)
+		}
+		if got != want.username {
+			t.Fatalf("getAuthorUsername(%d) = %q, want %q", want.authorId, got, want.username)
+		}
+	}
+	if userS.getCalls != 2 {
+		t.Fatalf("read the users %d times, want 2", userS.getCalls)
+	}
+}
+
+func TestCommitRenderer_GetAuthorUsernameFailsOnUnknownAuthor(t *testing.T) {
+	userS := &countingUserServiceMock{usersById: map[int64]user.User{}}
+	w := httptest.NewRecorder()
+	cr := newCommitRenderer(userS, nil, w)
+
+	_, ok := cr.getAuthorUsername(7)
+
+	if ok {
+		t.Fatalf("getAuthorUsername is ok, want not ok")
+	}
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status is %d, want %d", w.Code, http.StatusNotFound)
+	}
+}
+
+func TestCommitRenderer_GetAuthorUsernameFailsOnUserServiceError(t *testing.T) {
+	userS := &countingUserServiceMock{err: errors.New("boom")}
+	w := httptest.NewRecorder()
+	cr := newCommitRenderer(userS, nil, w)
+
+	_, ok := cr.getAuthorUsername(7)
+
+	if ok {
+		t.Fatalf("getAuthorUsername is ok, want not ok")
+	}
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status is %d, want %d", w.Code, http.StatusInternalServerError)
+	}
+}
+
+type countingUserServiceMock struct {
+	usersById map[int64]user.User
+	err       error
+	getCalls  int
+}
+
+func (m *countingUserServiceMock) Get(r context.Context, id int64) (
+	u user.User, isNotFoundErr bool, err error) {
+	m.getCalls++
+	if m.err != nil {
+		return user.User{}, false, m.err
+	}
+	u, isFound := m.usersById[id]
+	if !isFound {
+		return user.User{}, true, errors.New("user not found")
+	}
+	return u, false, nil
+}
