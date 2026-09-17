@@ -26,9 +26,11 @@ type Filter struct {
 	Message string
 	// Id of the commit author. 0 matches any author.
 	AuthorId int64
-	State    State
-	Wip      Presence
-	Archived Presence
+	// Id of a user in the commit reviewers. 0 matches any reviewer.
+	ReviewerId int64
+	State      State
+	Wip        Presence
+	Archived   Presence
 }
 
 // Returns a filter that matches every non-archived commit of a repo.

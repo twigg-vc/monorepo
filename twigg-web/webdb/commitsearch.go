@@ -58,6 +58,13 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 		q.WriteString(` AND s.authorId = ?`)
 		args = append(args, f.AuthorId)
 	}
+	if f.ReviewerId != 0 {
+		q.WriteString(` AND EXISTS (
+			SELECT 1 FROM review_reviewers rr
+			WHERE rr.repoId = s.repoId AND rr.commitId = s.commitId
+				AND rr.userId = ?)`)
+		args = append(args, f.ReviewerId)
+	}
 	if f.State == commitsearch.StatePending {
 		q.WriteString(` AND s.isSubmitted = 0`)
 	}

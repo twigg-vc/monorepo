@@ -3,6 +3,7 @@ package webdb_test
 import (
 	"context"
 	"monorepo/twigg-web/commitsearch"
+	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg/commit"
 	"reflect"
@@ -13,8 +14,8 @@ const searchRepoId = 7
 
 // Writes the commits the search tests run against:
 //
-//	c1 pending, author 1
-//	c2 pending, author 2
+//	c1 pending, author 1, reviewed by 1
+//	c2 pending, author 2, reviewed by 1 and 2
 //	c3 submitted, author 1
 //	c4 pending WIP, author 2
 //	c5 pending archived, author 1
@@ -30,6 +31,15 @@ func setUpSearchableCommits(t *testing.T, db webdb.WebDb, w context.Context) {
 	}
 	for _, c := range commits {
 		if err := db.SetCommit(w, "owner", searchRepoId, c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	reviewers := map[commit.LocalId][]int64{1: {1}, 2: {1, 2}}
+	for cId, userIds := range reviewers {
+		err := db.SetReviewData(w, "owner", searchRepoId, cId, review.Data{
+			ReviewersUserIds: userIds,
+		})
+		if err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -181,5 +191,25 @@ func Test_SearchCommits_FiltersByAuthor(t *testing.T) {
 	f.AuthorId = 2
 	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{4, 2}) {
 		t.Fatalf("commits of author 2 are %v, want [4 2]", got)
+	}
+}
+
+func Test_SearchCommits_FiltersByReviewer(t *testing.T) {
+	db, w := newSearchTestDb(t)
+
+	f := commitsearch.NewFilter(searchRepoId)
+	f.ReviewerId = 1
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{2, 1}) {
+		t.Fatalf("commits reviewed by 1 are %v, want [2 1]", got)
+	}
+
+	f.ReviewerId = 2
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{2}) {
+		t.Fatalf("commits reviewed by 2 are %v, want [2]", got)
+	}
+
+	f.ReviewerId = 3
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); len(got) != 0 {
+		t.Fatalf("commits reviewed by 3 are %v, want none", got)
 	}
 }
