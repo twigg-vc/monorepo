@@ -89,6 +89,9 @@ const (
 	RepoPattern                               = "/{owner}/{repo}"
 	RepoSearchCommitsPattern                  = RepoPattern + "/search-c"
 	RepoSearchCommitsSeachQueryQueryParamName = "q" // name of the query parameter of the search query
+	RepoCommitSearchPattern                   = RepoPattern + "/commit-search"
+	CommitSearchQueryParamName                = "q"      // what was typed in the search bar
+	CommitSearchCursorParamName               = "cursor" // reads the commits after a page
 	RepoPullPattern                           = RepoPattern + client.PullEndpoint
 	RepoPushPattern                           = RepoPattern + client.PushEndpoint
 	RepoSetServerIdPattern                    = RepoPattern + client.SetServerIdEndpoint

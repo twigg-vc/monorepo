@@ -8,6 +8,7 @@ import (
 	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/user"
+	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
 )
@@ -26,6 +27,8 @@ func AddHandlers(
 		h.handleGetMorePending)
 	readMux.HandleFuncR("GET "+routes.RepoSearchCommitsPattern,
 		h.handleGetCommitById)
+	readMux.HandleFuncR("GET "+routes.RepoCommitSearchPattern,
+		h.handleCommitSearch)
 	readMux.HandleFuncR("GET "+routes.RepoTwiggDocPattern,
 		h.handleGetTwiggDoc)
 }
@@ -40,6 +43,14 @@ func NewHandler(rSrv RepoService,
 		userSrv:  userSrv,
 		searchDb: searchDb,
 	}
+}
+
+// What the commit search endpoint answers with.
+type CommitSearchResponse struct {
+	Commits []twiggwc.FrontendCommit
+	// Reads the commits after these ones. An empty page means there are no
+	// more.
+	NextCursor string
 }
 
 type CommitSearchDb interface {

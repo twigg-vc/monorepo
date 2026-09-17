@@ -165,3 +165,17 @@ func (cr *commitRenderer) getReviewStatus(cId commit.LocalId) (
 	}
 	return d.ReviewStatus, true
 }
+
+// On any error, writes an error to the response and returns ok=false.
+func (cr *commitRenderer) renderAll(commits []commit.Commit) (
+	fcs []twiggwc.FrontendCommit, ok bool) {
+	fcs = make([]twiggwc.FrontendCommit, 0, len(commits))
+	for _, c := range commits {
+		fc, ok := cr.render(c)
+		if !ok {
+			return nil, false
+		}
+		fcs = append(fcs, fc)
+	}
+	return fcs, true
+}
