@@ -100,6 +100,7 @@ export class CommitSearch extends LitElement {
         willConflictByCommitId: { state: true },
         nextCursor: { state: true },
         isLoadingMore: { state: true },
+        showHelp: { state: true },
     }
     declare RepoOwnerName: string
     declare RepoName: string
@@ -110,6 +111,7 @@ export class CommitSearch extends LitElement {
     declare private willConflictByCommitId: Record<string, boolean>
     declare private nextCursor: string
     declare private isLoadingMore: boolean
+    declare private showHelp: boolean
     private debounceTimer: ReturnType<typeof setTimeout> | null = null
 
     constructor() {
@@ -123,6 +125,7 @@ export class CommitSearch extends LitElement {
         this.willConflictByCommitId = {}
         this.nextCursor = ""
         this.isLoadingMore = false
+        this.showHelp = false
     }
 
     connectedCallback() {
@@ -271,6 +274,7 @@ export class CommitSearch extends LitElement {
             </div>
             ${this.renderTermChips()}
             ${this.renderTermButtons()}
+            ${this.renderHelp()}
             ${this.renderResults()}
             <div class="load-more-btn-container">
                 ${this.renderLoadMoreBtn()}
@@ -348,6 +352,7 @@ export class CommitSearch extends LitElement {
         return html`
             <div class="term-btns">
                 ${termButtons.map((b) => this.renderTermButton(b))}
+                ${this.renderHelpBtn()}
             </div>
         `
     }
@@ -363,6 +368,54 @@ export class CommitSearch extends LitElement {
                 @click=${() => this.toggleTerm(b.term)}>
                 ${b.label}
             </button>
+        `
+    }
+
+    private renderHelpBtn() {
+        var label = "Search help"
+        if (this.showHelp) {
+            label = "Hide help"
+        }
+        return html`
+            <button class="help-btn" @click=${this.toggleHelp}>${label}</button>
+        `
+    }
+
+    private toggleHelp() {
+        this.showHelp = !this.showHelp
+    }
+
+    // What a search can be written with, for whoever does not know the terms
+    // by heart.
+    private renderHelp() {
+        if (!this.showHelp) {
+            return null
+        }
+        return html`
+            <div class="help">
+                <p>
+                    <code>author:</code> and <code>reviewer:</code> take a
+                    username, or <code>me</code> for your own.
+                </p>
+                <p>
+                    <code>is:</code> takes <code>pending</code>,
+                    <code>submitted</code>, <code>wip</code>,
+                    <code>archived</code>, <code>ready</code>/<code>lgtm</code>,
+                    <code>missing-lgtm</code>/<code>no-lgtm</code>,
+                    <code>unresolved</code> or
+                    <code>missing-owners-approval</code>.
+                </p>
+                <p>
+                    <code>-is:wip</code> and <code>-is:archived</code> leave
+                    those commits out instead of asking for them. Archived
+                    commits are excluded by default.
+                </p>
+                <p>
+                    Anything else searches the words of the commit message.
+                    Quote text that has a colon or starts with a dash, as in
+                    <code>"wip: rust rewrite"</code>.
+                </p>
+            </div>
         `
     }
 
@@ -587,6 +640,38 @@ export class CommitSearch extends LitElement {
         }
         .term-btn-on {
             border-color: var(--color-primary);
+            color: var(--color-text);
+        }
+        .help-btn {
+            margin-left: auto;
+            padding: var(--space0) var(--space2);
+            border: none;
+            background: none;
+            color: var(--color-text-muted);
+            font-family: var(--font-family);
+            font-size: var(--space3);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .help-btn:hover {
+            color: var(--color-text);
+        }
+        .help {
+            padding: var(--space2) var(--space3);
+            margin-bottom: var(--space2);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius1);
+            background: var(--color-surface);
+            color: var(--color-text-muted);
+            font-size: var(--space3);
+        }
+        .help p {
+            margin: var(--space1) 0;
+        }
+        .help code {
+            padding: var(--space0) var(--space1);
+            border-radius: var(--radius0);
+            background: var(--color-surface-alt);
             color: var(--color-text);
         }
         .load-more-btn-container {
