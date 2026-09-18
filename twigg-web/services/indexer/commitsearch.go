@@ -83,5 +83,7 @@ func (cs *commitSearch) indexOneBatch() {
 	cs.isDone = done
 	if done {
 		log.Print("[commit search] every commit is indexed")
+	} else {
+		log.Print("[commit search] indexed one batch")
 	}
 }
