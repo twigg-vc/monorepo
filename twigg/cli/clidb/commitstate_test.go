@@ -83,7 +83,7 @@ func Test_ShouldCommit_AfterFailedBlobWrite(t *testing.T) {
 		t.Fatal("should commit after a successful write")
 	}
 
-	_, err = cliDb.SetBlob(w, "owner", "prefix", "id", failingWriterTo{})
+	_, err = setBlob(w, cliDb, "owner", "prefix", "id", failingWriterTo{})
 	if err == nil {
 		t.Fatal("expected an error from the failing WriterTo")
 	}

@@ -27,6 +27,10 @@ func (db cliDb) GetCliState(ctx context.Context) (st clistate.State, isNotFoundE
 
 func (db cliDb) SetCliState(ctx context.Context, st clistate.State) error {
 	const quotaOwner = ""
-	_, err := db.setBlob(ctx, quotaOwner, cliStateBlobIdPrefix, "", structWriterTo(st))
+	v, err := db.GrabBlobVersion(ctx, cliStateBlobIdPrefix, "")
+	if err != nil {
+		return err
+	}
+	err = db.SetBlobVersion(ctx, quotaOwner, cliStateBlobIdPrefix, "", v, structWriterTo(st))
 	return err
 }

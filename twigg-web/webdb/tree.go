@@ -68,9 +68,28 @@ func (db webDb) GetLastVersionOfRootTree(ctx context.Context, repoId uint64) (v 
 }
 
 func (db webDb) SetTreeData(ctx context.Context, quotaOwner string, repoId uint64, treePath string, td treev.TreeDataV) (uint64, error) {
-	return db.setBlob(ctx, quotaOwner, treeDataBlobsIdPrefix, treeDataBlobId(repoId, treePath), gobencoding.StructWriterTo(td))
+	blobId := treeDataBlobId(repoId, treePath)
+	v, err := db.GrabBlobVersion(ctx, treeDataBlobsIdPrefix, blobId)
+	if err != nil {
+		return 0, err
+	}
+	err = db.SetBlobVersion(ctx, quotaOwner, treeDataBlobsIdPrefix, blobId, v,
+		gobencoding.StructWriterTo(td))
+	if err != nil {
+		return 0, err
+	}
+	return v, nil
 }
 
 func (db webDb) SetTreeBlob(ctx context.Context, quotaOwner string, repoId uint64, treePath string, wt io.WriterTo) (uint64, error) {
-	return db.setBlob(ctx, quotaOwner, treeBlobsIdPrefix, treeBlobsId(repoId, treePath), wt)
+	blobId := treeBlobsId(repoId, treePath)
+	v, err := db.GrabBlobVersion(ctx, treeBlobsIdPrefix, blobId)
+	if err != nil {
+		return 0, err
+	}
+	err = db.SetBlobVersion(ctx, quotaOwner, treeBlobsIdPrefix, blobId, v, wt)
+	if err != nil {
+		return 0, err
+	}
+	return v, nil
 }

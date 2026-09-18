@@ -103,6 +103,15 @@ func (m *memMetadata) SetMetadataGrabbedVersion(ctx context.Context, b blobdb.Bl
 	return nil
 }
 
+func setBlob(ctx context.Context, db blobdb.BlobDb, quotaOwner, idPrefix, id string,
+	wt io.WriterTo) (blobdb.Version, error) {
+	v, err := db.GrabBlobVersion(ctx, idPrefix, id)
+	if err != nil {
+		return 0, err
+	}
+	return v, db.SetBlobVersion(ctx, quotaOwner, idPrefix, id, v, wt)
+}
+
 type bytesWriterTo []byte
 
 func (b bytesWriterTo) WriteTo(w io.Writer) (int64, error) {
@@ -144,7 +153,7 @@ func Test_SetGetBlob(t *testing.T) {
 	}
 
 	// First write must create version 0
-	v, err := db.SetBlob(ctx, "owner", "prefix", "id", bytesWriterTo("v0-data"))
+	v, err := setBlob(ctx, db, "owner", "prefix", "id", bytesWriterTo("v0-data"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +162,7 @@ func Test_SetGetBlob(t *testing.T) {
 	}
 
 	// Second write must create version 1
-	v, err = db.SetBlob(ctx, "owner", "prefix", "id", bytesWriterTo("v1-data"))
+	v, err = setBlob(ctx, db, "owner", "prefix", "id", bytesWriterTo("v1-data"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,19 +231,16 @@ func Test_GrabBlobVersion(t *testing.T) {
 		t.Fatalf("v=%d, expected 0", v)
 	}
 
-	v, err = db.SetBlob(ctx, "owner", "prefix", "id", bytesWriterTo("v3-data"))
+	err = db.SetBlobVersion(ctx, "owner", "prefix", "id", 2, bytesWriterTo("v3-data"))
 	if err != nil {
 		t.Fatal(err)
-	}
-	if v != 3 {
-		t.Fatalf("v=%d, expected 3", v)
 	}
 	m, r, closeR, err := db.GetBlob(ctx, "prefix", "id")
 	if err != nil {
 		closeR()
 		t.Fatal(err)
 	}
-	if m.Version != 3 {
+	if m.Version != 2 {
 		t.Fatalf("m.Version=%d, expected 3", m.Version)
 	}
 	data := readAll(t, r, closeR)
@@ -256,7 +262,7 @@ func Test_ManyVersions(t *testing.T) {
 			" It shares most of its bytes with the other versions"+
 			" so delta encoding kicks in.", i)
 		contents = append(contents, content)
-		v, err := db.SetBlob(ctx, "owner", "prefix", "id", bytesWriterTo(content))
+		v, err := setBlob(ctx, db, "owner", "prefix", "id", bytesWriterTo(content))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -307,7 +313,7 @@ func Test_QuotaEnforcement(t *testing.T) {
 	for i := range 10000 {
 		content = append(content, byte(i%251))
 	}
-	_, err := db.SetBlob(ctx, "owner", "prefix", "id", bytesWriterTo(content))
+	_, err := setBlob(ctx, db, "owner", "prefix", "id", bytesWriterTo(content))
 	if !errors.Is(err, blobdb.ErrNotEnoughQuota) {
 		t.Fatalf("err=%v, expected ErrNotEnoughQuota", err)
 	}
@@ -321,7 +327,7 @@ func Test_QuotaEnforcement(t *testing.T) {
 	// With enough quota the same write must succeed. The refused write already
 	// took version 0, so this one gets version 1
 	q.left = 1000000
-	v, err := db.SetBlob(ctx, "owner", "prefix", "id", bytesWriterTo(content))
+	v, err := setBlob(ctx, db, "owner", "prefix", "id", bytesWriterTo(content))
 	if err != nil {
 		t.Fatal(err)
 	}

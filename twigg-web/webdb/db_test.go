@@ -1,6 +1,7 @@
 package webdb_test
 
 import (
+	"context"
 	"errors"
 	"io"
 	"monorepo/data/blobdb"
@@ -11,6 +12,15 @@ import (
 
 // Large enough to not matter for tests that don't exercise blob storage.
 const defaultTestBlockSize = 4 * 1024 * 1024 * 1024 // 4GB
+
+func setBlob(w context.Context, db webdb.WebDb, quotaOwner, idPrefix, id string,
+	wt io.WriterTo) (blobdb.Version, error) {
+	v, err := db.GrabBlobVersion(w, idPrefix, id)
+	if err != nil {
+		return 0, err
+	}
+	return v, db.SetBlobVersion(w, quotaOwner, idPrefix, id, v, wt)
+}
 
 type bytesWriterTo []byte
 
@@ -87,7 +97,7 @@ func Test_BlobStorageIsWiredThrough(t *testing.T) {
 	// latest, partially-filled block (5). There might be more because extra
 	// data might be written to represent the encoding.
 	const data = "0123456789ABCDEF"
-	v, err := db.SetBlob(w, "owner", "prefix", "id", bytesWriterTo(data))
+	v, err := setBlob(w, db, "owner", "prefix", "id", bytesWriterTo(data))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -207,7 +217,7 @@ func Test_Blob(t *testing.T) {
 	}
 
 	// First write must create version 0
-	v, err := db.SetBlob(w, "owner", "prefix", "id", bytesWriterTo("v0-data"))
+	v, err := setBlob(w, db, "owner", "prefix", "id", bytesWriterTo("v0-data"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +226,7 @@ func Test_Blob(t *testing.T) {
 	}
 
 	// Second write must create version 1
-	v, err = db.SetBlob(w, "owner", "prefix", "id", bytesWriterTo("v1-data"))
+	v, err = setBlob(w, db, "owner", "prefix", "id", bytesWriterTo("v1-data"))
 	if err != nil {
 		t.Fatal(err)
 	}

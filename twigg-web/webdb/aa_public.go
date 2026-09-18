@@ -134,10 +134,14 @@ func (db WebDb) GetPendingCommitsAfter(ctx context.Context, repoId uint64, after
 	return db.db.GetPendingCommitsAfter(ctx, repoId, afterId)
 }
 
-// Write a blob by its Id. The first version is 0, each write creates
-// version latest+1.
-func (db WebDb) SetBlob(writeCtx context.Context, quotaOwner string, idPrefix, id string, wt io.WriterTo) (v blobdb.Version, e error) {
-	return db.db.SetBlob(writeCtx, quotaOwner, idPrefix, id, wt)
+// Grabs a version to be used by SetBlobVersion
+func (db WebDb) GrabBlobVersion(writeCtx context.Context, idPrefix, id string) (v blobdb.Version, e error) {
+	return db.db.GrabBlobVersion(writeCtx, idPrefix, id)
+}
+
+// Write a blob by its Id and version
+func (db WebDb) SetBlobVersion(writeCtx context.Context, quotaOwner string, idPrefix, id string, v blobdb.Version, wt io.WriterTo) error {
+	return db.db.SetBlobVersion(writeCtx, quotaOwner, idPrefix, id, v, wt)
 }
 
 // Get the latest version of a blob by its id. Returns ErrNotFound if not
@@ -776,8 +780,11 @@ func (c Ctx) GetPendingCommitsAfter(repoId uint64, afterId commit.LocalId) (iter
 	return c.db.GetPendingCommitsAfter(c.ctx, repoId, afterId)
 }
 
-func (c Ctx) SetBlob(quotaOwner string, idPrefix, id string, wt io.WriterTo) (v blobdb.Version, e error) {
-	return c.db.SetBlob(c.ctx, quotaOwner, idPrefix, id, wt)
+func (c Ctx) GrabBlobVersion(idPrefix, id string) (v blobdb.Version, e error) {
+	return c.db.GrabBlobVersion(c.ctx, idPrefix, id)
+}
+func (c Ctx) SetBlobVersion(quotaOwner string, idPrefix, id string, v blobdb.Version, wt io.WriterTo) error {
+	return c.db.SetBlobVersion(c.ctx, quotaOwner, idPrefix, id, v, wt)
 }
 func (c Ctx) GetBlob(idPrefix, id string) (m blobdb.BlobData, r io.Reader, closeReader func(), e error) {
 	return c.db.GetBlob(c.ctx, idPrefix, id)

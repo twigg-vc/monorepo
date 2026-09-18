@@ -38,8 +38,8 @@ func (db db) GrabBlobVersion(writeCtx context.Context,
 	return db.m.GrabMetadataVersion(writeCtx, idPrefix, id)
 }
 
-func (db db) SetBlob(writeCtx context.Context,
-	quotaOwner string, idPrefix, id string, wt io.WriterTo) (v Version, err error) {
+func (db db) SetBlobVersion(writeCtx context.Context,
+	quotaOwner string, idPrefix, id string, v Version, wt io.WriterTo) (err error) {
 	parentM, parentNotFound, err := db.m.GetLatestMetadata(writeCtx, idPrefix, id)
 	if err != nil && !parentNotFound {
 		return
@@ -49,10 +49,6 @@ func (db db) SetBlob(writeCtx context.Context,
 	hasDeltaEncodingBase := false
 	var deltaEncodingBase Version
 	var parentR io.Reader
-	v, err = db.GrabBlobVersion(writeCtx, idPrefix, id)
-	if err != nil {
-		return
-	}
 	if !hasParent {
 		// Set to -1 bc then we can always say that the new DistanceToNonDelta
 		// is just DistanceToNonDelta + 1 without needing an extra variable

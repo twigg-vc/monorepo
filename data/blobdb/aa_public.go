@@ -60,9 +60,9 @@ func (db BlobDb) GrabBlobVersion(writeCtx context.Context, idPrefix, id string) 
 
 // Write a blob by its Id. The first version is 0, each write creates
 // version latest+1. Can return ErrNotEnoughQuota.
-func (db BlobDb) SetBlob(writeCtx context.Context,
-	quotaOwner string, idPrefix, id string, wt io.WriterTo) (v Version, err error) {
-	return db.db.SetBlob(writeCtx, quotaOwner, idPrefix, id, wt)
+func (db BlobDb) SetBlobVersion(writeCtx context.Context,
+	quotaOwner string, idPrefix, id string, v Version, wt io.WriterTo) error {
+	return db.db.SetBlobVersion(writeCtx, quotaOwner, idPrefix, id, v, wt)
 }
 
 // Get the latest version of a blob by its id. Returns ErrNotFound if not

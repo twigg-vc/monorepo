@@ -18,8 +18,13 @@ func commitBlobId(repoId uint64, commitId uint64, commitVersion uint64) string {
 }
 
 func (db webDb) SetCommit(ctx context.Context, quotaOwner string, repoId uint64, c commit.Commit) (err error) {
-	_, err = db.setBlob(ctx, quotaOwner, commitBlobIdPrefix,
-		commitBlobId(repoId, c.L, c.Version), gobencoding.StructWriterTo(c))
+	blobId := commitBlobId(repoId, c.L, c.Version)
+	v, err := db.GrabBlobVersion(ctx, commitBlobIdPrefix, blobId)
+	if err != nil {
+		return
+	}
+	err = db.SetBlobVersion(ctx, quotaOwner, commitBlobIdPrefix, blobId, v,
+		gobencoding.StructWriterTo(c))
 	if err != nil {
 		return
 	}

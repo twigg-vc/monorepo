@@ -43,8 +43,13 @@ func (db webDb) GetReviewData(ctx context.Context, repoId uint64, cId commit.Loc
 }
 
 func (db webDb) SetReviewData(writeCtx context.Context, quotaOwner string, repoId uint64, cId commit.LocalId, d review.Data) error {
-	_, err := db.setBlob(writeCtx, quotaOwner,
-		reviewDataBlobIdPrefix, reviewDataBlobId(repoId, cId), gobencoding.StructWriterTo(d))
+	blobId := reviewDataBlobId(repoId, cId)
+	v, err := db.GrabBlobVersion(writeCtx, reviewDataBlobIdPrefix, blobId)
+	if err != nil {
+		return err
+	}
+	err = db.SetBlobVersion(writeCtx, quotaOwner, reviewDataBlobIdPrefix, blobId,
+		v, gobencoding.StructWriterTo(d))
 	if err != nil {
 		return err
 	}
@@ -62,9 +67,13 @@ func (db webDb) GetReviewThread(ctx context.Context, threadId int64) (review.Thr
 }
 
 func (db webDb) SetReviewThread(writeCtx context.Context, quotaOwner string, threadId int64, th review.Thread) error {
-	_, err := db.setBlob(writeCtx, quotaOwner,
-		reviewThreadsBlobIdPrefix, reviewThreadBlobId(threadId), gobencoding.StructWriterTo(th))
-	return err
+	blobId := reviewThreadBlobId(threadId)
+	v, err := db.GrabBlobVersion(writeCtx, reviewThreadsBlobIdPrefix, blobId)
+	if err != nil {
+		return err
+	}
+	return db.SetBlobVersion(writeCtx, quotaOwner, reviewThreadsBlobIdPrefix,
+		blobId, v, gobencoding.StructWriterTo(th))
 }
 
 func (db webDb) GetReviewComment(ctx context.Context, commentId int64) (review.Comment, error) {
@@ -78,9 +87,13 @@ func (db webDb) GetReviewComment(ctx context.Context, commentId int64) (review.C
 }
 
 func (db webDb) SetReviewComment(writeCtx context.Context, quotaOwner string, commentId int64, cm review.Comment) error {
-	_, err := db.setBlob(writeCtx, quotaOwner,
-		reviewCommentsBlobIdPrefix, reviewCommentBlobId(commentId), gobencoding.StructWriterTo(cm))
-	return err
+	blobId := reviewCommentBlobId(commentId)
+	v, err := db.GrabBlobVersion(writeCtx, reviewCommentsBlobIdPrefix, blobId)
+	if err != nil {
+		return err
+	}
+	return db.SetBlobVersion(writeCtx, quotaOwner, reviewCommentsBlobIdPrefix,
+		blobId, v, gobencoding.StructWriterTo(cm))
 }
 
 func (db webDb) CreateReviewIfNotExists(writeCtx context.Context, repoId uint64, cId commit.LocalId) error {

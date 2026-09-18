@@ -201,3 +201,40 @@ func Test_CommitSyncsBlobLog(t *testing.T) {
 		t.Fatalf("synced=false after commit, expected true")
 	}
 }
+
+// A failed version grab must prevent the enclosing write transaction from
+// being committed, just like a failed blob write
+func Test_FailedGrabPreventsCommit(t *testing.T) {
+	db, closeDb, err := newMemCliDb()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(closeDb)
+
+	w, closeW, _, err := db.BeginWrite()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeW()
+
+	// A successful write first, so the tx would be committable otherwise
+	err = db.SetRepoNextLocalId(w, 99, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !db.ShouldCommit(w) {
+		t.Fatalf("ShouldCommit=false before the failed grab, expected true")
+	}
+
+	_, err = db.db.s.Exec(w, `DROP TABLE sqlarge_blob_versions`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.GrabBlobVersion(w, "prefix", "id")
+	if err == nil {
+		t.Fatalf("got no error grabbing a version without its table")
+	}
+	if db.ShouldCommit(w) {
+		t.Fatalf("ShouldCommit=true after a failed grab, expected false")
+	}
+}

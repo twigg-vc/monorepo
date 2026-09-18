@@ -187,20 +187,21 @@ func (db cliDb) ShouldCommit(ctx context.Context) bool {
 	return db.s.ShouldCommit(ctx)
 }
 
-// setBlob wraps db.blobs.SetBlob so a failed blob write also prevents the
-// enclosing write transaction from being committed. This is needed because
-// blobdb.SetBlob can fail before ever touching SQL (e.g. while writing the
-// blob bytes themselves), a path db.s.Exec's own tracking can't see.
-func (db cliDb) setBlob(ctx context.Context, quotaOwner string, idPrefix, id string, wt io.WriterTo) (v blobdb.Version, err error) {
-	v, err = db.blobs.SetBlob(ctx, quotaOwner, idPrefix, id, wt)
+func (db cliDb) GrabBlobVersion(writeCtx context.Context, idPrefix, id string) (v blobdb.Version, err error) {
+	// failed blob write also prevents the enclosing write transaction from being committed
+	v, err = db.blobs.GrabBlobVersion(writeCtx, idPrefix, id)
 	if err != nil {
-		db.s.PreventCommit(ctx)
+		db.s.PreventCommit(writeCtx)
 	}
 	return
 }
-
-func (db cliDb) SetBlob(writeCtx context.Context, quotaOwner string, idPrefix, id string, wt io.WriterTo) (v blobdb.Version, err error) {
-	return db.setBlob(writeCtx, quotaOwner, idPrefix, id, wt)
+func (db cliDb) SetBlobVersion(writeCtx context.Context, quotaOwner string, idPrefix, id string, v blobdb.Version, wt io.WriterTo) (err error) {
+	// failed blob write also prevents the enclosing write transaction from being committed
+	err = db.blobs.SetBlobVersion(writeCtx, quotaOwner, idPrefix, id, v, wt)
+	if err != nil {
+		db.s.PreventCommit(writeCtx)
+	}
+	return
 }
 func (db cliDb) GetBlob(readCtx context.Context, idPrefix, id string) (
 	m blobdb.BlobData, r io.Reader, closeReader func(), err error) {

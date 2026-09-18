@@ -16,9 +16,9 @@ func Test_QuotaUsed(t *testing.T) {
 	}
 	defer closeW()
 
-	db.SetBlob(w, "a", "", "", bytesWriterTo(strings.Repeat("a", 100)))
-	db.SetBlob(w, "a", "", "id2", bytesWriterTo(strings.Repeat("a", 50)))
-	db.SetBlob(w, "b", "", "", bytesWriterTo("12"))
+	setBlob(w, db, "a", "", "", bytesWriterTo(strings.Repeat("a", 100)))
+	setBlob(w, db, "a", "", "id2", bytesWriterTo(strings.Repeat("a", 50)))
+	setBlob(w, db, "b", "", "", bytesWriterTo("12"))
 
 	n, l, err := db.GetQuotaUsed("a")
 	if err != nil {
@@ -100,7 +100,7 @@ func Test_QuotaLeft(t *testing.T) {
 		t.Fatalf("got %d bytes left", n)
 	}
 
-	db.SetBlob(w, "a", "", "", bytesWriterTo(strings.Repeat("a", 20)))
+	setBlob(w, db, "a", "", "", bytesWriterTo(strings.Repeat("a", 20)))
 	n, err = db.GetQuotaLeft("a")
 	if err != nil {
 		t.Fatal(err)
@@ -133,7 +133,7 @@ func Test_CantReduceQuotaBelowUsage(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Error if reducing below usage
-	db.SetBlob(w, "a", "", "", bytesWriterTo("abc"))
+	setBlob(w, db, "a", "", "", bytesWriterTo("abc"))
 	err = db.SetQuota("a", 1)
 	if err == nil {
 		t.Fatal("got no error setting quota below current usage")
@@ -157,7 +157,7 @@ func Test_FreezeQuota(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db.SetBlob(w, "a", "", "", bytesWriterTo(strings.Repeat("a", 20)))
+	setBlob(w, db, "a", "", "", bytesWriterTo(strings.Repeat("a", 20)))
 	used, _, err := db.GetQuotaUsed("a")
 	if err != nil {
 		t.Fatal(err)
@@ -207,7 +207,7 @@ func Test_QuotaEnforcement(t *testing.T) {
 	// than 1 byte might be needed to store each byte of tiny writes.
 	for quotaLeft > 20 {
 		nWritten++
-		_, err = db.SetBlob(w, "a", "id-prefix", "id", bytesWriterTo("x"))
+		_, err = setBlob(w, db, "a", "id-prefix", "id", bytesWriterTo("x"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -222,7 +222,7 @@ func Test_QuotaEnforcement(t *testing.T) {
 
 	// A write bigger than what's left must fail with ErrNotEnoughQuota and
 	// must not silently succeed.
-	_, err = db.SetBlob(w, "a", "id-prefix", "id2", bytesWriterTo(strings.Repeat("x", 100)))
+	_, err = setBlob(w, db, "a", "id-prefix", "id2", bytesWriterTo(strings.Repeat("x", 100)))
 	if !errors.Is(err, blobdb.ErrNotEnoughQuota) {
 		t.Fatalf("err=%v, expected ErrNotEnoughQuota", err)
 	}
@@ -250,7 +250,7 @@ func Test_DoesntChargeQuotaOnFailedWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.SetBlob(w, "a", "id-prefix", "id", bytesWriterTo("x"))
+	_, err = setBlob(w, db, "a", "id-prefix", "id", bytesWriterTo("x"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,7 +269,7 @@ func Test_DoesntChargeQuotaOnFailedWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = db.SetBlob(w, "a", "id-prefix", "id2", bytesWriterTo(strings.Repeat("x", 100)))
+	_, err = setBlob(w, db, "a", "id-prefix", "id2", bytesWriterTo(strings.Repeat("x", 100)))
 	if !errors.Is(err, blobdb.ErrNotEnoughQuota) {
 		t.Fatalf("err=%v, expected ErrNotEnoughQuota", err)
 	}
