@@ -688,7 +688,7 @@ export class RepoDisplay extends LitElement {
         }
         .no-pending{
             text-align: center;
-            color: var(--muted)
+            color: var(--color-text-muted);
         }
         .commit-size-tag-span {
             font-size: var(--space4);
@@ -703,7 +703,7 @@ export class RepoDisplay extends LitElement {
         }
         .repo-desc {
             margin: 0;
-            color: var(--muted);        
+            color: var(--color-text-muted);
         }
         .header-actions {
             margin-left: auto;
@@ -784,7 +784,7 @@ export class RepoDisplay extends LitElement {
             margin-left: var(--space3);
             margin-right: var(--space3);
             font-size: var(--space3);
-            color: var(--muted);
+            color: var(--color-text-muted);
         }
         
         @media (max-width: 600px) {
@@ -870,7 +870,7 @@ export class RepoDisplay extends LitElement {
         }
 
         .retry-fetch-text {
-            color: var(--muted);
+            color: var(--color-text-muted);
             text-align: center;
         }
     `];
