@@ -2,7 +2,9 @@ package webdb
 
 import (
 	"context"
+	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"monorepo/twigg-web/services/gobencoding"
 	"monorepo/twigg/commit"
@@ -106,6 +108,38 @@ func (db webDb) indexCommitFromBlobs(w context.Context,
 		return err
 	}
 	return db.indexReviewForSearch(w, id.RepoId, id.CommitId, d)
+}
+
+// The cursor of the sweep is saved so that it carries on where the last run
+// of the server stopped instead of reading every blob again.
+func (db webDb) getCommitSearchIndexCursor(r context.Context) (string, error) {
+	var c indexCommitsForSearchCursor
+	err := db.s.QueryRow(r, `
+		SELECT repoId, commitId FROM commit_search_index_cursor WHERE id = 0
+	`).Scan(&c.RepoId, &c.CommitId)
+	if errors.Is(err, sql.ErrNoRows) {
+		// Nothing was swept yet, so the sweep starts at the first commit.
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return c.encode(), nil
+}
+
+func (db webDb) setCommitSearchIndexCursor(w context.Context,
+	cursor string) error {
+	c, err := decodeIndexCommitsForSearchCursor(cursor)
+	if err != nil {
+		return err
+	}
+	_, err = db.s.Exec(w, `
+		INSERT INTO commit_search_index_cursor (id, repoId, commitId)
+		VALUES (0, ?, ?)
+		ON CONFLICT (id) DO UPDATE SET
+			repoId = excluded.repoId, commitId = excluded.commitId
+	`, c.RepoId, c.CommitId)
+	return err
 }
 
 type indexCommitsForSearchCursor struct {

@@ -334,6 +334,18 @@ func (db WebDb) IndexCommitsForSearch(w context.Context,
 	return db.db.indexCommitsForSearch(w, after, limit)
 }
 
+// Returns the cursor the last saved sweep stopped at, or an empty one when
+// no sweep was saved yet.
+func (db WebDb) GetCommitSearchIndexCursor(r context.Context) (string, error) {
+	return db.db.getCommitSearchIndexCursor(r)
+}
+
+// Saves where a sweep stopped, so that the next server carries on from it.
+func (db WebDb) SetCommitSearchIndexCursor(w context.Context,
+	cursor string) error {
+	return db.db.setCommitSearchIndexCursor(w, cursor)
+}
+
 // Sets the review data of the commit, overwriting any previous one.
 func (db WebDb) SetReviewData(writeCtx context.Context, quotaOwner string, repoId uint64, cId commit.LocalId, d review.Data) error {
 	return db.db.SetReviewData(writeCtx, quotaOwner, repoId, cId, d)

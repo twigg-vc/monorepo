@@ -92,3 +92,57 @@ func Test_IndexCommitsForSearch_IndexesTheTextOfEveryVersion(t *testing.T) {
 		t.Fatalf("indexed text is %v, want [first try, second try]", got)
 	}
 }
+
+func Test_CommitSearchIndexCursor_IsEmptyUntilOneIsSaved(t *testing.T) {
+	db, w := newIndexTestDb(t)
+
+	got, err := db.GetCommitSearchIndexCursor(w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "" {
+		t.Fatalf("the cursor of a database with no sweep is %q, want none", got)
+	}
+}
+
+func Test_CommitSearchIndexCursor_ReadsBackTheLastSavedOne(t *testing.T) {
+	db, w := newIndexTestDb(t)
+	for i := 1; i <= 4; i++ {
+		err := db.SetCommit(w, "owner", 7,
+			commit.Commit{L: uint64(i), AuthorUserId: 3, Message: "msg"})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	first, _, err := db.IndexCommitsForSearch(w, "", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.SetCommitSearchIndexCursor(w, first); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := db.GetCommitSearchIndexCursor(w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != first {
+		t.Fatalf("the saved cursor is %q, want %q", got, first)
+	}
+	// A second sweep replaces the saved cursor instead of adding a row.
+	second, _, err := db.IndexCommitsForSearch(w, first, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SetCommitSearchIndexCursor(w, second); err != nil {
+		t.Fatal(err)
+	}
+	got, err = db.GetCommitSearchIndexCursor(w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != second {
+		t.Fatalf("the saved cursor is %q, want %q", got, second)
+	}
+}
