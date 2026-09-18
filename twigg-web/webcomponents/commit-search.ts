@@ -9,6 +9,9 @@ import { fetchGetWithRetry } from './fetch-get-with-retry';
 // How long the search waits for the typing to stop before it runs.
 const searchDebounceMs = 300;
 
+// Where the search is kept in the page url, so that one can be shared.
+const searchQueryParamName = "q";
+
 // How many commits the can-submit endpoint is asked about at a time.
 const maxCanSubmitCommitsPerRequest = 20;
 
@@ -64,7 +67,25 @@ export class CommitSearch extends LitElement {
 
     connectedCallback() {
         super.connectedCallback()
+        const searched = new URLSearchParams(window.location.search)
+            .get(searchQueryParamName)
+        if (searched !== null) {
+            this.query = searched
+        }
         this.search()
+    }
+
+    // The search is written to the page url so that it can be shared and
+    // survives a reload. It replaces the url instead of pushing a new one,
+    // so that going back leaves the repo instead of undoing the typing.
+    private writeSearchToUrl() {
+        const url = new URL(window.location.href)
+        if (this.query === "") {
+            url.searchParams.delete(searchQueryParamName)
+        } else {
+            url.searchParams.set(searchQueryParamName, this.query)
+        }
+        history.replaceState(null, "", url)
     }
 
     private onQueryInput(e: Event) {
@@ -78,6 +99,7 @@ export class CommitSearch extends LitElement {
     private async search() {
         try {
             this.isSearching = true
+            this.writeSearchToUrl()
             this.searchError = ""
             this.willConflictByCommitId = {}
             this.nextCursor = ""
