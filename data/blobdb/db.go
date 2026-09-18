@@ -33,6 +33,11 @@ type db struct {
 	enforceQuota bool
 }
 
+func (db db) GrabBlobVersion(writeCtx context.Context,
+	idPrefix, id string) (Version, error) {
+	return db.m.GrabMetadataVersion(writeCtx, idPrefix, id)
+}
+
 func (db db) SetBlob(writeCtx context.Context,
 	quotaOwner string, idPrefix, id string, wt io.WriterTo) (v Version, err error) {
 	parentM, parentNotFound, err := db.m.GetLatestMetadata(writeCtx, idPrefix, id)
@@ -44,7 +49,7 @@ func (db db) SetBlob(writeCtx context.Context,
 	hasDeltaEncodingBase := false
 	var deltaEncodingBase Version
 	var parentR io.Reader
-	v, err = db.m.GrabMetadataVersion(writeCtx, idPrefix, id)
+	v, err = db.GrabBlobVersion(writeCtx, idPrefix, id)
 	if err != nil {
 		return
 	}

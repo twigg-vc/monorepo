@@ -52,6 +52,13 @@ func New(log AppendLog, q QuotaDb, m MetadataDb, enforceQuota bool) BlobDb {
 	return BlobDb{db: db{log: log, q: q, m: m, enforceQuota: enforceQuota}}
 }
 
+// Grab the version to write a blob with. The first version is 0. A grabbed
+// version is never handed out again, even if the blob is never written.
+func (db BlobDb) GrabBlobVersion(writeCtx context.Context, idPrefix, id string) (
+	v Version, err error) {
+	return db.db.GrabBlobVersion(writeCtx, idPrefix, id)
+}
+
 // Write a blob by its Id. The first version is 0, each write creates
 // version latest+1. Can return ErrNotEnoughQuota.
 func (db BlobDb) SetBlob(writeCtx context.Context,
