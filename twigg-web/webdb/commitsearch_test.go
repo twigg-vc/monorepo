@@ -254,3 +254,41 @@ func Test_SearchCommits_FiltersByReviewStatus(t *testing.T) {
 		t.Fatalf("commits missing a lgtm are %v, want [4]", got)
 	}
 }
+
+// A status that needs a reviews row is searched through the reviews, so its
+// pages are cut by them instead of by the commits.
+func Test_SearchCommits_PaginatesAReviewStatusSearch(t *testing.T) {
+	db := getNewDb(t)
+	w, closeW, _, err := db.BeginWrite()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(closeW)
+	setUpSearchableUsers(t, db, w)
+	for i := 1; i <= 3; i++ {
+		c := commit.Commit{L: uint64(i), AuthorUserId: 1, Message: "a commit"}
+		if err := db.SetCommit(w, "owner", searchRepoId, c); err != nil {
+			t.Fatal(err)
+		}
+		err := db.SetReviewData(w, "owner", searchRepoId, commit.LocalId(i),
+			review.Data{ReviewStatus: review.ReviewStatus_Unresolved})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	f := commitsearch.NewFilter(searchRepoId)
+	f.HasReviewStatus = true
+	f.ReviewStatus = review.ReviewStatus_Unresolved
+
+	got, next := searchLocalIds(t, db, w, f, "", 2)
+	if !reflect.DeepEqual(got, []uint64{3, 2}) {
+		t.Fatalf("the first page is %v, want [3 2]", got)
+	}
+	got2, next2 := searchLocalIds(t, db, w, f, next, 2)
+	if !reflect.DeepEqual(got2, []uint64{1}) {
+		t.Fatalf("the second page is %v, want [1]", got2)
+	}
+	if next2 != "" {
+		t.Fatalf("the last page points at %q, want it to point at nothing", next2)
+	}
+}
