@@ -26,11 +26,18 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 	// A text search is driven by the text index and ordered by its rows.
 	// Since commit versions are saved incrementally, this should be equivalent
 	// to ordering by commit anyway.
-	// Any other search is driven by the commits themselves.
+	// Any other search is driven by the commits themselves, unless it asks
+	// for a review status.
 	// This is done because fts5 is efficient for text macthing, but any other
 	// "order by" is O(number of matches), which would make queries like "fix"
 	// be very inneficient (as basically all commits would be read).
 	match := ftsMatchQuery(f.Message)
+	// A commit nobody reviewed yet has no reviews row, so a search for
+	// MissingLgtm has to read the commits to find them. Every other status
+	// needs a reviews row, so it is driven by the reviews index instead of
+	// reading every commit of the repo to find the few that match.
+	searchesReviews := match == "" && f.HasReviewStatus &&
+		f.ReviewStatus != review.ReviewStatus_MissingLgtm
 	var q strings.Builder
 	var args []any
 	if match != "" {
@@ -43,6 +50,17 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 		if hasCursor {
 			q.WriteString(` AND t.rowid < ?`)
 			args = append(args, parsedCursor.TextSearchRowId)
+		}
+	} else if searchesReviews {
+		q.WriteString(`
+			SELECT s.commitId, 0 FROM reviews r
+			JOIN twigg_commit_search s
+				ON s.repoId = r.repoId AND s.commitId = r.commitId
+			WHERE r.repoId = ? AND r.reviewStatus = ?`)
+		args = append(args, f.RepoId, uint32(f.ReviewStatus))
+		if hasCursor {
+			q.WriteString(` AND r.commitId < ?`)
+			args = append(args, parsedCursor.CommitId)
 		}
 	} else {
 		q.WriteString(`
@@ -69,13 +87,16 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 		args = append(args, f.ReviewerUsername)
 	}
 	if f.HasReviewStatus {
-		// A commit nobody reviewed yet has no reviews row, and its status is
-		// the zero value: ReviewStatus_MissingLgtm.
-		q.WriteString(` AND s.isSubmitted = 0 AND COALESCE((
-			SELECT r.reviewStatus FROM reviews r
-			WHERE r.repoId = s.repoId AND r.commitId = s.commitId), ?) = ?`)
-		args = append(args, uint32(review.ReviewStatus_MissingLgtm),
-			uint32(f.ReviewStatus))
+		// A submitted commit has no review status.
+		q.WriteString(` AND s.isSubmitted = 0`)
+		if !searchesReviews {
+			// The status of a commit with no reviews row is the zero value.
+			q.WriteString(` AND COALESCE((
+				SELECT r.reviewStatus FROM reviews r
+				WHERE r.repoId = s.repoId AND r.commitId = s.commitId), ?) = ?`)
+			args = append(args, uint32(review.ReviewStatus_MissingLgtm),
+				uint32(f.ReviewStatus))
+		}
 	}
 	if f.State == commitsearch.StatePending {
 		q.WriteString(` AND s.isSubmitted = 0`)
@@ -93,6 +114,9 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 	}
 	if match != "" {
 		q.WriteString(` ORDER BY t.rowid DESC LIMIT ?`)
+	} else if searchesReviews {
+		// Same as s.commitId, but reading it from the driving index.
+		q.WriteString(` ORDER BY r.commitId DESC LIMIT ?`)
 	} else {
 		q.WriteString(` ORDER BY s.commitId DESC LIMIT ?`)
 	}
