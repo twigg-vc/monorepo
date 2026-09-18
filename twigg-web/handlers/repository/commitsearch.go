@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-const commitSearchPageSize = 25
+const commitSearchPageSize = 15
 
 func (hl handler) handleCommitSearch(w http.ResponseWriter,
 	r wrappers.UserWithReadPermissionMuxRequest, dbRead context.Context) {
