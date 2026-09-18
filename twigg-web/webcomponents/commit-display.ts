@@ -836,12 +836,12 @@ private renderRenameToWipBtn(message: string): TemplateResult {
         const unresolvedCount = this.threads_.filter(t => !t.IsResolved).length;
         const allCount = this.threads_.length;
         return html`
-            <h2 style="padding-top: var(--space6)">
+            <h2 style="padding-top: var(--space4)">
                 Unresolved comments: ${unresolvedCount ? html`<span class="badge-yellow">${unresolvedCount}</span>` : ''}
             </h2>
             ${this.renderAllUnresolved()}
 
-            <h2 style="padding-top: var(--space6)">
+            <h2 style="padding-top: var(--space4)">
                 All comments: <span class="badge-grey">${allCount}</span>
             </h2>
             ${this.renderAll()}
