@@ -245,6 +245,9 @@ export class RepoDisplay extends LitElement {
     }
 
     private renderSubmittedCommitsSection(){
+        if (GetFeatureFlags().SearchCommitsUi) {
+            return html``
+        }
         return html`
             <section class="commit-section card">
                 <h2>Submitted Commits</h2>
