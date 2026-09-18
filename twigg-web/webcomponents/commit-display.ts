@@ -157,6 +157,7 @@ export class CommitDisplay extends LitElement {
         this.isLoadingThreads_ = false
         this.showRollbackModal = false
         this.showSubmitCiModal = false
+        this.modalPointerDownOutside = false
         this.TabName = "feed"
         this.LatestParentIsSubmitted = false
         this.Reviewers = [];
@@ -182,6 +183,7 @@ export class CommitDisplay extends LitElement {
     declare private threads_: Thread[]
     declare private isLoadingThreads_: boolean
     declare private showRollbackModal: boolean
+    declare private modalPointerDownOutside: boolean
     declare private showSubmitCiModal: boolean
     declare private TabName: TabName
     declare private addReviewerError: string
@@ -349,8 +351,8 @@ export class CommitDisplay extends LitElement {
         }
 
         return html`
-        <div class="modal-backdrop" @click=${this.closeAddReviewerModal}>
-            <div class="modal" @click=${(e: Event) => e.stopPropagation()}>
+        <div class="modal-backdrop" @pointerdown=${this.onModalPointerDown} @pointerup=${this.onModalPointerUp}>
+            <div class="modal">
                 <h3>Reviewers:</h3>
 
                 <div class="reviewer-modal-list">
@@ -513,6 +515,26 @@ export class CommitDisplay extends LitElement {
         this.showAddReviewerModal = true
     }
 
+    private onModalPointerDown(e: PointerEvent) {
+        this.modalPointerDownOutside = e.target === e.currentTarget
+    }
+    private onModalPointerUp(e: PointerEvent) {
+        if (this.modalPointerDownOutside && e.target === e.currentTarget) {
+            this.closeOpenModal()
+        }
+        this.modalPointerDownOutside = false
+    }
+    private closeOpenModal() {
+        if (this.showAddReviewerModal) {
+            this.closeAddReviewerModal()
+        } else if (this.showRenameModal) {
+            this.closeRenameModal()
+        } else if (this.showRollbackModal) {
+            this.closeRollbackModal()
+        } else if (this.showSubmitCiModal) {
+            this.closeSubmitCiModal()
+        }
+    }
     private closeAddReviewerModal() {
         this.showAddReviewerModal = false
         this.addReviewerError = ""
@@ -639,8 +661,8 @@ private renderRenameToWipBtn(message: string): TemplateResult {
         const latest = this.getLatestCommit()
 
         return html`
-        <div class="modal-backdrop" @click=${this.closeRenameModal}>
-            <div class="modal rename-modal" @click=${(e: Event) => e.stopPropagation()}>
+        <div class="modal-backdrop" @pointerdown=${this.onModalPointerDown} @pointerup=${this.onModalPointerUp}>
+            <div class="modal rename-modal">
                 <h3>Rename commit:</h3>
                 <p>Mark as:</p>
                 <div class="quick-actions-btns-modal-rename-content">
@@ -1104,8 +1126,8 @@ private renderRenameToWipBtn(message: string): TemplateResult {
     private renderRollbackModal(){
         if (this.showRollbackModal){
             return html`
-                <div class="modal-backdrop" @click=${this.closeRollbackModal}>
-                    <div class="modal" @click=${(e: Event) => e.stopPropagation()}>
+                <div class="modal-backdrop" @pointerdown=${this.onModalPointerDown} @pointerup=${this.onModalPointerUp}>
+                    <div class="modal">
                         <h3>Are you sure?</h3>
                         <p>A new commit that reverts c/${this.getLatestCommit().L} will be created</p>
                         <div class="modal-buttons">
@@ -1138,8 +1160,8 @@ private renderRenameToWipBtn(message: string): TemplateResult {
             title = "CI hasn't finished"
         }
         return html`
-            <div class="modal-backdrop" @click=${this.closeSubmitCiModal}>
-                <div class="modal" @click=${(e: Event) => e.stopPropagation()}>
+            <div class="modal-backdrop" @pointerdown=${this.onModalPointerDown} @pointerup=${this.onModalPointerUp}>
+                <div class="modal">
                     <h3>${title}</h3>
                     <p>These CI jobs haven't succeeded:</p>
                     <ul class="submit-ci-modal-list">
