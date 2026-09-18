@@ -60,6 +60,35 @@ function termsExcludedBy(term: string): string[] {
     return []
 }
 
+// Splits a search the way the server does, keeping each token exactly as it
+// was typed so that taking one out leaves the rest as it was written.
+function searchTokens(query: string): string[] {
+    const tokens: string[] = []
+    var current = ""
+    var inQuotes = false
+    var hasToken = false
+    for (const c of query) {
+        if (c === '"') {
+            inQuotes = !inQuotes
+            current += c
+            hasToken = true
+        } else if (c === " " && !inQuotes) {
+            if (hasToken) {
+                tokens.push(current)
+            }
+            current = ""
+            hasToken = false
+        } else {
+            current += c
+            hasToken = true
+        }
+    }
+    if (hasToken) {
+        tokens.push(current)
+    }
+    return tokens
+}
+
 export class CommitSearch extends LitElement {
     static properties = {
         RepoOwnerName: { type: String },
@@ -240,6 +269,7 @@ export class CommitSearch extends LitElement {
                     @input=${this.onQueryInput}>
                 ${this.renderClearSearchBtn()}
             </div>
+            ${this.renderTermChips()}
             ${this.renderTermButtons()}
             ${this.renderResults()}
             <div class="load-more-btn-container">
@@ -248,10 +278,8 @@ export class CommitSearch extends LitElement {
         `
     }
 
-    // The terms of the search, which a button adds and takes out. A term
-    // never holds a space, so what is quoted is left as it was written.
     private searchedTerms(): string[] {
-        return this.query.split(/\s+/).filter((t) => t !== "")
+        return searchTokens(this.query)
     }
 
     private toggleTerm(term: string) {
@@ -264,6 +292,52 @@ export class CommitSearch extends LitElement {
             terms.push(term)
         }
         this.query = terms.join(" ")
+        if (this.debounceTimer !== null) {
+            clearTimeout(this.debounceTimer)
+        }
+        this.search()
+    }
+
+    // What the search is made of, so that one term of it can be taken out
+    // without editing the text by hand.
+    private renderTermChips() {
+        const tokens = this.searchedTerms()
+        if (tokens.length === 0) {
+            return html`
+                <div class="term-chips">
+                    <span class="no-terms">Searching every commit</span>
+                </div>
+            `
+        }
+        return html`
+            <div class="term-chips">
+                ${tokens.map((t, i) => this.renderTermChip(t, i))}
+            </div>
+        `
+    }
+
+    private renderTermChip(token: string, index: number) {
+        var chipClass = "term-chip"
+        if (!token.startsWith(`"`) && token.includes(":")) {
+            chipClass = "term-chip term-chip-of-key"
+        }
+        return html`
+            <span class=${chipClass}>
+                ${token}
+                <button
+                    class="remove-term-btn"
+                    title="Take it out of the search"
+                    @click=${() => this.removeTerm(index)}>
+                    <twigg-icon icon="XMark"></twigg-icon>
+                </button>
+            </span>
+        `
+    }
+
+    private removeTerm(index: number) {
+        const tokens = this.searchedTerms()
+        tokens.splice(index, 1)
+        this.query = tokens.join(" ")
         if (this.debounceTimer !== null) {
             clearTimeout(this.debounceTimer)
         }
@@ -456,6 +530,40 @@ export class CommitSearch extends LitElement {
         }
         .no-commits {
             color: var(--color-text-muted);
+            font-size: var(--space3);
+        }
+        .term-chips {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: var(--space1);
+            margin-top: var(--space2);
+        }
+        .no-terms {
+            color: var(--color-text-muted);
+            font-size: var(--space3);
+        }
+        .term-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space1);
+            padding: var(--space0) var(--space1) var(--space0) var(--space2);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius3);
+            color: var(--color-text-muted);
+            font-size: var(--space3);
+        }
+        .term-chip-of-key {
+            border-color: var(--color-primary);
+            color: var(--color-primary-pop);
+        }
+        .remove-term-btn {
+            display: flex;
+            padding: 0;
+            border: none;
+            background: none;
+            color: inherit;
+            cursor: pointer;
             font-size: var(--space3);
         }
         .term-btns {
