@@ -402,7 +402,7 @@ func ProdConfig(Port int,
 		PasswordSalt:                      GetEnvOrDie("TWIGG_PASSWORD_SALT"),
 		QueueRunnerSleep:                  10 * time.Second,
 		QueueConcurrency:                  1,
-		CommitSearchIndexerInterval:       60 * time.Second,
+		CommitSearchIndexerInterval:       30 * time.Second,
 		AdminEmails: []string{
 			"andre@twigg.vc", "joao@twigg.vc", "marcos@twigg.vc"},
 	}
