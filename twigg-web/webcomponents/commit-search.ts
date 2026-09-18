@@ -116,8 +116,7 @@ export class CommitSearch extends LitElement {
                 this.query, this.nextCursor)
             const resp = await fetchGetWithRetry(path)
             if (!resp.ok) {
-                this.searchError = await resp.text()
-                return
+                throw new Error(`request failed with status ${resp.status}`)
             }
             const found = await resp.json() as CommitSearchResponse
             // A page with no commits is the end of the search.
@@ -128,8 +127,9 @@ export class CommitSearch extends LitElement {
             this.commits = [...this.commits, ...found.Commits]
             this.nextCursor = found.NextCursor
         } catch (e) {
+            // The commits already found stay, and the button comes back for
+            // whoever wants to try again.
             console.error("failed to read more commits:", e)
-            this.searchError = "The search failed"
             return
         } finally {
             this.isLoadingMore = false
