@@ -35,6 +35,8 @@ export class CommitSearch extends LitElement {
         isSearching: { state: true },
         searchError: { state: true },
         willConflictByCommitId: { state: true },
+        nextCursor: { state: true },
+        isLoadingMore: { state: true },
     }
     declare RepoOwnerName: string
     declare RepoName: string
@@ -43,6 +45,8 @@ export class CommitSearch extends LitElement {
     declare private isSearching: boolean
     declare private searchError: string
     declare private willConflictByCommitId: Record<string, boolean>
+    declare private nextCursor: string
+    declare private isLoadingMore: boolean
     private debounceTimer: ReturnType<typeof setTimeout> | null = null
 
     constructor() {
@@ -54,6 +58,8 @@ export class CommitSearch extends LitElement {
         this.isSearching = false
         this.searchError = ""
         this.willConflictByCommitId = {}
+        this.nextCursor = ""
+        this.isLoadingMore = false
     }
 
     connectedCallback() {
@@ -74,6 +80,7 @@ export class CommitSearch extends LitElement {
             this.isSearching = true
             this.searchError = ""
             this.willConflictByCommitId = {}
+            this.nextCursor = ""
             const path = PathToCommitSearch(this.RepoOwnerName, this.RepoName,
                 this.query, "")
             const resp = await fetchGetWithRetry(path)
@@ -86,12 +93,46 @@ export class CommitSearch extends LitElement {
             const found = await resp.json() as CommitSearchResponse
             this.searchError = ""
             this.commits = found.Commits
+            this.nextCursor = found.NextCursor
         } catch (e) {
             console.error("failed to search the commits:", e)
             this.searchError = "The search failed"
             this.commits = []
         } finally {
             this.isSearching = false
+        }
+        this.readWhichSubmitsConflict()
+    }
+
+    // Reads the commits after the ones already found, which the cursor of the
+    // last search points at.
+    private async loadMoreCommits() {
+        if (this.isLoadingMore || this.nextCursor === "") {
+            return
+        }
+        try {
+            this.isLoadingMore = true
+            const path = PathToCommitSearch(this.RepoOwnerName, this.RepoName,
+                this.query, this.nextCursor)
+            const resp = await fetchGetWithRetry(path)
+            if (!resp.ok) {
+                this.searchError = await resp.text()
+                return
+            }
+            const found = await resp.json() as CommitSearchResponse
+            // A page with no commits is the end of the search.
+            if (found.Commits.length === 0) {
+                this.nextCursor = ""
+                return
+            }
+            this.commits = [...this.commits, ...found.Commits]
+            this.nextCursor = found.NextCursor
+        } catch (e) {
+            console.error("failed to read more commits:", e)
+            this.searchError = "The search failed"
+            return
+        } finally {
+            this.isLoadingMore = false
         }
         this.readWhichSubmitsConflict()
     }
@@ -147,6 +188,9 @@ export class CommitSearch extends LitElement {
                 ${this.renderClearSearchBtn()}
             </div>
             ${this.renderResults()}
+            <div class="load-more-btn-container">
+                ${this.renderLoadMoreBtn()}
+            </div>
         `
     }
 
@@ -170,6 +214,20 @@ export class CommitSearch extends LitElement {
         }
         this.query = ""
         this.search()
+    }
+
+    private renderLoadMoreBtn() {
+        if (this.isSearching || this.nextCursor === "") {
+            return null
+        }
+        if (this.isLoadingMore) {
+            return html`<simple-loader></simple-loader>`
+        }
+        return html`
+            <button class="load-more-btn" @click=${this.loadMoreCommits}>
+                View more
+            </button>
+        `
     }
 
     private renderResults() {
@@ -301,6 +359,14 @@ export class CommitSearch extends LitElement {
         .no-commits {
             color: var(--color-text-muted);
             font-size: var(--space3);
+        }
+        .load-more-btn-container {
+            display: flex;
+            justify-content: center;
+        }
+        .load-more-btn {
+            background: var(--color-surface);
+            color: var(--color-text);
         }
         .commits {
             display: flex;
