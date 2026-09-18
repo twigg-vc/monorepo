@@ -17,7 +17,7 @@ type blobMetadataDb struct {
 	s sqlitehelper.SqliteHelper
 }
 
-const blobMetadataColumns = `IdPrefix, Id, Version, IsLatest, SavedAt,
+const blobMetadataColumns = `IdPrefix, Id, Version, SavedAt,
 	IsDeleted, Datastrip, Offset, DistanceToNonDelta, CompressedSize,
 	UncompressedSize, Encoding, HasDeltaEncodingBase, DeltaEncodingBase, QuotaOwner`
 
@@ -62,17 +62,19 @@ func (db blobMetadataDb) SetMetadataGrabbedVersion(writeCtx context.Context, m b
 	if errors.Is(err, sql.ErrNoRows) || lastGrab < m.Version {
 		return fmt.Errorf("version %d not yet grabbed", m.Version)
 	}
+	// IsLatest is deprecated: nothing reads it anymore, it is only written to
+	// satisfy its NOT NULL column
 	_, err = db.s.Exec(writeCtx, `
-		INSERT INTO sqlarge_blobs (`+blobMetadataColumns+`)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, m.IdPrefix, m.Id, m.Version, m.IsLatest, m.SavedAt,
+		INSERT INTO sqlarge_blobs (`+blobMetadataColumns+`, IsLatest)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+	`, m.IdPrefix, m.Id, m.Version, m.SavedAt,
 		m.IsDeleted, m.Datastrip, m.Offset, m.DistanceToNonDelta, m.CompressedSize,
 		m.Size, m.Encoding, m.HasDeltaEncodingBase, m.DeltaEncodingBase, m.QuotaOwner)
 	return err
 }
 
 func scanBlobMetadata(row *sql.Row) (m blobdb.BlobData, isNotFoundErr bool, err error) {
-	err = row.Scan(&m.IdPrefix, &m.Id, &m.Version, &m.IsLatest, &m.SavedAt,
+	err = row.Scan(&m.IdPrefix, &m.Id, &m.Version, &m.SavedAt,
 		&m.IsDeleted, &m.Datastrip, &m.Offset, &m.DistanceToNonDelta, &m.CompressedSize,
 		&m.Size, &m.Encoding, &m.HasDeltaEncodingBase, &m.DeltaEncodingBase, &m.QuotaOwner)
 	if errors.Is(err, sql.ErrNoRows) {

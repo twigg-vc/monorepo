@@ -90,7 +90,6 @@ type BlobData struct {
 	SavedAt        time.Time
 	IsDeleted      bool
 	QuotaOwner     string
-	IsLatest       bool
 	Datastrip      string
 	Offset         int64
 	// DistanceToNonDelta indicates the size of the consecutive delta chain

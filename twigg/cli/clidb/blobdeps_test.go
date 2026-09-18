@@ -51,7 +51,6 @@ func Test_BlobMetadataDb(t *testing.T) {
 		SavedAt:              time.UnixMilli(123456789),
 		IsDeleted:            false,
 		QuotaOwner:           "owner",
-		IsLatest:             true,
 		Datastrip:            "ds0",
 		Offset:               7,
 		DistanceToNonDelta:   2,
