@@ -64,6 +64,7 @@ export class CommitSearch extends LitElement {
     private async search() {
         try {
             this.isSearching = true
+            this.searchError = ""
             const path = PathToCommitSearch(this.RepoOwnerName, this.RepoName,
                 this.query, "")
             const resp = await fetchGetWithRetry(path)
@@ -93,21 +94,16 @@ export class CommitSearch extends LitElement {
                 placeholder="is:pending author:me queue"
                 .value=${this.query}
                 @input=${this.onQueryInput}>
-            ${this.renderSearchError()}
-            ${this.renderCommits()}
+            ${this.renderResults()}
         `
     }
 
-    private renderSearchError() {
-        if (this.searchError === "") {
-            return null
-        }
-        return html`<p class="search-error">${this.searchError}</p>`
-    }
-
-    private renderCommits() {
-        if (this.isSearching && this.commits.length === 0) {
+    private renderResults() {
+        if (this.isSearching) {
             return html`<simple-loader></simple-loader>`
+        }
+        if (this.searchError !== "") {
+            return html`<p class="search-error">${this.searchError}</p>`
         }
         if (this.commits.length === 0) {
             return html`<p class="no-commits">No commit matches this search</p>`
