@@ -12,6 +12,13 @@ const searchDebounceMs = 300;
 // Where the search is kept in the page url, so that one can be shared.
 const searchQueryParamName = "q";
 
+// Terms that can not hold at the same time, because the search keeps the last
+// of them. Adding one takes the others out.
+const exclusiveTermGroups: string[][] = [
+    ["is:pending", "is:submitted"],
+    ["is:missing-lgtm", "is:unresolved", "is:ready"],
+];
+
 // The buttons under the search bar. Each one adds its term to the search or
 // takes it out.
 const termButtons: { term: string, label: string }[] = [
@@ -43,6 +50,16 @@ interface CommitSearchResponse {
  * Searches the commits of a repository with a query of terms such as
  * `is:pending author:me queue`.
  */
+// The terms that can not hold at the same time as the given one.
+function termsExcludedBy(term: string): string[] {
+    for (const group of exclusiveTermGroups) {
+        if (group.includes(term)) {
+            return group
+        }
+    }
+    return []
+}
+
 export class CommitSearch extends LitElement {
     static properties = {
         RepoOwnerName: { type: String },
@@ -242,6 +259,8 @@ export class CommitSearch extends LitElement {
         if (terms.includes(term)) {
             terms = terms.filter((t) => t !== term)
         } else {
+            const exclusive = termsExcludedBy(term)
+            terms = terms.filter((t) => !exclusive.includes(t))
             terms.push(term)
         }
         this.query = terms.join(" ")
