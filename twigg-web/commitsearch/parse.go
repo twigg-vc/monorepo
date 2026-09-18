@@ -19,14 +19,15 @@ var queryTokenizer = NewTokenizer(
 	[]string{keyIs, keyAuthor, keyReviewer, keyMessage},
 	maxQueryLength)
 
-// The review statuses a commit can be searched by.
+// The review statuses a commit can be searched by. MissingOwnersApproval is
+// not one of them, because it is computed per request against OWNERS and is
+// never written to the search index.
 var searchedReviewStatuses = map[string]review.ReviewStatus{
-	"ready":                   review.ReviewStatus_Ready,
-	"lgtm":                    review.ReviewStatus_Ready,
-	"missing-lgtm":            review.ReviewStatus_MissingLgtm,
-	"no-lgtm":                 review.ReviewStatus_MissingLgtm,
-	"unresolved":              review.ReviewStatus_Unresolved,
-	"missing-owners-approval": review.ReviewStatus_MissingOwnersApproval,
+	"ready":        review.ReviewStatus_Ready,
+	"lgtm":         review.ReviewStatus_Ready,
+	"missing-lgtm": review.ReviewStatus_MissingLgtm,
+	"no-lgtm":      review.ReviewStatus_MissingLgtm,
+	"unresolved":   review.ReviewStatus_Unresolved,
 }
 
 func parseQuery(repoId uint64, q string) (f Filter, err error) {

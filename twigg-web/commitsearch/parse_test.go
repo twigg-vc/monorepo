@@ -74,10 +74,9 @@ func Test_ParseQuery_ReadsTheStateTerms(t *testing.T) {
 
 func Test_ParseQuery_ReadsTheReviewStatusTerms(t *testing.T) {
 	cases := map[string]review.ReviewStatus{
-		"is:ready":                   review.ReviewStatus_Ready,
-		"is:missing-lgtm":            review.ReviewStatus_MissingLgtm,
-		"is:unresolved":              review.ReviewStatus_Unresolved,
-		"is:missing-owners-approval": review.ReviewStatus_MissingOwnersApproval,
+		"is:ready":        review.ReviewStatus_Ready,
+		"is:missing-lgtm": review.ReviewStatus_MissingLgtm,
+		"is:unresolved":   review.ReviewStatus_Unresolved,
 	}
 	for query, want := range cases {
 		f, err := commitsearch.ParseQuery(parsedRepoId, query)
@@ -151,6 +150,8 @@ func Test_ParseQuery_FailsOnASearchItCanNotRun(t *testing.T) {
 		`-is:pending`,
 		`-is:ready`,
 		`is:nope`,
+		// a status the index does not hold is refused, not silently empty
+		`is:missing-owners-approval`,
 		// the tokenizer refuses these before the words are read
 		`nope:1`,
 		`an "unclosed quote`,

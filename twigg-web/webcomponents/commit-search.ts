@@ -402,9 +402,8 @@ export class CommitSearch extends LitElement {
                     <code>is:</code> takes <code>pending</code>,
                     <code>submitted</code>, <code>wip</code>,
                     <code>archived</code>, <code>ready</code>/<code>lgtm</code>,
-                    <code>missing-lgtm</code>/<code>no-lgtm</code>,
-                    <code>unresolved</code> or
-                    <code>missing-owners-approval</code>.
+                    <code>missing-lgtm</code>/<code>no-lgtm</code> or
+                    <code>unresolved</code>.
                 </p>
                 <p>
                     <code>-is:wip</code> and <code>-is:archived</code> leave
