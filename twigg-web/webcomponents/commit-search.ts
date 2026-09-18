@@ -162,7 +162,7 @@ export class CommitSearch extends LitElement {
     }
     private renderCommitStatus(commit, submitWillConflict, isWip) {
         if (commit.IsSubmitted) {
-            return null
+            return html`<commit-status .Status=${"submitted"}></commit-status>`
         }
         if (this.isLoadingWillConflict) {
             return html`<simple-loader></simple-loader>`
