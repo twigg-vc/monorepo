@@ -108,9 +108,9 @@ func Test_SearchCommits_ReturnsTheRepoCommitsNewestFirstAndPaginateCursor(t *tes
 	if !reflect.DeepEqual(got2, []uint64{2, 1}) {
 		t.Fatalf("found %v, want [2 1]", got2)
 	}
-	got3, _ := searchLocalIds(t, db, w, commitsearch.NewFilter(searchRepoId), next2, 2)
-	if len(got3) != 0 {
-		t.Fatalf("found %v, want empty slice", got)
+	// The last page says it is the last, so nothing asks for another one
+	if next2 != "" {
+		t.Fatalf("the last page points at %q, want it to point at nothing", next2)
 	}
 }
 
@@ -180,10 +180,9 @@ func Test_SearchCommits_PaginatesATextSearchWithTheTextIndexRow(t *testing.T) {
 	if !reflect.DeepEqual(got2, []uint64{1}) {
 		t.Fatalf("second page is %v, want [1]", got2)
 	}
-
-	got3, _ := searchLocalIds(t, db, w, f, next2, 2)
-	if len(got3) != 0 {
-		t.Fatalf("last page is %v, want it empty", got3)
+	// The last page says it is the last, so nothing asks for another one
+	if next2 != "" {
+		t.Fatalf("the last page points at %q, want it to point at nothing", next2)
 	}
 }
 

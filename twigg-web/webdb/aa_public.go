@@ -318,7 +318,7 @@ func (db WebDb) GetReviewData(ctx context.Context, repoId uint64, cId commit.Loc
 
 // Returns the commits of a repo that match the filter, newest first, and the
 // cursor of the commits after them. An empty cursor reads the first ones, and
-// an empty page means there are no more.
+// the last page returns an empty one.
 func (db WebDb) SearchCommits(r context.Context, f commitsearch.Filter, cursor string, limit int) (
 	[]commit.Commit, string, error) {
 	return db.db.searchCommits(r, f, cursor, limit)

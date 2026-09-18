@@ -96,12 +96,18 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 	} else {
 		q.WriteString(` ORDER BY s.commitId DESC LIMIT ?`)
 	}
-	args = append(args, limit)
+	// One commit more than the page is read to know whether there is another
+	// page, so that the last one says it is the last.
+	args = append(args, limit+1)
 
 	// Parse the query results
 	queryResults, err := db.getSearchedCommits(r, q.String(), args)
 	if err != nil {
 		return nil, "", err
+	}
+	hasMore := len(queryResults) > limit
+	if hasMore {
+		queryResults = queryResults[:limit]
 	}
 	if len(queryResults) == 0 {
 		return nil, "", nil
@@ -114,6 +120,9 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 			return nil, "", err
 		}
 		commits = append(commits, c)
+	}
+	if !hasMore {
+		return commits, "", nil
 	}
 	// Prepare the next cursor
 	last := queryResults[len(queryResults)-1]
