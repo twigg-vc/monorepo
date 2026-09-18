@@ -187,7 +187,6 @@ export class RepoDisplay extends LitElement {
             case "commits graph":
                 return html`
                     <section class="commit-section card">
-                        <h2>Commit graph</h2>
                         <p>
                             Shows commit relationships. Click opens a commit in 
                             a new tab (Ctrl+Click stays). 
@@ -260,7 +259,6 @@ export class RepoDisplay extends LitElement {
         if (GetFeatureFlags().SearchCommitsUi) {
             return html`
                 <section class="commit-section card">
-                    <h2>Commits</h2>
                     <commit-search
                         RepoOwnerName=${this.RepoOwnerName}
                         RepoName=${this.RepoName}>
