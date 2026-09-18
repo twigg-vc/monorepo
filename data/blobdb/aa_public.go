@@ -37,7 +37,8 @@ type QuotaDb interface {
 type MetadataDb interface {
 	GetLatestMetadata(readCtx context.Context, idPrefix string, id string) (m BlobData, isNotFoundErr bool, err error)
 	GetMetadataByVersion(readCtx context.Context, idPrefix string, id string, v Version) (m BlobData, isNotFoundErr bool, err error)
-	InsertMetadata(writeCtx context.Context, m BlobData) error
+	GrabMetadataVersion(writeCtx context.Context, idPrefix string, id string) (Version, error)
+	SetMetadataVersion(writeCtx context.Context, m BlobData) error
 	SetMetadataIsLatest(writeCtx context.Context, idPrefix string, id string, v Version, isLatest bool) error
 }
 

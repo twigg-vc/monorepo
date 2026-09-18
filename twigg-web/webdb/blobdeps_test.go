@@ -61,7 +61,14 @@ func Test_BlobMetadataDb(t *testing.T) {
 		HasDeltaEncodingBase: true,
 		DeltaEncodingBase:    965,
 	}
-	err = m.InsertMetadata(w, in)
+	v, err := m.GrabMetadataVersion(w, "prefix", "id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != in.Version {
+		t.Fatalf("v=%d, expected %d", v, in.Version)
+	}
+	err = m.SetMetadataVersion(w, in)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,6 +108,50 @@ func Test_BlobMetadataDb(t *testing.T) {
 	}
 	if got.IsLatest {
 		t.Fatalf("IsLatest=true, expected false")
+	}
+
+	err = commitW()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Successive reservations of a blob must hand out 0, 1, 2... and each blob
+// must get its own sequence
+func Test_GrabMetadataVersion(t *testing.T) {
+	s, err := sqlitehelper.NewSqliteHelper(sqlitehelper.InMemoryPathToDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(s.Close)
+	err = s.Init(embeddedMigrations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := blobMetadataDb{s}
+
+	w, closeW, commitW, err := s.BeginWrite()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeW()
+
+	for i := range 5 {
+		v, err := m.GrabMetadataVersion(w, "prefix", "id")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if v != blobdb.Version(i) {
+			t.Fatalf("v=%d, expected %d", v, i)
+		}
+	}
+
+	v, err := m.GrabMetadataVersion(w, "prefix", "id2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != 0 {
+		t.Fatalf("v=%d, expected 0", v)
 	}
 
 	err = commitW()

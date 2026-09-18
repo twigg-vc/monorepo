@@ -52,7 +52,8 @@ func (q *memQuota) IncreaseSuccessfullBytes(quotaOwner string, n int64) error {
 }
 
 type memMetadata struct {
-	rows []blobdb.BlobData
+	rows        []blobdb.BlobData
+	nextVersion map[[2]string]blobdb.Version
 }
 
 func (m *memMetadata) GetLatestMetadata(ctx context.Context, idPrefix string, id string) (blobdb.BlobData, bool, error) {
@@ -71,7 +72,16 @@ func (m *memMetadata) GetMetadataByVersion(ctx context.Context, idPrefix string,
 	}
 	return blobdb.BlobData{}, true, blobdb.ErrNotFound
 }
-func (m *memMetadata) InsertMetadata(ctx context.Context, b blobdb.BlobData) error {
+func (m *memMetadata) GrabMetadataVersion(ctx context.Context, idPrefix string, id string) (blobdb.Version, error) {
+	if m.nextVersion == nil {
+		m.nextVersion = map[[2]string]blobdb.Version{}
+	}
+	k := [2]string{idPrefix, id}
+	v := m.nextVersion[k]
+	m.nextVersion[k] = v + 1
+	return v, nil
+}
+func (m *memMetadata) SetMetadataVersion(ctx context.Context, b blobdb.BlobData) error {
 	if !b.IsLatest {
 		return errors.New("got non latest metadata for insert")
 	}
@@ -256,14 +266,15 @@ func Test_QuotaEnforcement(t *testing.T) {
 		t.Fatalf("q.successfull=%d, expected 0", q.successfull)
 	}
 
-	// With enough quota the same write must succeed
+	// With enough quota the same write must succeed. The refused write already
+	// took version 0, so this one gets version 1
 	q.left = 1000000
 	v, err := db.SetBlob(ctx, "owner", "prefix", "id", bytesWriterTo(content))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v != 0 {
-		t.Fatalf("v=%d, expected 0", v)
+	if v != 1 {
+		t.Fatalf("v=%d, expected 1", v)
 	}
 	_, r, closeR, err := db.GetBlob(ctx, "prefix", "id")
 	if err != nil {

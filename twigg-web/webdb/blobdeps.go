@@ -36,7 +36,19 @@ func (db blobMetadataDb) GetMetadataByVersion(readCtx context.Context,
 	`, idPrefix, id, v))
 }
 
-func (db blobMetadataDb) InsertMetadata(writeCtx context.Context, m blobdb.BlobData) error {
+func (db blobMetadataDb) GrabMetadataVersion(writeCtx context.Context,
+	idPrefix string, id string) (v blobdb.Version, err error) {
+	err = db.s.QueryRow(writeCtx, `
+		INSERT INTO sqlarge_blob_versions (IdPrefix, Id, LastGrabbedVersion)
+		VALUES (?, ?, 0)
+		ON CONFLICT (IdPrefix, Id) DO UPDATE
+			SET LastGrabbedVersion = LastGrabbedVersion + 1
+		RETURNING LastGrabbedVersion
+	`, idPrefix, id).Scan(&v)
+	return
+}
+
+func (db blobMetadataDb) SetMetadataVersion(writeCtx context.Context, m blobdb.BlobData) error {
 	_, err := db.s.Exec(writeCtx, `
 		INSERT INTO sqlarge_blobs (`+blobMetadataColumns+`)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

@@ -44,10 +44,11 @@ func (db db) SetBlob(writeCtx context.Context,
 	hasDeltaEncodingBase := false
 	var deltaEncodingBase Version
 	var parentR io.Reader
-	if hasParent {
-		v = parentM.Version + 1
-	} else {
-		v = 0
+	v, err = db.m.GrabMetadataVersion(writeCtx, idPrefix, id)
+	if err != nil {
+		return
+	}
+	if !hasParent {
 		// Set to -1 bc then we can always say that the new DistanceToNonDelta
 		// is just DistanceToNonDelta + 1 without needing an extra variable
 		// for this.
@@ -110,7 +111,7 @@ func (db db) SetBlob(writeCtx context.Context,
 		err = ErrNotEnoughQuota
 		return
 	}
-	err = db.m.InsertMetadata(writeCtx, BlobData{
+	err = db.m.SetMetadataVersion(writeCtx, BlobData{
 		IdPrefix:             idPrefix,
 		Id:                   id,
 		Version:              v,
