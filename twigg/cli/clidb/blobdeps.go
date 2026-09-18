@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"monorepo/data/blobdb"
@@ -25,7 +26,8 @@ func (db blobMetadataDb) GetLatestMetadata(readCtx context.Context,
 	idPrefix string, id string) (m blobdb.BlobData, isNotFoundErr bool, err error) {
 	return scanBlobMetadata(db.s.QueryRow(readCtx, `
 		SELECT `+blobMetadataColumns+` FROM sqlarge_blobs
-		WHERE IdPrefix = ? AND Id = ? AND IsLatest = TRUE
+		WHERE IdPrefix = ? AND Id = ?
+		ORDER BY Version DESC LIMIT 1
 	`, idPrefix, id))
 }
 
@@ -49,23 +51,24 @@ func (db blobMetadataDb) GrabMetadataVersion(writeCtx context.Context,
 	return
 }
 
-func (db blobMetadataDb) SetMetadataVersion(writeCtx context.Context, m blobdb.BlobData) error {
-	_, err := db.s.Exec(writeCtx, `
+func (db blobMetadataDb) SetMetadataGrabbedVersion(writeCtx context.Context, m blobdb.BlobData) error {
+	var lastGrab blobdb.Version
+	err := db.s.QueryRow(writeCtx, `
+		SELECT LastGrabbedVersion FROM sqlarge_blob_versions
+		WHERE IdPrefix = ? AND Id = ?
+	`, m.IdPrefix, m.Id).Scan(&lastGrab)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	if errors.Is(err, sql.ErrNoRows) || lastGrab < m.Version {
+		return fmt.Errorf("version %d not yet grabbed", m.Version)
+	}
+	_, err = db.s.Exec(writeCtx, `
 		INSERT INTO sqlarge_blobs (`+blobMetadataColumns+`)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, m.IdPrefix, m.Id, m.Version, m.IsLatest, m.SavedAt,
 		m.IsDeleted, m.Datastrip, m.Offset, m.DistanceToNonDelta, m.CompressedSize,
 		m.Size, m.Encoding, m.HasDeltaEncodingBase, m.DeltaEncodingBase, m.QuotaOwner)
-	return err
-}
-
-func (db blobMetadataDb) SetMetadataIsLatest(writeCtx context.Context,
-	idPrefix string, id string, v blobdb.Version, isLatest bool) error {
-	_, err := db.s.Exec(writeCtx, `
-		UPDATE sqlarge_blobs
-		SET IsLatest = ?
-		WHERE IdPrefix = ? AND Id = ? AND Version = ?
-	`, isLatest, idPrefix, id, v)
 	return err
 }
 

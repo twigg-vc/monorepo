@@ -116,7 +116,7 @@ func (db db) SetBlob(writeCtx context.Context,
 		err = ErrNotEnoughQuota
 		return
 	}
-	err = db.m.SetMetadataVersion(writeCtx, BlobData{
+	err = db.m.SetMetadataGrabbedVersion(writeCtx, BlobData{
 		IdPrefix:             idPrefix,
 		Id:                   id,
 		Version:              v,
@@ -135,13 +135,6 @@ func (db db) SetBlob(writeCtx context.Context,
 	})
 	if err != nil {
 		return
-	}
-
-	if hasParent {
-		err = db.m.SetMetadataIsLatest(writeCtx, idPrefix, id, parentM.Version, false)
-		if err != nil {
-			return
-		}
 	}
 
 	err = db.q.IncreaseSuccessfullBytes(quotaOwner, compressedSize)

@@ -34,12 +34,18 @@ func Test_BlobMetadataDb(t *testing.T) {
 	if err == nil || !isNotFoundErr {
 		t.Fatalf("got no isNotFoundErr")
 	}
-
+	v0, err := m.GrabMetadataVersion(w, "prefix", "id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v0 != 0 {
+		t.Fatalf("got v=%d, expected 0", v0)
+	}
 	// All fields must roundtrip
 	in := blobdb.BlobData{
 		IdPrefix:             "prefix",
 		Id:                   "id",
-		Version:              0,
+		Version:              v0,
 		Size:                 100,
 		CompressedSize:       42,
 		SavedAt:              time.UnixMilli(123456789),
@@ -53,14 +59,7 @@ func Test_BlobMetadataDb(t *testing.T) {
 		HasDeltaEncodingBase: true,
 		DeltaEncodingBase:    987,
 	}
-	v, err := m.GrabMetadataVersion(w, "prefix", "id")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if v != in.Version {
-		t.Fatalf("v=%d, expected %d", v, in.Version)
-	}
-	err = m.SetMetadataVersion(w, in)
+	err = m.SetMetadataGrabbedVersion(w, in)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,22 +83,41 @@ func Test_BlobMetadataDb(t *testing.T) {
 		t.Fatalf("Version=%d, expected 0", got.Version)
 	}
 
-	// Clearing isLatest must hide the row from GetLatestMetadata but keep it
-	// reachable by version
-	err = m.SetMetadataIsLatest(w, "prefix", "id", 0, false)
+	// A higher version must take over as the latest, and the older one must
+	// stay reachable by version
+	v1, err := m.GrabMetadataVersion(w, "prefix", "id")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, isNotFoundErr, err = m.GetLatestMetadata(w, "prefix", "id")
-	if err == nil || !isNotFoundErr {
-		t.Fatalf("got no isNotFoundErr")
+	if v1 != 1 {
+		t.Fatalf("got v=%d, expected 0", v1)
+	}
+	newer := got
+	newer.Version = 1
+	err = m.SetMetadataGrabbedVersion(w, newer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, isNotFoundErr, err = m.GetLatestMetadata(w, "prefix", "id")
+	if err != nil || isNotFoundErr {
+		t.Fatal(err)
+	}
+	if got.Version != newer.Version {
+		t.Fatalf("Version=%d, expected %d", got.Version, newer.Version)
 	}
 	got, isNotFoundErr, err = m.GetMetadataByVersion(w, "prefix", "id", 0)
 	if err != nil || isNotFoundErr {
 		t.Fatal(err)
 	}
-	if got.IsLatest {
-		t.Fatalf("IsLatest=true, expected false")
+	if got.Version != 0 {
+		t.Fatalf("Version=%d, expected 0", got.Version)
+	}
+
+	// Cant set version without first grabbing
+	newer.Version = 999
+	err = m.SetMetadataGrabbedVersion(w, newer)
+	if err == nil {
+		t.Fatal("no error when setting before grabing")
 	}
 
 	err = commitW()

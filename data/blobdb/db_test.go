@@ -57,12 +57,21 @@ type memMetadata struct {
 }
 
 func (m *memMetadata) GetLatestMetadata(ctx context.Context, idPrefix string, id string) (blobdb.BlobData, bool, error) {
+	latest := blobdb.BlobData{}
+	found := false
 	for _, row := range m.rows {
-		if row.IdPrefix == idPrefix && row.Id == id && row.IsLatest {
-			return row, false, nil
+		if row.IdPrefix != idPrefix || row.Id != id {
+			continue
+		}
+		if !found || row.Version > latest.Version {
+			latest = row
+			found = true
 		}
 	}
-	return blobdb.BlobData{}, true, blobdb.ErrNotFound
+	if !found {
+		return blobdb.BlobData{}, true, blobdb.ErrNotFound
+	}
+	return latest, false, nil
 }
 func (m *memMetadata) GetMetadataByVersion(ctx context.Context, idPrefix string, id string, v blobdb.Version) (blobdb.BlobData, bool, error) {
 	for _, row := range m.rows {
@@ -81,19 +90,16 @@ func (m *memMetadata) GrabMetadataVersion(ctx context.Context, idPrefix string, 
 	m.nextVersion[k] = v + 1
 	return v, nil
 }
-func (m *memMetadata) SetMetadataVersion(ctx context.Context, b blobdb.BlobData) error {
-	if !b.IsLatest {
-		return errors.New("got non latest metadata for insert")
+func (m *memMetadata) SetMetadataGrabbedVersion(ctx context.Context, b blobdb.BlobData) error {
+	if m.nextVersion == nil {
+		m.nextVersion = map[[2]string]blobdb.Version{}
+	}
+	k := [2]string{b.IdPrefix, b.Id}
+	_, ok := m.nextVersion[k]
+	if !ok {
+		return fmt.Errorf("version %d not grabbed", b.Version)
 	}
 	m.rows = append(m.rows, b)
-	return nil
-}
-func (m *memMetadata) SetMetadataIsLatest(ctx context.Context, idPrefix string, id string, v blobdb.Version, isLatest bool) error {
-	for i, row := range m.rows {
-		if row.IdPrefix == idPrefix && row.Id == id && row.Version == v {
-			m.rows[i].IsLatest = isLatest
-		}
-	}
 	return nil
 }
 
