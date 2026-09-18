@@ -2,12 +2,20 @@ import { html, LitElement, css } from 'lit';
 import { TwiggCss } from './css';
 import { Commit } from './interfaces';
 import { FirstCommitMsg, IsWipCommit } from './commit-display';
-import { PathToCommitSearch, UrlToCommit } from './routes';
+import { PathToCommitSearch, UrlToCanSubmitCommits, UrlToCommit } from './routes';
 import { FormatRelativeTime } from './helpers';
 import { fetchGetWithRetry } from './fetch-get-with-retry';
 
 // How long the search waits for the typing to stop before it runs.
 const searchDebounceMs = 300;
+
+// How many commits the can-submit endpoint is asked about at a time.
+const maxCanSubmitCommitsPerRequest = 20;
+
+type CanSubmitByCommitId = Record<string, {
+    CanSubmit: boolean
+    CantSubmitReason: string
+}>
 
 interface CommitSearchResponse {
     Commits: Commit[]
@@ -26,7 +34,7 @@ export class CommitSearch extends LitElement {
         commits: { state: true },
         isSearching: { state: true },
         searchError: { state: true },
-        isLoadingWillConflict: { state: true },
+        willConflictByCommitId: { state: true },
     }
     declare RepoOwnerName: string
     declare RepoName: string
@@ -34,7 +42,7 @@ export class CommitSearch extends LitElement {
     declare private commits: Commit[]
     declare private isSearching: boolean
     declare private searchError: string
-    declare private isLoadingWillConflict: boolean
+    declare private willConflictByCommitId: Record<string, boolean>
     private debounceTimer: ReturnType<typeof setTimeout> | null = null
 
     constructor() {
@@ -45,7 +53,7 @@ export class CommitSearch extends LitElement {
         this.commits = []
         this.isSearching = false
         this.searchError = ""
-        this.isLoadingWillConflict = false
+        this.willConflictByCommitId = {}
     }
 
     connectedCallback() {
@@ -65,6 +73,7 @@ export class CommitSearch extends LitElement {
         try {
             this.isSearching = true
             this.searchError = ""
+            this.willConflictByCommitId = {}
             const path = PathToCommitSearch(this.RepoOwnerName, this.RepoName,
                 this.query, "")
             const resp = await fetchGetWithRetry(path)
@@ -84,6 +93,46 @@ export class CommitSearch extends LitElement {
         } finally {
             this.isSearching = false
         }
+        this.readWhichSubmitsConflict()
+    }
+
+    // Reads whether submitting each commit would conflict. It costs a request
+    // of its own, so it runs once the results settled and fills the badges in
+    // when it lands.
+    private async readWhichSubmitsConflict() {
+        const searched = this.commits
+        const idsToRead = searched
+            .filter((c) => c.L !== 0 && !c.IsSubmitted && !c.HasRebaseConflicts)
+            .map((c) => c.L)
+        if (idsToRead.length === 0) {
+            return
+        }
+        const willConflict: Record<string, boolean> = {}
+        try {
+            for (let i = 0; i < idsToRead.length; i += maxCanSubmitCommitsPerRequest) {
+                const batch = idsToRead.slice(i, i + maxCanSubmitCommitsPerRequest)
+                const resp = await fetchGetWithRetry(
+                    UrlToCanSubmitCommits(this.RepoOwnerName, this.RepoName, batch))
+                if (!resp.ok) {
+                    throw new Error(`request failed with status ${resp.status}`)
+                }
+                const read = await resp.json() as CanSubmitByCommitId
+                for (const commitId in read) {
+                    const item = read[commitId]
+                    willConflict[commitId] = !item.CanSubmit &&
+                        item.CantSubmitReason === "would-cause-rebase-conflict"
+                }
+            }
+        } catch (e) {
+            // The badge is extra, so a search that got its commits still works.
+            console.error("failed to read whether a submit conflicts:", e)
+            return
+        }
+        if (this.commits !== searched) {
+            // A newer search already replaced these commits.
+            return
+        }
+        this.willConflictByCommitId = willConflict
     }
 
     render() {
@@ -130,7 +179,7 @@ export class CommitSearch extends LitElement {
         }
         const isWip = commit.L != 0 && !commit.IsSubmitted && IsWipCommit(message)
         const lastUpdated = FormatRelativeTime(commit.CreatedOn);
-        const submitWillConflict = false // TODO: implementation in progress
+        const submitWillConflict = this.willConflictByCommitId[String(commit.L)] === true
         const commitLift = html`
                 <div class="commit twigg-lift ${statusClass}">
                     <span class="commit-size-tag-span">
@@ -159,9 +208,6 @@ export class CommitSearch extends LitElement {
     private renderCommitStatus(commit, submitWillConflict, isWip) {
         if (commit.IsSubmitted) {
             return html`<commit-status .Status=${"submitted"}></commit-status>`
-        }
-        if (this.isLoadingWillConflict) {
-            return html`<simple-loader></simple-loader>`
         }
         if (commit.HasRebaseConflicts) {
             return html`<commit-status Status="has-conflict" TooltipSide="left"></commit-status>`
