@@ -10,6 +10,8 @@ type Db interface {
 	BeginWrite() (writeCtx context.Context, closeTx func(), commitTx func() error, err error)
 	IndexCommitsForSearch(w context.Context, after string,
 		limit int) (next string, done bool, err error)
+	GetCommitSearchIndexCursor(r context.Context) (string, error)
+	SetCommitSearchIndexCursor(w context.Context, cursor string) error
 }
 
 type CommitSearch struct {

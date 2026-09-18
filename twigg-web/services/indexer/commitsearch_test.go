@@ -70,8 +70,42 @@ func Test_CommitSearch_IndexesEveryInterval(t *testing.T) {
 	}
 }
 
+func Test_CommitSearch_CarriesOnFromTheSavedCursor(t *testing.T) {
+	db := newDbMock()
+	db.savedCursor = "0/2"
+	gotIndexCalls := []string{}
+	db.indexCommitsForSearch = func(after string, limit int) (
+		string, bool, error) {
+		gotIndexCalls = append(gotIndexCalls, after)
+		done := true
+		return "fake-last-cursor", done, nil
+	}
+	cs := indexer.NewCommitSearch(db, time.Millisecond /*batchSize=*/, 2)
+	cs.Start()
+	defer cs.Stop()
+
+	// The cursor is saved after the batch, so we'll be done once the saved
+	// cursor changes.
+	start := time.Now()
+	for db.savedCursor == "0/2" {
+		time.Sleep(time.Millisecond)
+		if time.Since(start) > time.Second {
+			t.Fatal("spent too long waiting for index")
+		}
+	}
+
+	if !reflect.DeepEqual(gotIndexCalls, []string{"0/2"}) {
+		t.Fatalf("the sweep read %v, want it to carry on after 0/2",
+			gotIndexCalls)
+	}
+	if db.savedCursor != "fake-last-cursor" {
+		t.Fatalf("the saved cursor is %q, want fake-last-cursor", db.savedCursor)
+	}
+}
+
 type dbMock struct {
 	calls                 int
+	savedCursor           string
 	beginWrite            func() (context.Context, func(), func() error, error)
 	indexCommitsForSearch func(after string, limit int) (
 		next string, done bool, err error)
@@ -97,4 +131,14 @@ func (m *dbMock) IndexCommitsForSearch(w context.Context,
 	after string, limit int) (
 	string, bool, error) {
 	return m.indexCommitsForSearch(after, limit)
+}
+
+func (m *dbMock) GetCommitSearchIndexCursor(r context.Context) (string, error) {
+	return m.savedCursor, nil
+}
+
+func (m *dbMock) SetCommitSearchIndexCursor(w context.Context,
+	cursor string) error {
+	m.savedCursor = cursor
+	return nil
 }

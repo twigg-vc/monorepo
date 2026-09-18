@@ -7,13 +7,14 @@ import (
 )
 
 type commitSearch struct {
-	db        Db
-	interval  time.Duration
-	batchSize int
-	cursor    string
-	isDone    bool
-	stopCh    chan struct{}
-	wg        sync.WaitGroup
+	db           Db
+	interval     time.Duration
+	batchSize    int
+	cursor       string
+	loadedCursor bool
+	isDone       bool
+	stopCh       chan struct{}
+	wg           sync.WaitGroup
 }
 
 func (cs *commitSearch) Start() {
@@ -44,8 +45,8 @@ func (cs *commitSearch) Stop() {
 	cs.wg.Wait()
 }
 
-// The cursor only moves once the batch is committed, so a failed batch is
-// read again on the next tick.
+// The cursor is saved with the batch that moved it, so a failed batch leaves
+// both behind and is read again on the next tick.
 func (cs *commitSearch) indexOneBatch() {
 	w, closeTx, commitTx, err := cs.db.BeginWrite()
 	if err != nil {
@@ -53,10 +54,24 @@ func (cs *commitSearch) indexOneBatch() {
 		return
 	}
 	defer closeTx()
+	if !cs.loadedCursor {
+		// The sweep carries on from where the last run of the server stopped.
+		cs.cursor, err = cs.db.GetCommitSearchIndexCursor(w)
+		if err != nil {
+			log.Printf("[commit search] failed to read the cursor: %s", err)
+			return
+		}
+		cs.loadedCursor = true
+	}
 	next, done, err := cs.db.IndexCommitsForSearch(w, cs.cursor, cs.batchSize)
 	if err != nil {
 		log.Printf("[commit search] failed to index the batch after %+v: %s",
 			cs.cursor, err)
+		return
+	}
+	err = cs.db.SetCommitSearchIndexCursor(w, next)
+	if err != nil {
+		log.Printf("[commit search] failed to save the cursor: %s", err)
 		return
 	}
 	err = commitTx()
