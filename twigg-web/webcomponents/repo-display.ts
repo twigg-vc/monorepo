@@ -172,16 +172,7 @@ export class RepoDisplay extends LitElement {
             case "commits":
                 return html`
                     ${this.renderPendingCommitsSection()}
-
-                    <section class="commit-section card">
-                        <h2>Submitted Commits</h2>
-                        <div class="commit-list">
-                            ${this.SubmittedCommits.map((c) => this.renderCommit(c, false))}
-                        </div>
-                        <div class="view-more-btn-container">
-                            ${this.renderLoadMoreSubmittedCommitsBtn()}
-                        </div>
-                    </section>
+                    ${this.renderSubmittedCommitsSection()}
                 `;
 
             case "commits graph":
@@ -251,6 +242,20 @@ export class RepoDisplay extends LitElement {
 
     private hasMoreSubmittedToFetch(): boolean {
         return this.SubmittedCommits[this.SubmittedCommits.length - 1].L != 0
+    }
+
+    private renderSubmittedCommitsSection(){
+        return html`
+            <section class="commit-section card">
+                <h2>Submitted Commits</h2>
+                <div class="commit-list">
+                    ${this.SubmittedCommits.map((c) => this.renderCommit(c, false))}
+                </div>
+                <div class="view-more-btn-container">
+                    ${this.renderLoadMoreSubmittedCommitsBtn()}
+                </div>
+            </section>
+        `
     }
 
 
