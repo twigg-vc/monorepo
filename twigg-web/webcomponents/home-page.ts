@@ -159,7 +159,7 @@ export class HomePage extends LitElement {
         }
 
         .repo-section {
-            margin-bottom: var(--space6);
+            margin-bottom: var(--space4);
         }
 
         .repo-list {
