@@ -229,7 +229,8 @@ export class NavBar extends LitElement {
     private renderLinks(){
         return html`
             <a class="icon-btn" href="${HomeUrl}">
-                <twigg-icon class="tab-icon" icon="Home" style="font-size: var(--space5)"></twigg-icon>
+                <twigg-icon class="tab-icon" icon="Home" title="Home"
+                style="font-size: var(--space5)"></twigg-icon>
             </a>
             <div class="notif-menu">
                 <div class="centralized">
@@ -243,6 +244,7 @@ export class NavBar extends LitElement {
                             <twigg-icon
                                 class="tab-icon"
                                 icon="Bell"
+                                title="Notifications"
                                 style="font-size: var(--space5)">
                             </twigg-icon>
 
@@ -274,7 +276,8 @@ export class NavBar extends LitElement {
                         aria-haspopup="menu"
                         aria-expanded=${this.UserOpen ? 'true' : 'false'}
                     >
-                        <twigg-icon class="tab-icon" icon="User" style="font-size: var(--space5)"></twigg-icon>
+                        <twigg-icon class="tab-icon" icon="User" title="Account"
+                        style="font-size: var(--space5)"></twigg-icon>
                     </a>
                 </div>
                 <div class="user-menu-list nested-submenu-on-mobile ${this.UserOpen ? 'open' : ''}" role="menu">
@@ -400,7 +403,7 @@ export class NavBar extends LitElement {
         return html`
         <a class="icon-btn" href="${OrganizationsPattern}">
             <twigg-icon 
-            class="tab-icon" icon="BuildingOffice2" title="organizations" 
+            class="tab-icon" icon="BuildingOffice2" title="Organizations" 
             style="font-size: var(--space5)"></twigg-icon>
         </a>
         `
