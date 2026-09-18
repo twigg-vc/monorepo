@@ -191,6 +191,52 @@ func Test_SetGetBlob(t *testing.T) {
 	}
 }
 
+// Grabbed versions are never handed out again, so a write after a few grabs
+// lands on the next free version
+func Test_GrabBlobVersion(t *testing.T) {
+	db, _, _, _ := getNewBlobDb(false, 0)
+	ctx := context.Background()
+
+	for i := range 3 {
+		v, err := db.GrabBlobVersion(ctx, "prefix", "id")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if v != uint64(i) {
+			t.Fatalf("v=%d, expected %d", v, i)
+		}
+	}
+
+	// Another blob must get its own sequence
+	v, err := db.GrabBlobVersion(ctx, "prefix", "id2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != 0 {
+		t.Fatalf("v=%d, expected 0", v)
+	}
+
+	v, err = db.SetBlob(ctx, "owner", "prefix", "id", bytesWriterTo("v3-data"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != 3 {
+		t.Fatalf("v=%d, expected 3", v)
+	}
+	m, r, closeR, err := db.GetBlob(ctx, "prefix", "id")
+	if err != nil {
+		closeR()
+		t.Fatal(err)
+	}
+	if m.Version != 3 {
+		t.Fatalf("m.Version=%d, expected 3", m.Version)
+	}
+	data := readAll(t, r, closeR)
+	if string(data) != "v3-data" {
+		t.Fatalf("data=%q, expected %q", data, "v3-data")
+	}
+}
+
 // Writes more versions than maxConsecutiveDeltaEncoded to exercise both the
 // delta encoded chains and the forced non-delta resets, then reads every
 // version back.
