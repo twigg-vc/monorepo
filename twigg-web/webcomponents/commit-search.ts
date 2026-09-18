@@ -113,6 +113,9 @@ export class CommitSearch extends LitElement {
     declare private isLoadingMore: boolean
     declare private showHelp: boolean
     private debounceTimer: ReturnType<typeof setTimeout> | null = null
+    // Counts the searches started, so that a reply of one that a newer search
+    // already replaced is thrown away instead of painted over it.
+    private searchesStarted = 0
 
     constructor() {
         super()
@@ -160,32 +163,39 @@ export class CommitSearch extends LitElement {
     }
 
     private async search() {
+        this.searchesStarted++
+        const searchNumber = this.searchesStarted
+        this.isSearching = true
+        this.writeSearchToUrl()
+        var error = ""
+        var found: CommitSearchResponse | undefined = undefined
         try {
-            this.isSearching = true
-            this.writeSearchToUrl()
-            this.searchError = ""
-            this.willConflictByCommitId = {}
-            this.nextCursor = ""
             const path = PathToCommitSearch(this.RepoOwnerName, this.RepoName,
                 this.query, "")
             const resp = await fetchGetWithRetry(path)
             if (!resp.ok) {
                 // The body of a refused search says what is wrong with it.
-                this.searchError = await resp.text()
-                this.commits = []
-                return
+                error = await resp.text()
+            } else {
+                found = await resp.json() as CommitSearchResponse
             }
-            const found = await resp.json() as CommitSearchResponse
-            this.searchError = ""
-            this.commits = found.Commits
-            this.nextCursor = found.NextCursor
         } catch (e) {
             console.error("failed to search the commits:", e)
-            this.searchError = "The search failed"
-            this.commits = []
-        } finally {
-            this.isSearching = false
+            error = "The search failed"
         }
+        if (searchNumber !== this.searchesStarted) {
+            return
+        }
+        this.isSearching = false
+        this.searchError = error
+        this.willConflictByCommitId = {}
+        if (found === undefined) {
+            this.commits = []
+            this.nextCursor = ""
+            return
+        }
+        this.commits = found.Commits
+        this.nextCursor = found.NextCursor
         this.readWhichSubmitsConflict()
     }
 
@@ -195,6 +205,7 @@ export class CommitSearch extends LitElement {
         if (this.isLoadingMore || this.nextCursor === "") {
             return
         }
+        const searchNumber = this.searchesStarted
         try {
             this.isLoadingMore = true
             const path = PathToCommitSearch(this.RepoOwnerName, this.RepoName,
@@ -204,6 +215,9 @@ export class CommitSearch extends LitElement {
                 throw new Error(`request failed with status ${resp.status}`)
             }
             const found = await resp.json() as CommitSearchResponse
+            if (searchNumber !== this.searchesStarted) {
+                return
+            }
             // A page with no commits is the end of the search.
             if (found.Commits.length === 0) {
                 this.nextCursor = ""
