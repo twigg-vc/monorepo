@@ -12,6 +12,20 @@ const searchDebounceMs = 300;
 // Where the search is kept in the page url, so that one can be shared.
 const searchQueryParamName = "q";
 
+// The buttons under the search bar. Each one adds its term to the search or
+// takes it out.
+const termButtons: { term: string, label: string }[] = [
+    { term: "is:pending", label: "Pending" },
+    { term: "is:submitted", label: "Submitted" },
+    { term: "author:me", label: "Mine" },
+    { term: "reviewer:me", label: "To review" },
+    { term: "is:unresolved", label: "Unresolved" },
+    { term: "is:missing-lgtm", label: "Missing LGTM" },
+    { term: "is:ready", label: "Ready" },
+    { term: "-is:wip", label: "No WIP" },
+    { term: "is:archived", label: "Archived" },
+];
+
 // How many commits the can-submit endpoint is asked about at a time.
 const maxCanSubmitCommitsPerRequest = 20;
 
@@ -209,10 +223,53 @@ export class CommitSearch extends LitElement {
                     @input=${this.onQueryInput}>
                 ${this.renderClearSearchBtn()}
             </div>
+            ${this.renderTermButtons()}
             ${this.renderResults()}
             <div class="load-more-btn-container">
                 ${this.renderLoadMoreBtn()}
             </div>
+        `
+    }
+
+    // The terms of the search, which a button adds and takes out. A term
+    // never holds a space, so what is quoted is left as it was written.
+    private searchedTerms(): string[] {
+        return this.query.split(/\s+/).filter((t) => t !== "")
+    }
+
+    private toggleTerm(term: string) {
+        var terms = this.searchedTerms()
+        if (terms.includes(term)) {
+            terms = terms.filter((t) => t !== term)
+        } else {
+            terms.push(term)
+        }
+        this.query = terms.join(" ")
+        if (this.debounceTimer !== null) {
+            clearTimeout(this.debounceTimer)
+        }
+        this.search()
+    }
+
+    private renderTermButtons() {
+        return html`
+            <div class="term-btns">
+                ${termButtons.map((b) => this.renderTermButton(b))}
+            </div>
+        `
+    }
+
+    private renderTermButton(b: { term: string, label: string }) {
+        var onClass = ""
+        if (this.searchedTerms().includes(b.term)) {
+            onClass = "term-btn-on"
+        }
+        return html`
+            <button
+                class="term-btn ${onClass}"
+                @click=${() => this.toggleTerm(b.term)}>
+                ${b.label}
+            </button>
         `
     }
 
@@ -381,6 +438,29 @@ export class CommitSearch extends LitElement {
         .no-commits {
             color: var(--color-text-muted);
             font-size: var(--space3);
+        }
+        .term-btns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space1);
+            margin: var(--space2) 0;
+        }
+        .term-btn {
+            padding: var(--space0) var(--space2);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius1);
+            background: var(--color-surface);
+            color: var(--color-text-muted);
+            font-family: var(--font-family);
+            font-size: var(--space3);
+            cursor: pointer;
+        }
+        .term-btn:hover {
+            color: var(--color-text);
+        }
+        .term-btn-on {
+            border-color: var(--color-primary);
+            color: var(--color-text);
         }
         .load-more-btn-container {
             display: flex;
