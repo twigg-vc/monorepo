@@ -259,10 +259,12 @@ export class RepoDisplay extends LitElement {
         if (GetFeatureFlags().SearchCommitsUi) {
             return html`
                 <section class="commit-section card">
-                    <commit-search
-                        RepoOwnerName=${this.RepoOwnerName}
-                        RepoName=${this.RepoName}>
-                    </commit-search>
+                    <div class="commit-search-container">
+                        <commit-search
+                            RepoOwnerName=${this.RepoOwnerName}
+                            RepoName=${this.RepoName}>
+                        </commit-search>
+                    </div>
                 </section>
             `
         }
@@ -632,6 +634,9 @@ export class RepoDisplay extends LitElement {
         }
         .commit-section h3 {
             margin-bottom: var(--space2);
+        }
+        .commit-search-container{
+            padding-top: var(--space2);
         }
         .commit-list {
             display: flex;
