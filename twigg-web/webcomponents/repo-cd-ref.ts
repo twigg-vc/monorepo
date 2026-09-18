@@ -42,6 +42,7 @@ export class RepoCdRef extends LitElement {
     declare private isLoadingMorePipelines: boolean;
     declare private isLaunchingNew: boolean;
     declare private isModalOpen: boolean;
+    declare private modalPointerDownOutside: boolean;
     declare private selectedCommit: Commit | null;
     constructor() {
         super();
@@ -58,6 +59,7 @@ export class RepoCdRef extends LitElement {
         this.isLoadingMorePipelines = false;
         this.isLaunchingNew = false;
         this.isModalOpen = false;
+        this.modalPointerDownOutside = false;
         this.selectedCommit = null;
     }
     willUpdate(changedProps) {
@@ -225,6 +227,15 @@ export class RepoCdRef extends LitElement {
         this.isModalOpen = true;
     }
 
+    private onModalPointerDown(e: PointerEvent) {
+        this.modalPointerDownOutside = e.target === e.currentTarget
+    }
+    private onModalPointerUp(e: PointerEvent) {
+        if (this.modalPointerDownOutside && e.target === e.currentTarget) {
+            this.closeModal()
+        }
+        this.modalPointerDownOutside = false
+    }
     private closeModal() {
         this.isModalOpen = false;
         this.selectedCommit = null;
@@ -244,8 +255,8 @@ export class RepoCdRef extends LitElement {
             return html``
         }
         return html`
-        <div class="modal-backdrop" @click=${this.closeModal}>
-            <div id="launch-pipeline-modal" class="modal" @click=${(e: Event) => e.stopPropagation()}>
+        <div class="modal-backdrop" @pointerdown=${this.onModalPointerDown} @pointerup=${this.onModalPointerUp}>
+            <div id="launch-pipeline-modal" class="modal">
                 <button class="modal-close" ?disabled=${this.isLaunchingNew} @click=${this.closeModal}>✕</button>
                 <h3>Launch Pipeline</h3>
 
