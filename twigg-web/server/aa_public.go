@@ -161,7 +161,10 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 	const memLoggerInterval = 60 * time.Minute // Log memory use every 60 min
 	memLogger := memlogger.New(memLoggerInterval, mService)
 
-	const commitSearchIndexerBatchSize = 100
+	// One batch is one write transaction, and each commit in it costs a blob
+	// read per version it has plus one for its review, so the batch is kept
+	// small: it blocks every other write while it runs.
+	const commitSearchIndexerBatchSize = 10
 	commitSearchIndexer := indexer.NewCommitSearch(sDb,
 		s.C.CommitSearchIndexerInterval, commitSearchIndexerBatchSize)
 
