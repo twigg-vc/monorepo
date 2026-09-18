@@ -146,9 +146,9 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 		panic(fmt.Sprintf("failed to create queue service: %s", err))
 	}
 	s.QueueRunner = squeue.NewRunner(queueStorage, s.C.QueueRunnerSleep, s.C.QueueConcurrency)
-	const metricsFlushInternal = 30 * time.Second // Sample metrics every 30 sec
-	const cleanupIntervalInSeconds = 2 * 60 * 60  // cleanup every 2h
-	const metricRetentionInSeconds = 24 * 60 * 60 // retain metrics for 24h
+	const metricsFlushInternal = 30 * time.Second      // Sample metrics every 30 sec
+	const cleanupIntervalInSeconds = 2 * 60 * 60       // cleanup every 2h
+	const metricRetentionInSeconds = 10 * 24 * 60 * 60 // retain metrics for 10d
 	mService, closeMetricsService, err := metrics.New(
 		s.C.StorageFolderAbsPath, metricsFlushInternal,
 		cleanupIntervalInSeconds, metricRetentionInSeconds)
