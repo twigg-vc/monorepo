@@ -187,9 +187,7 @@ export class RepoDisplay extends LitElement {
             case "commits graph":
                 return html`
                     <section class="commit-section card">
-                        <h2  style="padding-top: var(--space6)">
-                            Commit graph
-                        </h2>
+                        <h2>Commit graph</h2>
                         <p>
                             Shows commit relationships. Click opens a commit in 
                             a new tab (Ctrl+Click stays). 
@@ -262,7 +260,7 @@ export class RepoDisplay extends LitElement {
         if (GetFeatureFlags().SearchCommitsUi) {
             return html`
                 <section class="commit-section card">
-                    <h2 style="padding-top: var(--space6)">Commits</h2>
+                    <h2>Commits</h2>
                     <commit-search
                         RepoOwnerName=${this.RepoOwnerName}
                         RepoName=${this.RepoName}>
@@ -272,9 +270,7 @@ export class RepoDisplay extends LitElement {
         }
         return html`
             <section class="commit-section card">
-                <h2 style="padding-top: var(--space6)">
-                    Pending Commits
-                </h2>
+                <h2>Pending Commits</h2>
                 <div class="commit-list">
                     ${this.renderPendingCommitsList()}
                 </div>
@@ -631,7 +627,10 @@ export class RepoDisplay extends LitElement {
             font-size: var(--space5p)
         }
         .commit-section {
-            margin-bottom: var(--space6);
+            margin-bottom: var(--space4);
+        }
+        .commit-section h2 {
+            padding-top: var(--space2);
         }
         .commit-section h3 {
             margin-bottom: var(--space2);
