@@ -268,7 +268,7 @@ export class CommitSearch extends LitElement {
                 <input
                     class="search-bar"
                     type="search"
-                    placeholder="is:pending author:me queue"
+                    placeholder="is:pending author:me message"
                     .value=${this.query}
                     @input=${this.onQueryInput}>
                 ${this.renderClearSearchBtn()}
