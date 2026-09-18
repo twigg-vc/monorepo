@@ -137,14 +137,39 @@ export class CommitSearch extends LitElement {
 
     render() {
         return html`
-            <input
-                class="search-bar"
-                type="search"
-                placeholder="is:pending author:me queue"
-                .value=${this.query}
-                @input=${this.onQueryInput}>
+            <div class="search-bar-container">
+                <input
+                    class="search-bar"
+                    type="search"
+                    placeholder="is:pending author:me queue"
+                    .value=${this.query}
+                    @input=${this.onQueryInput}>
+                ${this.renderClearSearchBtn()}
+            </div>
             ${this.renderResults()}
         `
+    }
+
+    private renderClearSearchBtn() {
+        if (this.query === "") {
+            return null
+        }
+        return html`
+            <button
+                class="clear-search-btn"
+                title="Clear the search"
+                @click=${this.clearSearch}>
+                <twigg-icon icon="XMark"></twigg-icon>
+            </button>
+        `
+    }
+
+    private clearSearch() {
+        if (this.debounceTimer !== null) {
+            clearTimeout(this.debounceTimer)
+        }
+        this.query = ""
+        this.search()
     }
 
     private renderResults() {
@@ -233,6 +258,31 @@ export class CommitSearch extends LitElement {
     }
 
     static styles = [TwiggCss, css`
+        .search-bar-container {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        /* The one the browser draws is not of this palette */
+        .search-bar::-webkit-search-cancel-button {
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .clear-search-btn {
+            position: absolute;
+            right: var(--space2);
+            display: flex;
+            align-items: center;
+            padding: 0;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: var(--color-text-muted);
+            font-size: var(--space4);
+        }
+        .clear-search-btn:hover {
+            color: var(--color-text);
+        }
         .search-bar {
             width: 100%;
             padding: var(--space2) var(--space3);
@@ -242,6 +292,7 @@ export class CommitSearch extends LitElement {
             color: var(--color-text);
             font-family: var(--font-family);
             font-size: var(--space4);
+            padding-right: var(--space6m);
         }
         .search-error {
             color: var(--color-danger);
