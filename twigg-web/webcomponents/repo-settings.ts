@@ -61,6 +61,7 @@ export class RepoSettings extends LitElement {
     declare private isLoadingSaveDescription: boolean;
     declare private isLoadingArchive: boolean;
     declare private showCreateSecretModal: boolean;
+    declare private modalPointerDownOutside: boolean;
     declare private isLoadingCreateSecretBtn: boolean;
     declare private secretsWithDeleteBtnLoading: string[];
 
@@ -85,6 +86,7 @@ export class RepoSettings extends LitElement {
         this.isLoadingSaveDescription = false;
         this.isLoadingArchive = false;
         this.showCreateSecretModal = false;
+        this.modalPointerDownOutside = false;
         this.isLoadingCreateSecretBtn = false;
         this.secretsWithDeleteBtnLoading = [];
     }
@@ -100,6 +102,15 @@ export class RepoSettings extends LitElement {
         this.showCreateSecretModal = true;
     }
 
+    private onModalPointerDown(e: PointerEvent) {
+        this.modalPointerDownOutside = e.target === e.currentTarget
+    }
+    private onModalPointerUp(e: PointerEvent) {
+        if (this.modalPointerDownOutside && e.target === e.currentTarget) {
+            this.closeCreateSecretModal()
+        }
+        this.modalPointerDownOutside = false
+    }
     closeCreateSecretModal() {
         this.showCreateSecretModal = false;
     }
@@ -405,8 +416,8 @@ export class RepoSettings extends LitElement {
 
         ${this.showCreateSecretModal ? 
         html`
-        <div class="modal-backdrop" @click=${this.closeCreateSecretModal}>
-            <div class="modal" @click=${(e) => e.stopPropagation()}>
+        <div class="modal-backdrop" @pointerdown=${this.onModalPointerDown} @pointerup=${this.onModalPointerUp}>
+            <div class="modal">
                 <h2 class="create-new-secret-modal-title">Create a new Secret</h2>
                 <form class="form-of-create-secret-modal" id="create-secret-form-id">
                     <p>Name:</p>
