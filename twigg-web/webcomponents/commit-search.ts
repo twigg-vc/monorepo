@@ -264,6 +264,7 @@ export class CommitSearch extends LitElement {
     render() {
         return html`
             <div class="search-bar-container">
+                <twigg-icon class="search-icon" icon="MagnifyingGlass"></twigg-icon>
                 <input
                     class="search-bar"
                     type="search"
@@ -551,6 +552,13 @@ export class CommitSearch extends LitElement {
             -webkit-appearance: none;
             appearance: none;
         }
+        .search-icon {
+            position: absolute;
+            left: var(--space2);
+            color: var(--color-text-muted);
+            font-size: var(--space4);
+            pointer-events: none;
+        }
         .clear-search-btn {
             position: absolute;
             right: var(--space2);
@@ -575,6 +583,7 @@ export class CommitSearch extends LitElement {
             color: var(--color-text);
             font-family: var(--font-family);
             font-size: var(--space4);
+            padding-left: var(--space6m);
             padding-right: var(--space6m);
         }
         .search-error {
