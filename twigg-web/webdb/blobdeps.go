@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"io"
 	"monorepo/data/blobdb"
 	"monorepo/data/sqlitehelper"
@@ -51,16 +50,16 @@ func (db blobMetadataDb) GrabMetadataVersion(writeCtx context.Context,
 }
 
 func (db blobMetadataDb) SetMetadataGrabbedVersion(writeCtx context.Context, m blobdb.BlobData) error {
-	var lastGrab blobdb.Version
-	err := db.s.QueryRow(writeCtx, `
-		SELECT LastGrabbedVersion FROM sqlarge_blob_versions
-		WHERE IdPrefix = ? AND Id = ?
-	`, m.IdPrefix, m.Id).Scan(&lastGrab)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	// A version that was never grabbed can be written, but no grab may hand
+	// it out afterwards
+	_, err := db.s.Exec(writeCtx, `
+		INSERT INTO sqlarge_blob_versions (IdPrefix, Id, LastGrabbedVersion)
+		VALUES (?, ?, ?)
+		ON CONFLICT (IdPrefix, Id) DO UPDATE
+			SET LastGrabbedVersion = MAX(LastGrabbedVersion, excluded.LastGrabbedVersion)
+	`, m.IdPrefix, m.Id, m.Version)
+	if err != nil {
 		return err
-	}
-	if errors.Is(err, sql.ErrNoRows) || lastGrab < m.Version {
-		return fmt.Errorf("version %d not yet grabbed", m.Version)
 	}
 	// IsLatest is deprecated: nothing reads it anymore, it is only written to
 	// satisfy its NOT NULL column

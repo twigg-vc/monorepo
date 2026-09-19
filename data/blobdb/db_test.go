@@ -95,9 +95,8 @@ func (m *memMetadata) SetMetadataGrabbedVersion(ctx context.Context, b blobdb.Bl
 		m.nextVersion = map[[2]string]blobdb.Version{}
 	}
 	k := [2]string{b.IdPrefix, b.Id}
-	_, ok := m.nextVersion[k]
-	if !ok {
-		return fmt.Errorf("version %d not grabbed", b.Version)
+	if next, ok := m.nextVersion[k]; !ok || next <= b.Version {
+		m.nextVersion[k] = b.Version + 1
 	}
 	m.rows = append(m.rows, b)
 	return nil

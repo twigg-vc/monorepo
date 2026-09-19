@@ -112,11 +112,33 @@ func Test_BlobMetadataDb(t *testing.T) {
 		t.Fatalf("Version=%d, expected 0", got.Version)
 	}
 
-	// Cant set version without first grabbing
+	// A version that was never grabbed can be set, but no grab may hand it
+	// out afterwards
 	newer.Version = 999
 	err = m.SetMetadataGrabbedVersion(w, newer)
-	if err == nil {
-		t.Fatal("no error when setting before grabing")
+	if err != nil {
+		t.Fatal(err)
+	}
+	grabbed, err := m.GrabMetadataVersion(w, "prefix", "id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if grabbed != 1000 {
+		t.Fatalf("grabbed=%d, expected 1000", grabbed)
+	}
+
+	// Setting an older version must not move the grabbing back
+	newer.Version = 5
+	err = m.SetMetadataGrabbedVersion(w, newer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	grabbed, err = m.GrabMetadataVersion(w, "prefix", "id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if grabbed != 1001 {
+		t.Fatalf("grabbed=%d, expected 1001", grabbed)
 	}
 
 	err = commitW()
