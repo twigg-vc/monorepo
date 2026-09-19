@@ -38,7 +38,7 @@ type MetadataDb interface {
 	GetLatestMetadata(readCtx context.Context, idPrefix string, id string) (m BlobData, isNotFoundErr bool, err error)
 	GetMetadataByVersion(readCtx context.Context, idPrefix string, id string, v Version) (m BlobData, isNotFoundErr bool, err error)
 	GrabMetadataVersion(writeCtx context.Context, idPrefix string, id string) (Version, error)
-	SetMetadataGrabbedVersion(writeCtx context.Context, m BlobData) error
+	SetMetadataVersion(writeCtx context.Context, m BlobData) error
 }
 
 // MUST BE INITIALIZED WITH `New`

@@ -66,7 +66,7 @@ func Test_BlobMetadataDb(t *testing.T) {
 		HasDeltaEncodingBase: true,
 		DeltaEncodingBase:    965,
 	}
-	err = m.SetMetadataGrabbedVersion(w, in)
+	err = m.SetMetadataVersion(w, in)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func Test_BlobMetadataDb(t *testing.T) {
 	}
 	newer := got
 	newer.Version = 1
-	err = m.SetMetadataGrabbedVersion(w, newer)
+	err = m.SetMetadataVersion(w, newer)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func Test_BlobMetadataDb(t *testing.T) {
 	// A version that was never grabbed can be set, but no grab may hand it
 	// out afterwards
 	newer.Version = 999
-	err = m.SetMetadataGrabbedVersion(w, newer)
+	err = m.SetMetadataVersion(w, newer)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func Test_BlobMetadataDb(t *testing.T) {
 
 	// Setting an older version must not move the grabbing back
 	newer.Version = 5
-	err = m.SetMetadataGrabbedVersion(w, newer)
+	err = m.SetMetadataVersion(w, newer)
 	if err != nil {
 		t.Fatal(err)
 	}

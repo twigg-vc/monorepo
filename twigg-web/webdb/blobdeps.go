@@ -49,7 +49,7 @@ func (db blobMetadataDb) GrabMetadataVersion(writeCtx context.Context,
 	return
 }
 
-func (db blobMetadataDb) SetMetadataGrabbedVersion(writeCtx context.Context, m blobdb.BlobData) error {
+func (db blobMetadataDb) SetMetadataVersion(writeCtx context.Context, m blobdb.BlobData) error {
 	// A version that was never grabbed can be written, but no grab may hand
 	// it out afterwards
 	_, err := db.s.Exec(writeCtx, `

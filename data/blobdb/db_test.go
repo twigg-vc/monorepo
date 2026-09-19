@@ -90,7 +90,7 @@ func (m *memMetadata) GrabMetadataVersion(ctx context.Context, idPrefix string, 
 	m.nextVersion[k] = v + 1
 	return v, nil
 }
-func (m *memMetadata) SetMetadataGrabbedVersion(ctx context.Context, b blobdb.BlobData) error {
+func (m *memMetadata) SetMetadataVersion(ctx context.Context, b blobdb.BlobData) error {
 	if m.nextVersion == nil {
 		m.nextVersion = map[[2]string]blobdb.Version{}
 	}

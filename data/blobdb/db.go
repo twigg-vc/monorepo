@@ -112,7 +112,7 @@ func (db db) SetBlobVersion(writeCtx context.Context,
 		err = ErrNotEnoughQuota
 		return
 	}
-	err = db.m.SetMetadataGrabbedVersion(writeCtx, BlobData{
+	err = db.m.SetMetadataVersion(writeCtx, BlobData{
 		IdPrefix:             idPrefix,
 		Id:                   id,
 		Version:              v,
