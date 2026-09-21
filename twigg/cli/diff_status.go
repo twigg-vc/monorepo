@@ -79,8 +79,10 @@ func (a *app) diff(args commandArgs) {
 		return
 	}
 	if A.IsDetached {
-		a.logError(instructToPullParent(A))
-		return
+		ok := a.pullParentOfDetached(&A)
+		if !ok {
+			return
+		}
 	}
 	if a.args.all {
 		err := a.ag.WriteDiffAll(A.TreeVersion, B.TreeVersion, a.out, a.wl)

@@ -198,10 +198,6 @@ func restoredCommit(restoredVersion uint64, restored commit.Commit,
 		commitString(restored, true, supportsHyperlink, serverUrl,
 			/*onlyShowServerId*/ false))
 }
-func instructToPullParent(detached commit.Commit) string {
-	return fmt.Sprintf("parent not found. Run `pull c%dv%d --stay`",
-		detached.ParentServerL, detached.ParentServerV)
-}
 
 func fileHasUnresolvedConflicts(path string) string {
 	return fmt.Sprintf("%s has unresolved conflicts", path)

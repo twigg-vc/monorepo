@@ -6,7 +6,6 @@ import (
 	"math"
 	"monorepo/buildmeta"
 	"monorepo/twigg/client"
-	"monorepo/twigg/commit"
 	diff3 "monorepo/twigg/diff/epiclabs-io"
 	"monorepo/twigg/server"
 	"monorepo/twigg/tree"
@@ -4392,7 +4391,7 @@ func TestPullParentOfDetached(t *testing.T) {
 	h2.CheckOutContains(parentNotFound)
 }
 
-func TestDiffOfDetachedInstructsToPullParent(t *testing.T) {
+func TestDiffOfDetachedAutoPullsParent(t *testing.T) {
 	h1 := NewTestHelper(t)
 	h1.Run("init")
 	h2 := NewTestHelper2(t)
@@ -4415,6 +4414,11 @@ func TestDiffOfDetachedInstructsToPullParent(t *testing.T) {
 	srv.Submit(2)
 
 	// Client 2 pulls the second detached
+	//
+	//   c2
+	//   |
+	//   ~
+	// 0
 	h2.Run("pull", "c2")
 	h2.CheckActiveCommit(CheckCommitArg{
 		Id:          1,
@@ -4425,13 +4429,26 @@ func TestDiffOfDetachedInstructsToPullParent(t *testing.T) {
 		HasServerV:  true,
 		ServerV:     1,
 	})
-	// Running diff instructs to pull the parent
+	// Running diff automatically pulls the parent
+	//
+	//
+	//   c2
+	//   |
+	//   c1
+	//  /
+	// 0
 	h2.Run("diff")
-	h2.CheckOutContains(instructToPullParent(commit.Commit{ParentServerL: 1, ParentServerV: 1}))
-
-	h2.Run("pull", "c1v1", "--stay")
+	h2.CheckLogAllVersions(
+		IdVersionAndConflict{Id: 2, Version: 0},
+		IdVersionAndConflict{Id: 1, Version: 0},
+		IdVersionAndConflict{Id: 0, Version: 0})
 	h2.Run("diff", "--all")
 	h2.CheckOutContains("bbb")
+
+	h2.Run("down")
+	h2.CheckActiveCommitLocalId(2)
+	h2.Run("down")
+	h2.CheckActiveCommitLocalId(0)
 }
 
 func TestPlainPullAttachesDetachedCommit(t *testing.T) {
