@@ -9,16 +9,15 @@ import (
 )
 
 type Read interface {
-	// Returns last version of treePath=root.RootPath
-	GetLastVersionOfRootTree(repoId uint64) (v uint64, isNotFoundErr bool, err error)
 	GetTreeData(repoId uint64, treePath string, v uint64) (td treev.TreeDataV, isNotFoundErr bool, err error)
 	GetTreeBlob(repoId uint64, treePath string, v uint64) (r io.Reader, closeR func(), isNotFoundErr bool, err error)
 }
 
 type Write interface {
 	Read
-	SetTreeData(quotaOwner string, repoId uint64, treePath string, td treev.TreeDataV) (v uint64, err error)
-	SetTreeBlob(quotaOwner string, repoId uint64, treePath string, wt io.WriterTo) (v uint64, err error)
+	GrabRootTreeVersion(repoId uint64) (v uint64, err error)
+	SetTreeData(quotaOwner string, repoId uint64, treePath string, v uint64, td treev.TreeDataV) error
+	SetTreeBlob(quotaOwner string, repoId uint64, treePath string, v uint64, wt io.WriterTo) error
 }
 
 const RootTreeVersion = 0

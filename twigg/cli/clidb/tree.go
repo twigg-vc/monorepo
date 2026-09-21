@@ -51,44 +51,17 @@ func (db cliDb) GetTreeBlob(ctx context.Context, repoId uint64, treePath string,
 	return
 }
 
-func (db cliDb) GetLastVersionOfRootTree(ctx context.Context, repoId uint64) (v uint64, isNotFoundErr bool, err error) {
-	m, _, closeR, err := db.blobs.GetBlob(ctx, treeDataBlobsIdPrefix, treeDataBlobId(repoId, tree.RootPath))
-	closeR()
-	if errors.Is(err, blobdb.ErrNotFound) {
-		err = ErrNotFound
-		isNotFoundErr = true
-		return
-	}
-	if err != nil {
-		return
-	}
-	v = m.Version
-	return
+func (db cliDb) GrabRootTreeVersion(ctx context.Context, repoId uint64) (uint64, error) {
+	return db.GrabBlobVersion(ctx, treeDataBlobsIdPrefix,
+		treeDataBlobId(repoId, tree.RootPath))
 }
 
-func (db cliDb) SetTreeData(ctx context.Context, quotaOwner string, repoId uint64, treePath string, td treev.TreeDataV) (uint64, error) {
-	blobId := treeDataBlobId(repoId, treePath)
-	v, err := db.GrabBlobVersion(ctx, treeDataBlobsIdPrefix, blobId)
-	if err != nil {
-		return 0, err
-	}
-	err = db.SetBlobVersion(ctx, quotaOwner, treeDataBlobsIdPrefix, blobId, v,
-		structWriterTo(td))
-	if err != nil {
-		return 0, err
-	}
-	return v, nil
+func (db cliDb) SetTreeData(ctx context.Context, quotaOwner string, repoId uint64, treePath string, v uint64, td treev.TreeDataV) error {
+	return db.SetBlobVersion(ctx, quotaOwner, treeDataBlobsIdPrefix,
+		treeDataBlobId(repoId, treePath), v, structWriterTo(td))
 }
 
-func (db cliDb) SetTreeBlob(ctx context.Context, quotaOwner string, repoId uint64, treePath string, wt io.WriterTo) (uint64, error) {
-	blobId := treeBlobsId(repoId, treePath)
-	v, err := db.GrabBlobVersion(ctx, treeBlobsIdPrefix, blobId)
-	if err != nil {
-		return 0, err
-	}
-	err = db.SetBlobVersion(ctx, quotaOwner, treeBlobsIdPrefix, blobId, v, wt)
-	if err != nil {
-		return 0, err
-	}
-	return v, nil
+func (db cliDb) SetTreeBlob(ctx context.Context, quotaOwner string, repoId uint64, treePath string, v uint64, wt io.WriterTo) error {
+	return db.SetBlobVersion(ctx, quotaOwner, treeBlobsIdPrefix,
+		treeBlobsId(repoId, treePath), v, wt)
 }

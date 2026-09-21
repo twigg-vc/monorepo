@@ -99,14 +99,14 @@ func (db WebDb) GetTreeData(ctx context.Context, repoId uint64, treePath string,
 func (db WebDb) GetTreeBlob(ctx context.Context, repoId uint64, treePath string, v uint64) (r io.Reader, closeR func(), isNotFoundErr bool, e error) {
 	return db.db.GetTreeBlob(ctx, repoId, treePath, v)
 }
-func (db WebDb) GetLastVersionOfRootTree(ctx context.Context, repoId uint64) (v uint64, isNotFoundErr bool, e error) {
-	return db.db.GetLastVersionOfRootTree(ctx, repoId)
+func (db WebDb) GrabRootTreeVersion(ctx context.Context, repoId uint64) (v uint64, e error) {
+	return db.db.GrabRootTreeVersion(ctx, repoId)
 }
-func (db WebDb) SetTreeData(ctx context.Context, quotaOwner string, repoId uint64, treePath string, td treev.TreeDataV) (uint64, error) {
-	return db.db.SetTreeData(ctx, quotaOwner, repoId, treePath, td)
+func (db WebDb) SetTreeData(ctx context.Context, quotaOwner string, repoId uint64, treePath string, v uint64, td treev.TreeDataV) error {
+	return db.db.SetTreeData(ctx, quotaOwner, repoId, treePath, v, td)
 }
-func (db WebDb) SetTreeBlob(ctx context.Context, quotaOwner string, repoId uint64, treePath string, wt io.WriterTo) (uint64, error) {
-	return db.db.SetTreeBlob(ctx, quotaOwner, repoId, treePath, wt)
+func (db WebDb) SetTreeBlob(ctx context.Context, quotaOwner string, repoId uint64, treePath string, v uint64, wt io.WriterTo) error {
+	return db.db.SetTreeBlob(ctx, quotaOwner, repoId, treePath, v, wt)
 }
 
 func (db WebDb) SetCommit(ctx context.Context, quotaOwner string, repoId uint64, c commit.Commit) error {
@@ -745,14 +745,14 @@ func (c Ctx) GetTreeData(repoId uint64, treePath string, v uint64) (td treev.Tre
 func (c Ctx) GetTreeBlob(repoId uint64, treePath string, v uint64) (r io.Reader, closeR func(), isNotFoundErr bool, e error) {
 	return c.db.GetTreeBlob(c.ctx, repoId, treePath, v)
 }
-func (c Ctx) GetLastVersionOfRootTree(repoId uint64) (v uint64, isNotFoundErr bool, e error) {
-	return c.db.GetLastVersionOfRootTree(c.ctx, repoId)
+func (c Ctx) GrabRootTreeVersion(repoId uint64) (v uint64, e error) {
+	return c.db.GrabRootTreeVersion(c.ctx, repoId)
 }
-func (c Ctx) SetTreeData(quotaOwner string, repoId uint64, treePath string, td treev.TreeDataV) (uint64, error) {
-	return c.db.SetTreeData(c.ctx, quotaOwner, repoId, treePath, td)
+func (c Ctx) SetTreeData(quotaOwner string, repoId uint64, treePath string, v uint64, td treev.TreeDataV) error {
+	return c.db.SetTreeData(c.ctx, quotaOwner, repoId, treePath, v, td)
 }
-func (c Ctx) SetTreeBlob(quotaOwner string, repoId uint64, treePath string, wt io.WriterTo) (uint64, error) {
-	return c.db.SetTreeBlob(c.ctx, quotaOwner, repoId, treePath, wt)
+func (c Ctx) SetTreeBlob(quotaOwner string, repoId uint64, treePath string, v uint64, wt io.WriterTo) error {
+	return c.db.SetTreeBlob(c.ctx, quotaOwner, repoId, treePath, v, wt)
 }
 
 func (c Ctx) SetCommit(quotaOwner string, repoId uint64, cm commit.Commit) error {

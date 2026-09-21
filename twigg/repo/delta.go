@@ -77,14 +77,10 @@ func (d deltaIter) advanceWhileNeeded() error {
 }
 
 func (r repo) SaveDelta(d DeltaIter, base TreeVersion, l Write) (newV TreeVersion, rootDirHash [32]byte, err error) {
-	lastVersionOfRoot, _, err := l.GetLastVersionOfRootTree(r.id)
-	if err != nil {
-		return
-	}
-	newV = lastVersionOfRoot + 1
+	g := newOnceGrabber(&newV, r.id, l)
 
-	// Maps new trees to their most recent versions
-	newTreesVersions := make(map[string]uint64)
+	// The trees saved with newV
+	newTreePaths := make(map[string]bool)
 
 	// Provides the trees at the base version
 	baseRoot := r.getRoot_(base, l)
@@ -117,19 +113,26 @@ func (r repo) SaveDelta(d DeltaIter, base TreeVersion, l Write) (newV TreeVersio
 		}
 
 		if shouldSaveTreeBlob(tr) {
-			var blobTreeVersion uint64
-			blobTreeVersion, err = r.saveTreeBlob(treePath, tr, l)
+			err = g.GrabOnce()
 			if err != nil {
 				return
 			}
-			_, err = r.saveTree(treePath, tr, blobTreeVersion, hasBaseTree, baseTr_,
-				newTreesVersions, l)
+			err = r.saveTreeBlob(treePath, tr, newV, l)
+			if err != nil {
+				return
+			}
+			err = r.saveTree(treePath, tr, newV,
+				/*treeBlobVersion*/ newV, hasBaseTree, baseTr_, newTreePaths, l)
 			if err != nil {
 				return
 			}
 		} else {
-			_, err = r.saveTree(treePath,
-				tr, 0, hasBaseTree, baseTr_, newTreesVersions, l)
+			err = g.GrabOnce()
+			if err != nil {
+				return
+			}
+			err = r.saveTree(treePath, tr, newV,
+				/*treeBlobVersion*/ 0, hasBaseTree, baseTr_, newTreePaths, l)
 			if err != nil {
 				return
 			}
@@ -141,7 +144,7 @@ func (r repo) SaveDelta(d DeltaIter, base TreeVersion, l Write) (newV TreeVersio
 		}
 	}
 
-	if len(newTreesVersions) == 0 {
+	if len(newTreePaths) == 0 {
 		newV = base
 		err = ErrNoChange
 	}

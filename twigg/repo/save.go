@@ -9,15 +9,18 @@ import (
 
 func (r repo) Init(l Write) (TreeVersion, [32]byte, error) {
 	tr := firstTree{}
-	newTreePathToVersion := make(map[string]uint64)
-	treeVersion, err := r.saveTree(tree.RootPath, tr,
+	v, err := l.GrabRootTreeVersion(r.id)
+	if err != nil {
+		return 0, [32]byte{}, err
+	}
+	if v != RootTreeVersion {
+		panic("tried to re-init")
+	}
+	err = r.saveTree(tree.RootPath, tr, v,
 		/*treeBlobVersion*/ 0,
 		/*hasOlderTree*/ false,
 		/*olderTree*/ tree_{},
-		newTreePathToVersion, l)
-	if treeVersion != RootTreeVersion {
-		panic("tried to re-init")
-	}
+		make(map[string]bool), l)
 	if err != nil {
 		return 0, [32]byte{}, err
 	}
@@ -37,17 +40,11 @@ func (r repo) save(
 	iter tree.Iterator,
 	baseV TreeVersion,
 	l Write) (newV TreeVersion, hash [32]byte, gotConflict bool, err error) {
-
-	lastVersOfRoot, _, err := l.GetLastVersionOfRootTree(r.id)
-	if err != nil {
-		return
-	}
-	newV = lastVersOfRoot + 1
-
+	g := newOnceGrabber(&newV, r.id, l)
 	baseRoot := r.getRoot_(baseV, l)
 
-	// Maps new trees to their newest versions
-	newTreePathToVersion := make(map[string]uint64)
+	// The trees saved with newV
+	newTreePaths := make(map[string]bool)
 
 	var trPath string
 	var trPathDepth uint32
@@ -126,19 +123,26 @@ func (r repo) save(
 		}
 
 		if shouldSaveTreeBlob(tr) {
-			var blobVersion uint64
-			blobVersion, err = r.saveTreeBlob(trPath, tr, l)
+			err = g.GrabOnce()
 			if err != nil {
 				return
 			}
-			_, err = r.saveTree(trPath, tr,
-				blobVersion, hasTreeOnBase, treeOnBase, newTreePathToVersion, l)
+			err = r.saveTreeBlob(trPath, tr, newV, l)
+			if err != nil {
+				return
+			}
+			err = r.saveTree(trPath, tr, newV,
+				/*treeBlobVersion*/ newV, hasTreeOnBase, treeOnBase, newTreePaths, l)
 			if err != nil {
 				return
 			}
 		} else {
-			_, err = r.saveTree(trPath, tr,
-				0, hasTreeOnBase, treeOnBase, newTreePathToVersion, l)
+			err = g.GrabOnce()
+			if err != nil {
+				return
+			}
+			err = r.saveTree(trPath, tr, newV,
+				/*treeBlobVersion*/ 0, hasTreeOnBase, treeOnBase, newTreePaths, l)
 			if err != nil {
 				return
 			}
@@ -150,7 +154,7 @@ func (r repo) save(
 		}
 	}
 
-	if len(newTreePathToVersion) == 0 {
+	if len(newTreePaths) == 0 {
 		newV = baseV
 		err = ErrNoChange
 	}
@@ -164,11 +168,12 @@ func (r repo) save(
 func (r repo) saveTree(
 	newTreePath string,
 	newTree tree.Tree,
+	v uint64,
 	treeBlobVersion uint64,
 	hasTreeOnBase bool,
 	treeOnBase tree_,
-	newTreePathToVersion map[string]uint64,
-	l Write) (TreeVersion, error) {
+	newTreePaths map[string]bool,
+	l Write) error {
 	var err error
 
 	// Before saving, we must find the names and versions of all children.
@@ -182,19 +187,19 @@ func (r repo) saveTree(
 	newTreeData.ChildrenVersions = make([]TreeVersion, 0, n)
 	for _, childName := range newTree.Data().ChildrenBaseNames {
 		newTreeData.Data.ChildrenBaseNames = append(newTreeData.Data.ChildrenBaseNames, childName)
-		newChildVersion, childIsNew := newTreePathToVersion[path.Join(newTreePath, childName)]
+		childIsNew := newTreePaths[path.Join(newTreePath, childName)]
 
 		// The version of the child will depend on wheather the child is
 		// new or not.
-		// If the child is new, use its newest version. Else, read the parent
+		// If the child is new, it was saved with v. Else, read the parent
 		// to figure out what its version of the children was
 		if childIsNew {
 			newTreeData.ChildrenVersions = append(
-				newTreeData.ChildrenVersions, newChildVersion)
+				newTreeData.ChildrenVersions, v)
 		} else {
 			// If the child is not new, we read it from the old version
 			if !hasTreeOnBase {
-				return 0, errors.New("tree base not found")
+				return errors.New("tree base not found")
 			}
 			parentChildrenNames := treeOnBase.d.Data.ChildrenBaseNames
 			parentChildrenVersions := treeOnBase.d.ChildrenVersions
@@ -214,12 +219,12 @@ func (r repo) saveTree(
 		}
 	}
 
-	version, err := l.SetTreeData(r.quotaOwner, r.id, newTreePath, newTreeData)
+	err = l.SetTreeData(r.quotaOwner, r.id, newTreePath, v, newTreeData)
 	if err != nil {
-		return 0, err
+		return err
 	}
-	newTreePathToVersion[newTreePath] = version
-	return version, nil
+	newTreePaths[newTreePath] = true
+	return nil
 }
 
 func shouldSaveTreeBlob(tr tree.Tree) bool {
@@ -232,7 +237,7 @@ func shouldSaveTreeBlob(tr tree.Tree) bool {
 	return true
 }
 
-func (r repo) saveTreeBlob(treePath string, tr tree.Tree, l Write) (v uint64, err error) {
+func (r repo) saveTreeBlob(treePath string, tr tree.Tree, v uint64, l Write) (err error) {
 	if !shouldSaveTreeBlob(tr) {
 		panic("tried to save blob of " + treePath)
 	}
@@ -240,6 +245,39 @@ func (r repo) saveTreeBlob(treePath string, tr tree.Tree, l Write) (v uint64, er
 	if err != nil {
 		return
 	}
-	v, err = l.SetTreeBlob(r.quotaOwner, r.id, treePath, wt)
-	return
+	return l.SetTreeBlob(r.quotaOwner, r.id, treePath, v, wt)
+}
+
+// onceGrabber is a simpler helper that calls GrabRootTreeVersion only once.
+// Its used so that we can populate a *TreeVersion variable only if needed
+// when saving a new repository version to avoid grabbing a version to save
+// an unmodified repository.
+type onceGrabber struct {
+	newV    *TreeVersion
+	grabbed bool
+	repoId  uint64
+	l       Write
+}
+
+func newOnceGrabber(newV *TreeVersion, repoId uint64, l Write) *onceGrabber {
+	return &onceGrabber{
+		newV:    newV,
+		grabbed: false,
+		repoId:  repoId,
+		l:       l,
+	}
+}
+
+// Calls GrabRootTreeVersion if it wanst called yet
+func (g *onceGrabber) GrabOnce() error {
+	if g.grabbed {
+		return nil
+	}
+	v, err := g.l.GrabRootTreeVersion(g.repoId)
+	if err != nil {
+		return err
+	}
+	g.grabbed = true
+	(*g.newV) = v
+	return nil
 }

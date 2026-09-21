@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+const testRepoId = 1
+
 func setup(t *testing.T) (TreeVersion, workdir.TestWorkdir, Write, Repo) {
 	wd := workdir.NewTest("test", t)
 	db, closeDb, err := clidb.NewMem()
@@ -27,7 +29,7 @@ func setup(t *testing.T) (TreeVersion, workdir.TestWorkdir, Write, Repo) {
 	}
 	w := db.Bind(l)
 
-	r := New("owner", 1)
+	r := New("owner", testRepoId)
 	v0, _, err := r.Init(w)
 	if err != nil {
 		t.Fatal(err)
@@ -36,6 +38,23 @@ func setup(t *testing.T) (TreeVersion, workdir.TestWorkdir, Write, Repo) {
 		t.Fatal("first version must be zero")
 	}
 	return v0, wd, w, r
+}
+
+func TestNoChangeDoesntGrabVersion(t *testing.T) {
+	v0, wd, l, r := setup(t)
+
+	_, _, err := r.Save(wd, v0, l)
+	if !errors.Is(err, ErrNoChange) {
+		t.Fatalf("got err=%v, expected ErrNoChange", err)
+	}
+
+	v, err := l.GrabRootTreeVersion(testRepoId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != 1 {
+		t.Fatalf("v1 was grabbed by non modified repo")
+	}
 }
 
 func TestSaveSingleFile(t *testing.T) {
@@ -1127,6 +1146,13 @@ func TestSaveEmptyDelta(t *testing.T) {
 	_, _, err = r.SaveDelta(d, v0, l)
 	if !errors.Is(err, ErrNoChange) {
 		t.Fatal("expected no change err")
+	}
+	v, err := l.GrabRootTreeVersion(testRepoId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != 1 {
+		t.Fatalf("v1 was grabbed by non modified repo")
 	}
 }
 
