@@ -548,6 +548,11 @@ func (h handler) getPayloadDisplayString(payload []byte) string {
 }
 
 func (h handler) handleQueuePushToGitMirror(payload []byte) error {
+	const gitMirrorIsEnabled = false
+	if !gitMirrorIsEnabled {
+		return nil
+	}
+
 	var args pushTopToGitMirrorPayloadArgs
 
 	err := args.decode(payload)
