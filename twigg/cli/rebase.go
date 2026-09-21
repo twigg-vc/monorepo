@@ -10,8 +10,10 @@ func (a *app) rebase(args commandArgs) {
 		return
 	}
 	if source.IsDetached {
-		a.logError(commitIsDetached)
-		return
+		ok := a.pullParentOfDetached(&source)
+		if !ok {
+			return
+		}
 	}
 	rebased, err := a.ag.Rebase(&source, &target,
 		/*isAutoRebaseOfChildren*/ false,

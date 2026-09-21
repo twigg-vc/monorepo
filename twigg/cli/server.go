@@ -190,15 +190,25 @@ func (a *app) pull(args commandArgs) {
 	}
 	a.logSuccess(pullOk)
 }
-func (a *app) refreshAndSaveCurrent() (ok bool) {
-	newC, err := a.ag.GetVersion(
-		a.s.Current.L, a.s.Current.Version, a.wl)
+
+// calls logError and returns ok=false on any error
+func (a *app) refreshCommit(c *commit.Commit) (ok bool) {
+	newC, err := a.ag.GetVersion(c.L, c.Version, a.wl)
 	if err != nil {
 		a.logError(err.Error())
 		return
 	}
-	a.s.Current = newC
-	err = a.saveState()
+	*c = newC
+	return true
+}
+
+// calls logError and returns ok=false on any error
+func (a *app) refreshAndSaveCurrent() (ok bool) {
+	ok = a.refreshCommit(&a.s.Current)
+	if !ok {
+		return
+	}
+	err := a.saveState()
 	if err != nil {
 		a.logError(err.Error())
 		return
@@ -207,6 +217,16 @@ func (a *app) refreshAndSaveCurrent() (ok bool) {
 }
 
 func (a *app) pullCommit(args commandArgs) {
+	a.pullCommit_(args.commit0InServerSyntax, args.stay)
+}
+
+// returns false and logs any error
+func (a *app) pullCommit_(commit0InServerSyntax string, stay bool) (ok bool) {
+	defer func() {
+		// all errors call logError
+		ok = !a.logErrorWasCalled
+	}()
+
 	var pulledCommitServerId uint64
 	onPull := func(pulled commit.Commit, hasLocal bool, local commit.Commit) error {
 		pulledCommitServerId = pulled.ServerL
@@ -227,12 +247,12 @@ func (a *app) pullCommit(args commandArgs) {
 
 	var isBadApiKeyErr bool
 	var isOldProtocolErr bool
-	if args.commit0InServerSyntax == topCommitAlias {
+	if commit0InServerSyntax == topCommitAlias {
 		isBadApiKeyErr, isOldProtocolErr, err = a.ag.PullTopCommit(base,
 			a.s.ServerUrl, a.s.ApiKey, onPull, a.wl)
 	} else {
 		match, id, hasVersion, version := a.tryParseServerCommitString(
-			args.commit0InServerSyntax)
+			commit0InServerSyntax)
 		if !match {
 			a.logError(badCommitServerSyntax)
 			return
@@ -304,7 +324,7 @@ func (a *app) pullCommit(args commandArgs) {
 			return
 		}
 	}
-	if args.stay {
+	if stay {
 		_ = a.refreshAndSaveCurrent()
 		return
 	}
@@ -326,4 +346,22 @@ func (a *app) pullCommit(args commandArgs) {
 		}
 	}
 	a.logSuccess(pullOk)
+	return
+}
+
+// pulls the parent of a detached commit. Panics it not detached.
+// Should be used for commands such as diff and rebase tha require parents.
+// logs error if any happen and returns false
+func (a *app) pullParentOfDetached(c *commit.Commit) (ok bool) {
+	if !c.IsDetached {
+		panic("called pullParentOfDetached for non detached")
+	}
+	parentServerCommitId := fmt.Sprintf("c%dv%d", c.ParentServerL, c.ParentServerV)
+	const stay = true
+	ok = a.pullCommit_(parentServerCommitId, stay)
+	if !ok {
+		return
+	}
+	ok = a.refreshCommit(c)
+	return
 }

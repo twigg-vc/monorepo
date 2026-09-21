@@ -3873,7 +3873,7 @@ func TestPullDetachedTop(t *testing.T) {
 	})
 }
 
-func TestDetachedCommitCantBeRebased(t *testing.T) {
+func TestRebaseOfDetachedAutoPullsParent(t *testing.T) {
 	h1 := NewTestHelper(t)
 	h1.Run("init")
 	h2 := NewTestHelper2(t)
@@ -3899,7 +3899,14 @@ func TestDetachedCommitCantBeRebased(t *testing.T) {
 		Version: 0,
 	})
 
-	// Client 2 pulls c2
+	// Client 2 pulls c2:
+	//
+	//      #2v0
+	//      |
+	//      ~
+	// #1
+	// |
+	// 0
 	h2.Run("server", srv.ServerPath())
 	h2.Run("key", FakeApiKey)
 	h2.Run("pull", "c2v0")
@@ -3913,9 +3920,31 @@ func TestDetachedCommitCantBeRebased(t *testing.T) {
 		ServerV:     0,
 	})
 
-	// Client 2 tries to rebase c2 but fails bc parent is not present
+	// Client 2 rebases c2 into 1. It'll auto pull the parent of c2:
+	//
+	//      #2v0
+	// #2v1 |
+	// |    #3v0
+	// #1 /
+	// | /
+	// 0
 	h2.Run("rebase", "c2", "1")
-	h2.CheckOutContains(commitIsDetached)
+	h2.CheckActiveCommit(CheckCommitArg{
+		Id:          2,
+		Version:     1,
+		IsSubmitted: false,
+		HasServerId: true,
+		ServerId:    2,
+		HasServerV:  false,
+		ServerV:     0,
+	})
+	h2.CheckLogAllVersions(
+		IdVersionAndConflict{Id: 0, Version: 0},
+		IdVersionAndConflict{Id: 1, Version: 0},
+		IdVersionAndConflict{Id: 2, Version: 0},
+		IdVersionAndConflict{Id: 2, Version: 1},
+		IdVersionAndConflict{Id: 3, Version: 0},
+	)
 }
 
 func TestPullDetachedCommitByVersion(t *testing.T) {
