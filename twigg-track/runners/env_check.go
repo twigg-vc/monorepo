@@ -12,8 +12,7 @@ func checkDockerEnv() (bool, error) {
 		}
 		return false, err
 	}
-	for _, img := range []string{dockerBaseRunnerImage, dockerGoRunnerImage, dockerBunRunnerImage,
-		dockerGitRunnerImage} {
+	for _, img := range dockerImages {
 		_, err := exec.Command("docker", "image", "inspect", img).CombinedOutput()
 		if err == nil {
 			continue

@@ -275,6 +275,13 @@ const (
 	dockerGitRunnerImage    = "twigg-git-runner:latest"
 )
 
+var dockerImages []string = []string{
+	dockerBaseRunnerImage,
+	dockerGoRunnerImage,
+	dockerNode20RunnerImage,
+	dockerBunRunnerImage,
+	dockerGitRunnerImage}
+
 // Returns the name of the image the job must run under.
 // When nothing matches, returns the base image
 func resolveImage(j runnerlib.JobPayload) string {
