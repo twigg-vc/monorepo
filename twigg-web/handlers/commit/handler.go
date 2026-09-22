@@ -1854,7 +1854,7 @@ func (hl handler) handlePostRemoveReviewers(w http.ResponseWriter,
 			http.Error(w, fmt.Sprintf("invalid username: %s", username), http.StatusBadRequest)
 			return
 		}
-		err = hl.revSrv.RemoveReviewer(dbWrite, quotaOwner(r.Repo.OwnerId), r.Repo.Id, cI, u.Id)
+		_, err = hl.revSrv.RemoveReviewer(dbWrite, quotaOwner(r.Repo.OwnerId), r.Repo.Id, cI, u.Id, r.UserWithWritePermission.Id)
 		if err != nil {
 			log.Printf("failed to RemoveReviewer: %s", err)
 			http.Error(w, "failed to remove reviewer", http.StatusInternalServerError)

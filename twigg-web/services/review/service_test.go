@@ -983,9 +983,13 @@ func TestAddAndRemoveReviewer(t *testing.T) {
 		t.Fatalf("duplicate add should not change list\n got: %#v\nexpected: %#v", d.ReviewersUserIds, []int64{10, 20})
 	}
 
-	// Remove non-existing
-	if err := s.RemoveReviewer(w, quotaOwner, repoId, commitId, 999); err != nil {
+	// Remove non-existing (should no-op and not create a thread)
+	th, err = s.RemoveReviewer(w, quotaOwner, repoId, commitId, 999, actorUserId)
+	if err != nil {
 		t.Fatalf("RemoveReviewer(non-existing) failed: %v", err)
+	}
+	if th != (review.Thread{}) {
+		t.Fatalf("expected no thread for remove of non-reviewer, got: %#v", th)
 	}
 	d, _, err = s.GetData(w, repoId, commitId, false, 0, []string{})
 	if err != nil {
@@ -996,8 +1000,12 @@ func TestAddAndRemoveReviewer(t *testing.T) {
 	}
 
 	// Remove existing
-	if err := s.RemoveReviewer(w, quotaOwner, repoId, commitId, 10); err != nil {
+	th, err = s.RemoveReviewer(w, quotaOwner, repoId, commitId, 10, actorUserId)
+	if err != nil {
 		t.Fatalf("RemoveReviewer failed: %v", err)
+	}
+	if th.Type != review.ThreadType_RemoveReviewer || th.AuthorUserId != actorUserId || th.TargetUserId != 10 {
+		t.Fatalf("wrong thread returned by RemoveReviewer: %#v", th)
 	}
 	d, _, err = s.GetData(w, repoId, commitId, false, 0, []string{})
 	if err != nil {
@@ -1008,7 +1016,7 @@ func TestAddAndRemoveReviewer(t *testing.T) {
 	}
 
 	// Remove last
-	if err := s.RemoveReviewer(w, quotaOwner, repoId, commitId, 20); err != nil {
+	if _, err := s.RemoveReviewer(w, quotaOwner, repoId, commitId, 20, actorUserId); err != nil {
 		t.Fatalf("RemoveReviewer(2) failed: %v", err)
 	}
 	d, _, err = s.GetData(w, repoId, commitId, false, 0, []string{})

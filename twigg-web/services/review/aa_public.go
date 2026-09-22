@@ -59,8 +59,10 @@ type Service interface {
 	// Thread and nil error. Returns error if it would exceed MaxReviewers.
 	AddReviewer(w context.Context, quotaOwner string, repoId uint64, cId commit.LocalId, userId int64, actorUserId int64) (review.Thread, error)
 
-	// Removes userId from reviewers list.
-	RemoveReviewer(w context.Context, quotaOwner string, repoId uint64, cId commit.LocalId, userId int64) error
+	// Removes userId from reviewers list and records a ThreadType_RemoveReviewer
+	// thread authored by actorUserId. If user isn't currently a reviewer,
+	// returns a zero Thread and nil error.
+	RemoveReviewer(w context.Context, quotaOwner string, repoId uint64, cId commit.LocalId, userId int64, actorUserId int64) (review.Thread, error)
 
 	// ResolveSupremeLeaders returns the usernames whose collective LGTM bypasses
 	// OWNERS file requirements. For user-owned repos this is just the owner; for

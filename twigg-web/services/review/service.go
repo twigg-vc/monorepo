@@ -513,11 +513,12 @@ func (s service) RemoveReviewer(
 	repoId uint64,
 	cId commit.LocalId,
 	userId int64,
-) error {
+	actorUserId int64,
+) (review.Thread, error) {
 
 	d, isNotFoundErr, err := s.GetData(w, repoId, cId, false, 0, []string{})
 	if err != nil && !isNotFoundErr {
-		return err
+		return review.Thread{}, err
 	}
 
 	newList := make([]int64, 0, len(d.ReviewersUserIds))
@@ -532,12 +533,33 @@ func (s service) RemoveReviewer(
 	}
 
 	if !found {
-		return nil
+		return review.Thread{}, nil
+	}
+
+	threadId, err := s.db.CreateReviewThread(w, repoId, cId, actorUserId, uint32(review.ThreadType_RemoveReviewer))
+	if err != nil {
+		return review.Thread{}, err
+	}
+	th := review.Thread{
+		Id:           threadId,
+		Type:         review.ThreadType_RemoveReviewer,
+		AuthorUserId: actorUserId,
+		TargetUserId: userId,
+		IsResolved:   true,
+		CreatedOn:    time.Now(),
+	}
+	err = s.db.SetReviewThread(w, quotaOwner, threadId, th)
+	if err != nil {
+		return th, err
 	}
 
 	d.ReviewersUserIds = newList
 
-	return s.setData(w, quotaOwner, repoId, cId, d)
+	err = s.setData(w, quotaOwner, repoId, cId, d)
+	if err != nil {
+		return th, err
+	}
+	return th, nil
 }
 
 func (s service) ResolveSupremeLeaders(db context.Context, ownerUsr user.User) ([]string, error) {
