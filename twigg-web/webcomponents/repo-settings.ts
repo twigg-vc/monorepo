@@ -15,6 +15,7 @@ import { GetCsrfHeaders, HomeUrl, PathToAddRepoPermission, PathToArchiveRepo,
     GitMirrorUrlSecretName} from './routes';
 import { GetFeatureFlags } from './feature-flags';
 import { Secret } from './interfaces';
+import { ParseEnv, LooksLikeEnv } from './env-parser';
 
 // One row of the bulk "Create Secrets" form.
 interface SecretDraft {
@@ -469,6 +470,9 @@ export class RepoSettings extends LitElement {
         <div class="modal-backdrop" @pointerdown=${this.onModalPointerDown} @pointerup=${this.onModalPointerUp}>
             <div class="modal create-secret-modal">
                 <h2 class="create-new-secret-modal-title">Create Secrets</h2>
+                <p class="create-secret-hint">
+                    Tip: paste the contents of a <code>.env</code> file into a Name field to import several secrets at once.
+                </p>
                 <form class="form-of-create-secret-modal" @submit=${(e: Event) => e.preventDefault()}>
                     <div class="secret-draft-header">
                         <span>Name</span>
@@ -509,6 +513,7 @@ export class RepoSettings extends LitElement {
                 placeholder="e.g. CLIENT_KEY"
                 .value=${draft.Name}
                 @input=${(e: Event) => this.onSecretDraftNameInput(i, e)}
+                @paste=${(e: ClipboardEvent) => this.onSecretDraftNamePasted(i, e)}
             />
             <textarea
                 class="input"
@@ -540,6 +545,30 @@ export class RepoSettings extends LitElement {
     private onSecretDraftValueInput(i: number, e: Event) {
         const input = e.target as HTMLTextAreaElement
         this.updateSecretDraft(i, { Value: input.value, Error: "" })
+    }
+    // Pasting a dotenv block into a Name field replaces that row with one
+    // row per parsed entry, so a whole .env file can be imported at once.
+    private onSecretDraftNamePasted(i: number, e: ClipboardEvent) {
+        const text = e.clipboardData?.getData("text") ?? ""
+        if (!LooksLikeEnv(text)) {
+            return
+        }
+        const entries = ParseEnv(text)
+        if (entries.length === 0) {
+            return
+        }
+        e.preventDefault()
+        var drafts: SecretDraft[] = []
+        for (var j = 0; j < this.secretDrafts.length; j++) {
+            if (j === i) {
+                for (const entry of entries) {
+                    drafts.push(newSecretDraft(entry.Name, entry.Value))
+                }
+            } else {
+                drafts.push(this.secretDrafts[j])
+            }
+        }
+        this.secretDrafts = drafts
     }
     private onAddSecretRowClicked() {
         this.secretDrafts = [...this.secretDrafts, newSecretDraft()]
@@ -1037,6 +1066,10 @@ export class RepoSettings extends LitElement {
                 width: min(90vw, var(--size3));
                 max-width: var(--size3);
                 text-align: left;
+            }
+            .create-secret-hint {
+                color: var(--color-text-muted);
+                font-size: var(--space3p);
             }
             .secret-draft-header,
             .secret-draft-row {
