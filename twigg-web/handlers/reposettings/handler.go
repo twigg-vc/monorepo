@@ -588,9 +588,7 @@ func (h handler) handleQueuePushToGitMirror(payload []byte) error {
 		return err
 	}
 	// Construct the payload that will be put to the track client
-	commitId := twiggCommitId(topCommit.ServerL, topCommit.ServerV)
-	jobPayload := pushToGitMirrorJobPayload(token, args.RepoId, commitId,
-		topCommit.Message+"\n\nTwigg mirror "+commitId)
+	jobPayload := pushToGitMirrorJobPayload(token, args.RepoId, topCommit.Message)
 	// Put the job to be run on the track and skip a webhook bc we don't handle it
 	jobId := fmt.Sprintf("push-repo-%d-c%d", args.RepoId, topCommit.L)
 	return h.track.PutSkipWebhook(jobId, jobPayload)
@@ -631,11 +629,6 @@ const pushToGitMirrorPayloadType = "push-to-git-mirror"
 
 const gitMirrorCommitMsgEnvVar = "TWIGG_MIRROR_COMMIT_MSG"
 
-// Identifies a commit on the server, e.g "c7v2".
-func twiggCommitId(commitServerId uint64, commitServerVersion uint64) string {
-	return fmt.Sprintf("c%dv%d", commitServerId, commitServerVersion)
-}
-
 // Points HEAD at the twigg branch of the mirror so the new commit lands on top
 // of the history that is already there, without checking out any of its files.
 // Creates the branch instead when the mirror does not have one yet.
@@ -650,8 +643,16 @@ else
 fi
 `
 
+// Only the job knows which commit it pulled, so it names it with `tw id`
+// rather than being told. The message is written by users, so it comes from
+// the environment instead of being interpolated.
+const gitMirrorCommitStep = `set -e
+twiggCommitId=$(tw id)
+git commit -q --allow-empty -m "$` + gitMirrorCommitMsgEnvVar + `" -m "Twigg mirror $twiggCommitId"
+`
+
 func pushToGitMirrorJobPayload(twiggToken string, repoId uint64,
-	commitId string, commitMsg string) runnerlib.JobPayload {
+	commitMsg string) runnerlib.JobPayload {
 	return runnerlib.JobPayload{
 		Name:      "push to git mirror",
 		ImageName: runnerlib.GitMirrorImage,
@@ -659,7 +660,9 @@ func pushToGitMirrorJobPayload(twiggToken string, repoId uint64,
 			{Run: "tw init"},
 			{Run: fmt.Sprintf("tw key %s", twiggToken)},
 			{Run: fmt.Sprintf("tw server %d/%d", repoId, repoId)},
-			{Run: fmt.Sprintf("tw pull %s", commitId)},
+			// Pulls whatever is top when the job runs. Jobs are asynchronous, so
+			// pinning a commit here could mirror them out of order.
+			{Run: "tw pull top"},
 
 			{Run: "git init -q"},
 			{Run: "git config user.name Twigg"},
@@ -671,8 +674,7 @@ func pushToGitMirrorJobPayload(twiggToken string, repoId uint64,
 				Secrets: []string{repo.GitMirrorUrlSecretName}},
 			{Run: reuseMirrorTwiggBranchOrCreateItStep},
 			{Run: "git add -A"},
-			// The message is written by users, so it comes from the environment
-			{Run: `git commit -q --allow-empty -m "$` + gitMirrorCommitMsgEnvVar + `"`,
+			{Run: gitMirrorCommitStep,
 				Env: map[string]string{gitMirrorCommitMsgEnvVar: commitMsg}},
 			{Run: "git push -q origin twigg"},
 		},

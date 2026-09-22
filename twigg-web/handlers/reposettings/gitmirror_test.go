@@ -105,7 +105,7 @@ func TestQueuePushToGitMirrorPutsJobSteps(t *testing.T) {
 		{Run: "tw init"},
 		{Run: fmt.Sprintf("tw key %s", pl.Token)},
 		{Run: fmt.Sprintf("tw server %d/%d", testServerRepoId, testServerRepoId)},
-		{Run: fmt.Sprintf("tw pull c%dv%d", top.ServerL, top.ServerV)},
+		{Run: "tw pull top"},
 
 		{Run: "git init -q"},
 		{Run: "git config user.name Twigg"},
@@ -115,11 +115,8 @@ func TestQueuePushToGitMirrorPutsJobSteps(t *testing.T) {
 			Secrets: []string{reposervice.GitMirrorUrlSecretName}},
 		{Run: reuseMirrorTwiggBranchOrCreateItStep},
 		{Run: "git add -A"},
-		{Run: `git commit -q --allow-empty -m "$TWIGG_MIRROR_COMMIT_MSG"`,
-			Env: map[string]string{
-				gitMirrorCommitMsgEnvVar: testCommitMsg + "\n\nTwigg mirror " +
-					fmt.Sprintf("c%dv%d", top.ServerL, top.ServerV),
-			}},
+		{Run: gitMirrorCommitStep,
+			Env: map[string]string{gitMirrorCommitMsgEnvVar: testCommitMsg}},
 		{Run: "git push -q origin twigg"},
 	}
 	if len(pl.Steps) != len(expectedSteps) {
