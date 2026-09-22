@@ -6,9 +6,6 @@ import { GetCsrfHeaders, HomeUrl, PathToAddRepoPermission, PathToArchiveRepo,
     PathToSetRepoDescription,
     RepoDescriptionParamName,
     GitMirrorEnabledParamName,
-    RepoSecretValueParamName,
-    RepoSecretNameParamName,
-    PathToSetRepoSecret,
     PathToSetRepoSecretsBulk,
     UrlToDeleteRepoSecret,
     PathToSetRepoPublic,
@@ -442,36 +439,6 @@ export class RepoSettings extends LitElement {
         ${this.renderBulkSecretCreationModal()}
     `;
     }
-    private renderSingleSecretCreationModal() {
-        if (!this.showCreateSecretModal) {
-            return html``
-        }
-        return html`
-        <div class="modal-backdrop" @pointerdown=${this.onModalPointerDown} @pointerup=${this.onModalPointerUp}>
-            <div class="modal">
-                <h2 class="create-new-secret-modal-title">Create a new Secret</h2>
-                <form class="form-of-create-secret-modal" id="create-secret-form-id">
-                    <p>Name:</p>
-                    <input
-                        class="input"
-                        name=${RepoSecretNameParamName}
-                    />
-                    <p>Secret:</p>
-                    <textarea class="input" name=${RepoSecretValueParamName}></textarea>
-                </form>
-
-                <div class="modal-buttons">
-                    <button @click=${this.closeCreateSecretModal}>Cancel</button>
-                    <button class="btn btn-primary" 
-                        ?disabled=${this.isLoadingCreateSecretBtn} 
-                        @click=${this.onCreateSecretClicked}
-                    >
-                        Create secret
-                    </button>
-                </div>
-            </div>
-        </div>`
-    }
     private renderBulkSecretCreationModal() {
         if (!this.showCreateSecretModal) {
             return html``
@@ -773,42 +740,6 @@ export class RepoSettings extends LitElement {
         } 
     }
 
-    private async onCreateSecretClicked() {
-        if (this.isLoadingCreateSecretBtn) {
-            return
-        }
-        this.isLoadingCreateSecretBtn = true
-
-        const form = this.renderRoot.querySelector("#create-secret-form-id") as HTMLFormElement
-        if (!form){
-            console.error("could not find create secret form")
-            alert("something is off, please reload page")
-            return
-        }
-        const formData = new FormData(form);
-
-        try {
-            const resp = await fetch(PathToSetRepoSecret(this.RepoOwnerName, this.RepoName), {
-                method: 'POST',
-                body: formData,
-                headers: GetCsrfHeaders(),
-            });
-            if (!resp.ok) {
-                console.error("Request to create secret failed: ", resp)
-                const errorMsg = await resp.text();
-                throw new Error(errorMsg);
-            }
-            const newSecrets = await resp.json() as Secret;
-            this.Secrets = [...this.Secrets, newSecrets]
-            this.closeCreateSecretModal()
-        } catch (error) {
-            console.error("field to create secret: ", error)
-            alert(error);
-        } finally{
-            this.isLoadingCreateSecretBtn = false
-        }
-    }
-
     private async onDeleteSecretClicked(secret: Secret) {
         this.markSecretDeleteBtlLoading(secret.Name)
 
@@ -1095,18 +1026,6 @@ export class RepoSettings extends LitElement {
             }
             .form-of-create-secret-modal{
                 text-align: left;
-            }
-            .form-of-create-secret-modal input{
-                width: 100%;
-            }
-            .form-of-create-secret-modal textarea{
-                resize: vertical;
-                min-width: var(--size0);
-                min-height: var(--fixedSpace8);
-                border: 1px solid var(--color-border);
-                border-radius: var(--radius1);
-                font-family: monospace;
-                overflow-wrap: break-word;
             }
             .create-secret-modal {
                 width: min(90vw, var(--size3));
