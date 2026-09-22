@@ -56,6 +56,10 @@ type Thread struct {
 	Type ThreadType
 	// Id of the user who created the thread
 	AuthorUserId int64
+	// Id of the user targeted by the thread (e.g. the reviewer being
+	// added/removed for ThreadType_AddReviewer/ThreadType_RemoveReviewer).
+	// Unused (zero) for other thread types.
+	TargetUserId int64
 	// Indicates the commit version to which the thread is anchored
 	CommitVersion uint64
 	// Used to indicate if resolved or not
@@ -100,6 +104,10 @@ const (
 	// Not a comment thread "per-se". It's just an removal of an LGTM
 	// at a specific commit version.
 	ThreadType_RemoveLGTM
+	// Not a comment thread "per-se". It's just the addition of a reviewer.
+	ThreadType_AddReviewer
+	// Not a comment thread "per-se". It's just the removal of a reviewer.
+	ThreadType_RemoveReviewer
 )
 
 type ReviewStatus uint32
