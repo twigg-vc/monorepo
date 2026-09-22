@@ -547,8 +547,15 @@ export class RepoSettings extends LitElement {
         }
         this.secretDrafts = drafts
     }
-    private onAddSecretRowClicked() {
+    private async onAddSecretRowClicked() {
         this.secretDrafts = [...this.secretDrafts, newSecretDraft()]
+        // Wait for the new row to render, then scroll it into view since the
+        // rows list scrolls when there are many secrets.
+        await this.updateComplete
+        const form = this.renderRoot.querySelector(".form-of-create-secret-modal")
+        if (form) {
+            form.scrollTop = form.scrollHeight
+        }
     }
     private onRemoveSecretRowClicked(i: number) {
         if (this.secretDrafts.length === 1) {
