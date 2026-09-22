@@ -462,27 +462,49 @@ func (s service) AddReviewer(
 	repoId uint64,
 	cId commit.LocalId,
 	userId int64,
-) error {
+	actorUserId int64,
+) (review.Thread, error) {
 
 	d, isNotFoundErr, err := s.GetData(w, repoId, cId, false, 0, []string{})
 	if err != nil && !isNotFoundErr {
-		return err
+		return review.Thread{}, err
 	}
 
 	// Prevent duplicates
 	for _, id := range d.ReviewersUserIds {
 		if id == userId {
-			return nil // already reviewer
+			return review.Thread{}, nil // already reviewer
 		}
 	}
 
 	if len(d.ReviewersUserIds) >= review.MaxReviewers {
-		return fmt.Errorf("max reviewers limit (%d) reached", review.MaxReviewers)
+		return review.Thread{}, fmt.Errorf("max reviewers limit (%d) reached", review.MaxReviewers)
+	}
+
+	threadId, err := s.db.CreateReviewThread(w, repoId, cId, actorUserId, uint32(review.ThreadType_AddReviewer))
+	if err != nil {
+		return review.Thread{}, err
+	}
+	th := review.Thread{
+		Id:           threadId,
+		Type:         review.ThreadType_AddReviewer,
+		AuthorUserId: actorUserId,
+		TargetUserId: userId,
+		IsResolved:   true,
+		CreatedOn:    time.Now(),
+	}
+	err = s.db.SetReviewThread(w, quotaOwner, threadId, th)
+	if err != nil {
+		return th, err
 	}
 
 	d.ReviewersUserIds = append(d.ReviewersUserIds, userId)
 
-	return s.setData(w, quotaOwner, repoId, cId, d)
+	err = s.setData(w, quotaOwner, repoId, cId, d)
+	if err != nil {
+		return th, err
+	}
+	return th, nil
 }
 
 func (s service) RemoveReviewer(

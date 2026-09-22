@@ -1770,7 +1770,7 @@ func (hl handler) handlePostAddReviewers(w http.ResponseWriter,
 			http.Error(w, fmt.Sprintf("invalid username: %s", username), http.StatusBadRequest)
 			return
 		}
-		err = hl.revSrv.AddReviewer(dbWrite, quotaOwner(r.Repo.OwnerId), r.Repo.Id, cI, addedUser.Id)
+		_, err = hl.revSrv.AddReviewer(dbWrite, quotaOwner(r.Repo.OwnerId), r.Repo.Id, cI, addedUser.Id, r.UserWithWritePermission.Id)
 		if err != nil {
 			log.Printf("failed to AddReviewer: %s", err)
 			http.Error(w, "failed to add reviewer", http.StatusInternalServerError)

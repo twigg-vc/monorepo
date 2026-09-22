@@ -925,10 +925,24 @@ func TestAddAndRemoveReviewer(t *testing.T) {
 	const quotaOwner = "owner"
 	const repoId = uint64(1)
 	const commitId = uint64(123)
+	const actorUserId = int64(42)
 
-	// Add first reviewer (should create Data and persist)
-	if err := s.AddReviewer(w, quotaOwner, repoId, commitId, 10); err != nil {
+	// Add first reviewer (should create Data and persist, and a thread)
+	th, err := s.AddReviewer(w, quotaOwner, repoId, commitId, 10, actorUserId)
+	if err != nil {
 		t.Fatalf("AddReviewer failed: %v", err)
+	}
+	if th.Type != review.ThreadType_AddReviewer || th.AuthorUserId != actorUserId || th.TargetUserId != 10 {
+		t.Fatalf("wrong thread returned by AddReviewer: %#v", th)
+	}
+	fetchedTh, err := s.GetThread(w, th.Id)
+	if err != nil {
+		t.Fatalf("GetThread failed: %v", err)
+	}
+	assertRecentAndClearCreatedOn(t, &fetchedTh)
+	assertRecentAndClearCreatedOn(t, &th)
+	if !reflect.DeepEqual(fetchedTh, th) {
+		t.Fatalf("thread didn't round-trip\n got: %#v\nexpected: %#v", fetchedTh, th)
 	}
 	d, isNotFoundErr, err := s.GetData(w, repoId, commitId, false, 0, []string{})
 	if err != nil {
@@ -942,7 +956,7 @@ func TestAddAndRemoveReviewer(t *testing.T) {
 	}
 
 	// Add another reviewer
-	if err := s.AddReviewer(w, quotaOwner, repoId, commitId, 20); err != nil {
+	if _, err := s.AddReviewer(w, quotaOwner, repoId, commitId, 20, actorUserId); err != nil {
 		t.Fatalf("AddReviewer(2) failed: %v", err)
 	}
 	d, _, err = s.GetData(w, repoId, commitId, false, 0, []string{})
@@ -953,9 +967,13 @@ func TestAddAndRemoveReviewer(t *testing.T) {
 		t.Fatalf("wrong reviewers\n got: %#v\nexpected: %#v", d.ReviewersUserIds, []int64{10, 20})
 	}
 
-	// Add duplicate (should "not add")
-	if err := s.AddReviewer(w, quotaOwner, repoId, commitId, 20); err != nil {
+	// Add duplicate (should "not add" and not create a thread)
+	th, err = s.AddReviewer(w, quotaOwner, repoId, commitId, 20, actorUserId)
+	if err != nil {
 		t.Fatalf("AddReviewer(duplicate) failed: %v", err)
+	}
+	if th != (review.Thread{}) {
+		t.Fatalf("expected no thread for duplicate add, got: %#v", th)
 	}
 	d, _, err = s.GetData(w, repoId, commitId, false, 0, []string{})
 	if err != nil {
@@ -1024,6 +1042,7 @@ func TestAddReviewerMaxLimit(t *testing.T) {
 	const quotaOwner = "owner"
 	const repoId = uint64(2)
 	const commitId = uint64(456)
+	const actorUserId = int64(42)
 
 	originalMaxReviewers := review.MaxReviewers
 	t.Cleanup(func() {
@@ -1032,13 +1051,14 @@ func TestAddReviewerMaxLimit(t *testing.T) {
 	review.MaxReviewers = 20
 	// Fill up to MaxReviewers
 	for i := 0; i < review.MaxReviewers; i++ {
-		if err := s.AddReviewer(w, quotaOwner, repoId, commitId, int64(i+1)); err != nil {
+		if _, err := s.AddReviewer(w, quotaOwner, repoId, commitId, int64(i+1), actorUserId); err != nil {
 			t.Fatalf("failed adding reviewer %d: %v", i+1, err)
 		}
 	}
 
 	// Next add must fail
-	if err := s.AddReviewer(w, quotaOwner, repoId, commitId, 999999); err == nil {
+	_, err = s.AddReviewer(w, quotaOwner, repoId, commitId, 999999, actorUserId)
+	if err == nil {
 		t.Fatalf("expected error when adding reviewer past MaxReviewers=%d", review.MaxReviewers)
 	}
 

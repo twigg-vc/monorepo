@@ -54,9 +54,10 @@ type Service interface {
 	// GetLgtmAuthors returns all user who currently have LGTM on the commit.
 	GetLgtmAuthors(r context.Context, repoId uint64, cId commit.LocalId) (iterator.I[int64], error)
 
-	// Adds userId to reviewers list. If user is already a reviewer just return nil.
-	// Returns error if it would exceed MaxReviewers.
-	AddReviewer(w context.Context, quotaOwner string, repoId uint64, cId commit.LocalId, userId int64) error
+	// Adds userId to reviewers list and records a ThreadType_AddReviewer thread
+	// authored by actorUserId. If user is already a reviewer, returns a zero
+	// Thread and nil error. Returns error if it would exceed MaxReviewers.
+	AddReviewer(w context.Context, quotaOwner string, repoId uint64, cId commit.LocalId, userId int64, actorUserId int64) (review.Thread, error)
 
 	// Removes userId from reviewers list.
 	RemoveReviewer(w context.Context, quotaOwner string, repoId uint64, cId commit.LocalId, userId int64) error
