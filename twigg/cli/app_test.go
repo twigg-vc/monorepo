@@ -4133,6 +4133,14 @@ func TestPullDetachedAmendAndPush(t *testing.T) {
 		HasServerId: true,
 		ServerId:    2,
 	})
+	// Note that amending will pull the parent
+	// Client 2:
+	//
+	// #1v0-c2v0*  @#1v1-c2v1
+	// |           |
+	// #2v0-c1v0---/
+	// |
+	// ~
 	h2.Run("push")
 	h2.CheckActiveCommit(CheckCommitArg{
 		Id:          1,
@@ -4143,11 +4151,6 @@ func TestPullDetachedAmendAndPush(t *testing.T) {
 		HasServerV:  true,
 		ServerV:     1,
 	})
-	// Client 2:
-	//
-	// #1v0-c2v0*  #1v1-c2v1
-	// |           |
-	// ~           ~
 
 	// Submit both
 	srv.Submit(1)
@@ -4173,18 +4176,14 @@ func TestPullDetachedAmendAndPush(t *testing.T) {
 	h1.CheckLogAll(0, 1, 1, 2, 2)
 	h2.Run("pull")
 	// Pull will always pull everything after the last submitted one.
-	// c1 is already there as #2, as the amend pulled it.
+	//
 	// Client 2:
 	//
-	// #1v0-c2v0*  #1v1-c2v1*
-	// |           |
-	// ~           ~
-	//
-	//             #1v2-c2v2
-	//             |
-	// #2v0-c1v0*  #2v1-c1v1
-	// |           |
-	// root--------/
+	// #1v0-c2v0*   #1v1-c2v1*
+	// |            |           @#1v2-c2v2
+	// #2v0-c1v0*---/           |
+	// |                        #2v1-c1v1
+	// root---------------------/
 	h2.CheckLogAll(0, 1, 1, 1, 2, 2)
 	h2.CheckActiveCommit(CheckCommitArg{
 		Id:          1,
