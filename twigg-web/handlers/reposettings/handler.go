@@ -645,6 +645,39 @@ type setRepoSecretsBulkResponse struct {
 	Secrets  []secrets.SecretRef
 }
 
+func (h handler) validateSecretsBulk(dbRead context.Context, repoId uint64,
+	entries []setRepoSecretsBulkEntry) (errs map[string]string, err error) {
+	errs = map[string]string{}
+	seen := map[string]bool{}
+	for _, entry := range entries {
+		if entry.Name == "" {
+			errs[entry.Name] = "invalid secretName"
+			continue
+		}
+		if seen[entry.Name] {
+			errs[entry.Name] = "duplicated in request"
+			continue
+		}
+		seen[entry.Name] = true
+		if entry.Name == repo.GitMirrorUrlSecretName {
+			errs[entry.Name] = "reserved secret name"
+			continue
+		}
+		if entry.Value == "" {
+			errs[entry.Name] = "invalid secretValue"
+			continue
+		}
+		hasSecret, err := h.secrets.RepoIdHasSecret(dbRead, repoId, entry.Name)
+		if err != nil {
+			return nil, err
+		}
+		if hasSecret {
+			errs[entry.Name] = "secret already exist"
+		}
+	}
+	return errs, nil
+}
+
 const gitMirrorCommitMsgEnvVar = "TWIGG_MIRROR_COMMIT_MSG"
 
 // Points HEAD at the twigg branch of the mirror so the new commit lands on top
