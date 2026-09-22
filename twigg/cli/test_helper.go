@@ -542,6 +542,14 @@ func (h helper) CheckActiveCommitLocalId(n int) {
 			"expected commit with id %d, got %d", n, a.Id)
 	}
 }
+func (h helper) CheckActiveCommitServerId(n int) {
+	h.t.Helper()
+	a := h.ActiveCommit()
+	if a.ServerId != n {
+		h.t.Fatalf(
+			"expected commit with server %d, got %d", n, a.ServerId)
+	}
+}
 func (h helper) CheckLogN(number int, expectedIds []int) {
 	h.checkLog(h.LogN(number), expectedIds...)
 }

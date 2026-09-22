@@ -72,6 +72,8 @@ type TestHelper interface {
 	CheckActiveCommit(args CheckCommitArg)
 	// Helper to check the local id of the active commit
 	CheckActiveCommitLocalId(i int)
+	// Helper to check the server id of the active commit
+	CheckActiveCommitServerId(i int)
 	// Calls `log` command and reads the commits logged
 	Log() []LoggedCommit
 	// Calls `log` with "--all" flag and reads the commits logged

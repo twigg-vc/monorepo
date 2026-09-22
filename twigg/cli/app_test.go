@@ -4415,40 +4415,35 @@ func TestDiffOfDetachedAutoPullsParent(t *testing.T) {
 
 	// Client 2 pulls the second detached
 	//
-	//   c2
+	//   @c2
 	//   |
 	//   ~
 	// 0
 	h2.Run("pull", "c2")
-	h2.CheckActiveCommit(CheckCommitArg{
-		Id:          1,
-		Version:     0,
-		IsSubmitted: true,
-		HasServerId: true,
-		ServerId:    2,
-		HasServerV:  true,
-		ServerV:     1,
-	})
+	h2.CheckActiveCommitServerId(2)
+
 	// Running diff automatically pulls the parent
 	//
 	//
-	//   c2
+	//   @c2(+b.txt)
 	//   |
-	//   c1
+	//   c1(+a.txt)
 	//  /
 	// 0
 	h2.Run("diff")
-	h2.CheckLogAllVersions(
-		IdVersionAndConflict{Id: 2, Version: 0},
-		IdVersionAndConflict{Id: 1, Version: 0},
-		IdVersionAndConflict{Id: 0, Version: 0})
-	h2.Run("diff", "--all")
-	h2.CheckOutContains("bbb")
+	h2.CheckOutContains("b.txt")
+	h2.CheckOutDoesntContain("a.txt")
+
+	// Verify the tree
+	h2.CheckActiveCommitServerId(2)
+	h2.Run("down")
+	h2.CheckActiveCommitServerId(1)
+	h2.Run("diff")
+	h2.CheckOutContains("a.txt")
+	h2.CheckOutDoesntContain("b.txt")
 
 	h2.Run("down")
-	h2.CheckActiveCommitLocalId(2)
-	h2.Run("down")
-	h2.CheckActiveCommitLocalId(0)
+	h2.CheckActiveCommitServerId(0)
 }
 
 func TestPlainPullAttachesDetachedCommit(t *testing.T) {

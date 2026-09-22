@@ -74,15 +74,12 @@ func (a *app) diff(args commandArgs) {
 		a.logError(allNotSupportedWithJson)
 		return
 	}
-	A, B, ok := a.parseDiffArgs(args)
+	A, B, ok := a.parseDiffArgsAndPullParentIfNeeded(args)
 	if !ok {
 		return
 	}
 	if A.IsDetached {
-		ok := a.pullParentOfDetached(&A)
-		if !ok {
-			return
-		}
+		panic("parseDiffArgsAndPullParentIfNeeded didnt pull parent")
 	}
 	if a.args.all {
 		err := a.ag.WriteDiffAll(A.TreeVersion, B.TreeVersion, a.out, a.wl)
@@ -105,11 +102,18 @@ func (a *app) diff(args commandArgs) {
 }
 
 // diff will log (A-B). This method parses A and B.
+// If automatically fecthes the parent of A if A is detached and B is its parent
 // On any error, logs it and returns ok=false
-func (a *app) parseDiffArgs(args commandArgs) (A commit.Commit, B commit.Commit, ok bool) {
+func (a *app) parseDiffArgsAndPullParentIfNeeded(args commandArgs) (A commit.Commit, B commit.Commit, ok bool) {
 	// If no arg is provided, diff the current commit and its parent
 	if args.commit0 == "" {
 		A = a.s.Current
+		if A.IsDetached {
+			ok = a.pullParentOfDetached(&A)
+			if !ok {
+				return
+			}
+		}
 		var err error
 		B, err = a.ag.GetVersion(A.ParentL, A.ParentV, a.wl)
 		if err != nil {
@@ -126,6 +130,12 @@ func (a *app) parseDiffArgs(args commandArgs) (A commit.Commit, B commit.Commit,
 			return
 		}
 		var err error
+		if A.IsDetached {
+			ok = a.pullParentOfDetached(&A)
+			if !ok {
+				return
+			}
+		}
 		B, err = a.ag.GetVersion(A.ParentL, A.ParentV, a.wl)
 		if err != nil {
 			a.logError(err.Error())
