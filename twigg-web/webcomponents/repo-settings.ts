@@ -467,17 +467,17 @@ export class RepoSettings extends LitElement {
         }
         return html`
         <div class="modal-backdrop" @pointerdown=${this.onModalPointerDown} @pointerup=${this.onModalPointerUp}>
-            <div class="modal">
+            <div class="modal create-secret-modal">
                 <h2 class="create-new-secret-modal-title">Create Secrets</h2>
                 <form class="form-of-create-secret-modal" @submit=${(e: Event) => e.preventDefault()}>
-                    <div>
+                    <div class="secret-draft-header">
                         <span>Name</span>
                         <span>Value</span>
                         <span></span>
                     </div>
                     ${this.secretDrafts.map((draft, i) => this.renderSecretDraftRow(draft, i))}
                 </form>
-                <button class="btn" @click=${this.onAddSecretRowClicked}>
+                <button class="btn add-secret-row-btn" @click=${this.onAddSecretRowClicked}>
                     + Add another
                 </button>
 
@@ -496,14 +496,14 @@ export class RepoSettings extends LitElement {
     private renderSecretDraftRow(draft: SecretDraft, i: number) {
         var error = html``
         if (draft.Error !== "") {
-            error = html`<span class="reviewer-modal-error">${draft.Error}</span>`
+            error = html`<span class="secret-draft-error">${draft.Error}</span>`
         }
         var nameClass = "input"
         if (draft.Error !== "") {
             nameClass = "input input-error"
         }
         return html`
-        <div>
+        <div class="secret-draft-row">
             <input
                 class=${nameClass}
                 placeholder="e.g. CLIENT_KEY"
@@ -517,7 +517,7 @@ export class RepoSettings extends LitElement {
                 @input=${(e: Event) => this.onSecretDraftValueInput(i, e)}
             ></textarea>
             <button
-                class="btn"
+                class="btn remove-secret-row-btn"
                 title="Remove"
                 ?disabled=${this.secretDrafts.length === 1}
                 @click=${() => this.onRemoveSecretRowClicked(i)}
@@ -1032,6 +1032,42 @@ export class RepoSettings extends LitElement {
                 border-radius: var(--radius1);
                 font-family: monospace;
                 overflow-wrap: break-word;
+            }
+            .create-secret-modal {
+                width: min(90vw, var(--size3));
+                max-width: var(--size3);
+                text-align: left;
+            }
+            .secret-draft-header,
+            .secret-draft-row {
+                display: grid;
+                grid-template-columns: 1fr 2fr auto;
+                gap: var(--space2);
+                align-items: start;
+                margin-bottom: var(--space2);
+            }
+            .secret-draft-header {
+                color: var(--color-text-muted);
+                font-size: var(--space3p);
+                margin-bottom: var(--space1);
+            }
+            .secret-draft-row input,
+            .secret-draft-row textarea {
+                width: 100%;
+                box-sizing: border-box;
+                font-family: monospace;
+                resize: vertical;
+                border: 1px solid var(--color-border);
+                border-radius: var(--radius1);
+                overflow-wrap: break-word;
+            }
+            .secret-draft-error {
+                grid-column: 1 / -1;
+                color: var(--color-danger);
+                font-size: var(--space3p);
+            }
+            .add-secret-row-btn {
+                margin-bottom: var(--space3);
             }
         `,
     ];
