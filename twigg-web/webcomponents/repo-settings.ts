@@ -414,8 +414,14 @@ export class RepoSettings extends LitElement {
             </div>
         </div>
 
-        ${this.showCreateSecretModal ? 
-        html`
+        ${this.renderSingleSecretCreationModal()}
+    `;
+    }
+    private renderSingleSecretCreationModal() {
+        if (!this.showCreateSecretModal) {
+            return html``
+        }
+        return html`
         <div class="modal-backdrop" @pointerdown=${this.onModalPointerDown} @pointerup=${this.onModalPointerUp}>
             <div class="modal">
                 <h2 class="create-new-secret-modal-title">Create a new Secret</h2>
@@ -440,8 +446,6 @@ export class RepoSettings extends LitElement {
                 </div>
             </div>
         </div>`
-        : html``}
-    `;
     }
     private renderSecretRow(secret: Secret) {
         const isLoading = this.secretsWithDeleteBtnLoading.includes(secret.Name);
