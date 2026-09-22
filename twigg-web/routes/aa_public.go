@@ -129,6 +129,7 @@ const (
 	RepoGitMirrorEnabledPattern = RepoSettingsPattern + "/git-mirror-enabled"
 	RepoGitMirrorUrlPattern     = RepoSettingsPattern + "/git-mirror-url"
 	RepoSettingsSecret          = RepoSettingsPattern + "/repo-secret"
+	RepoSettingsSecretsBulk     = RepoSettingsPattern + "/repo-secrets"
 	RepoDescriptionParamName    = "description"
 	GitMirrorEnabledParamName   = "git-mirror-enabled"
 	RepoSecretNameParamName     = "repo-secret-name"
