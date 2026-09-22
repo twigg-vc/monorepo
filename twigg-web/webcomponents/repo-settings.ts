@@ -439,7 +439,7 @@ export class RepoSettings extends LitElement {
             </div>
         </div>
 
-        ${this.renderSingleSecretCreationModal()}
+        ${this.renderBulkSecretCreationModal()}
     `;
     }
     private renderSingleSecretCreationModal() {
