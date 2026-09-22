@@ -3932,6 +3932,39 @@ func TestGotoParentOfRootFails(t *testing.T) {
 	h.CheckOutContains(parentNotFound)
 }
 
+func TestAmendOfDetachedAutoPullsParent(t *testing.T) {
+	h1 := NewTestHelper(t)
+	h1.Run("init")
+	h2 := NewTestHelper2(t)
+	h2.Run("init")
+	srv := server.NewTestServer(FakeApiKey, t)
+	h1.SetServerRootUrl(srv.RootUrl())
+	h2.SetServerRootUrl(srv.RootUrl())
+
+	// Client 1 creates c1 and c2
+	h1.WriteFile("a.txt", "aaa")
+	h1.Run("commit", "c1")
+	h1.WriteFile("b.txt", "bbb")
+	h1.Run("commit", "c2")
+	h1.Run("server", srv.ServerPath())
+	h1.Run("key", FakeApiKey)
+	h1.Run("push")
+
+	// Client 2 pulls only c2, so it is detached
+	h2.Run("server", srv.ServerPath())
+	h2.Run("key", FakeApiKey)
+	h2.Run("pull", "c2v0")
+	h2.CheckActiveCommitServerId(2)
+	h2.CheckLog(1)
+
+	// Amending automatically pulls c1
+	h2.WriteFile("b.txt", "BBB")
+	h2.Run("amend")
+	h2.CheckOutContains("pulled commit")
+	h2.CheckActiveCommitServerId(2)
+	h2.CheckLog(2, 1, 0)
+}
+
 func TestRebaseOfDetachedAutoPullsParent(t *testing.T) {
 	h1 := NewTestHelper(t)
 	h1.Run("init")
@@ -4139,19 +4172,20 @@ func TestPullDetachedAmendAndPush(t *testing.T) {
 	})
 	h1.CheckLogAll(0, 1, 1, 2, 2)
 	h2.Run("pull")
-	// Pull will always pull everything after the last submitted one
+	// Pull will always pull everything after the last submitted one.
+	// c1 is already there as #2, as the amend pulled it.
 	// Client 2:
 	//
 	// #1v0-c2v0*  #1v1-c2v1*
 	// |           |
 	// ~           ~
 	//
-	// #1v2-c2v2
-	// |
-	// #2v0-c1v1
-	// |
-	// root
-	h2.CheckLogAll(0, 2, 1)
+	//             #1v2-c2v2
+	//             |
+	// #2v0-c1v0*  #2v1-c1v1
+	// |           |
+	// root--------/
+	h2.CheckLogAll(0, 1, 1, 1, 2, 2)
 	h2.CheckActiveCommit(CheckCommitArg{
 		Id:          1,
 		Version:     2,
@@ -4164,7 +4198,7 @@ func TestPullDetachedAmendAndPush(t *testing.T) {
 	h2.Run("down")
 	h2.CheckActiveCommit(CheckCommitArg{
 		Id:          2,
-		Version:     0,
+		Version:     1,
 		IsSubmitted: true,
 		HasServerId: true,
 		ServerId:    1,

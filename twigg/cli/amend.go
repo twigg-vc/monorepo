@@ -9,6 +9,14 @@ import (
 
 // creates and commits lock
 func (a *app) amend(args commandArgs) {
+	// Without the parent, the diff counts are computed against an empty tree
+	if a.s.Current.IsDetached {
+		ok := a.pullParentOfDetached(&a.s.Current)
+		if !ok {
+			return
+		}
+	}
+
 	msg := args.message
 	if msg == "" {
 		msg = a.s.Current.Message
