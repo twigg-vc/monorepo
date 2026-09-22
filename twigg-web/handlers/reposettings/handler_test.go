@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"monorepo/base/iterator"
+	"monorepo/twigg-web/featureflags"
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
+	"monorepo/twigg-web/secrets"
 	reposervice "monorepo/twigg-web/services/repo"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
@@ -884,4 +886,150 @@ func (m mockRepoSettingsRepoService) GetServer(_ context.Context, _ int64, _ str
 }
 func (m mockRepoSettingsRepoService) GetServerWrite(_ context.Context) server.Write {
 	panic("unexpected call to GetServerWrite")
+}
+
+func TestHandlePostSetRepoSecretsBulk(t *testing.T) {
+	const repoId uint64 = 42
+
+	tests := []struct {
+		name                 string
+		featureEnabled       bool
+		body                 string
+		existingSecret       string
+		hasSecretErr         error
+		setSecretErr         error
+		expectedStatus       int
+		expectedBody         string
+		expectedShouldCommit bool
+	}{
+		{
+			name:                 "all valid, expect 200 and created secrets",
+			featureEnabled:       true,
+			body:                 `{"Secrets":[{"Name":"A","Value":"1"},{"Name":"B","Value":"2"}]}`,
+			expectedStatus:       http.StatusOK,
+			expectedBody:         `{"HasError":false,"Errors":{},"Secrets":[{"Name":"A","Id":1},{"Name":"B","Id":1}]}`,
+			expectedShouldCommit: true,
+		},
+		{
+			name:                 "empty value and existing name, expect 200 with errors and no commit",
+			featureEnabled:       true,
+			body:                 `{"Secrets":[{"Name":"A","Value":"1"},{"Name":"B","Value":""},{"Name":"C","Value":"3"}]}`,
+			existingSecret:       "C",
+			expectedStatus:       http.StatusOK,
+			expectedBody:         `{"HasError":true,"Errors":{"B":"invalid secretValue","C":"secret already exist"},"Secrets":[]}`,
+			expectedShouldCommit: false,
+		},
+		{
+			name:                 "empty, reserved and duplicated names, expect 200 with errors and no commit",
+			featureEnabled:       true,
+			body:                 `{"Secrets":[{"Name":"","Value":"1"},{"Name":"` + reposervice.GitMirrorUrlSecretName + `","Value":"1"},{"Name":"A","Value":"1"},{"Name":"A","Value":"2"}]}`,
+			expectedStatus:       http.StatusOK,
+			expectedBody:         `{"HasError":true,"Errors":{"":"invalid secretName","A":"duplicated in request","` + reposervice.GitMirrorUrlSecretName + `":"reserved secret name"},"Secrets":[]}`,
+			expectedShouldCommit: false,
+		},
+		{
+			name:                 "empty list, expect 400",
+			featureEnabled:       true,
+			body:                 `{"Secrets":[]}`,
+			expectedStatus:       http.StatusBadRequest,
+			expectedBody:         "no secrets given",
+			expectedShouldCommit: false,
+		},
+		{
+			name:                 "invalid json, expect 400",
+			featureEnabled:       true,
+			body:                 `{not json`,
+			expectedStatus:       http.StatusBadRequest,
+			expectedBody:         "invalid json body",
+			expectedShouldCommit: false,
+		},
+		{
+			name:                 "RepoIdHasSecret errors, expect 500 and no commit",
+			featureEnabled:       true,
+			body:                 `{"Secrets":[{"Name":"A","Value":"1"}]}`,
+			hasSecretErr:         errors.New("boom"),
+			expectedStatus:       http.StatusInternalServerError,
+			expectedBody:         "failed to set repo secrets",
+			expectedShouldCommit: false,
+		},
+		{
+			name:                 "SetRepoIdSecret errors, expect 500 and no commit",
+			featureEnabled:       true,
+			body:                 `{"Secrets":[{"Name":"A","Value":"1"}]}`,
+			setSecretErr:         errors.New("boom"),
+			expectedStatus:       http.StatusInternalServerError,
+			expectedBody:         "failed to set repo secrets",
+			expectedShouldCommit: false,
+		},
+		{
+			name:                 "feature disabled, expect 503 and no commit",
+			featureEnabled:       false,
+			body:                 `{"Secrets":[{"Name":"A","Value":"1"}]}`,
+			expectedStatus:       http.StatusServiceUnavailable,
+			expectedBody:         "feature is disabled",
+			expectedShouldCommit: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockedSecrets := mockRepoSettingsSecrets{
+				repoIdHasSecret: func(gotRepoId uint64, name string) (bool, error) {
+					if gotRepoId != repoId {
+						t.Fatalf("unexpected repoId: %d", gotRepoId)
+					}
+					return name == tt.existingSecret, tt.hasSecretErr
+				},
+				setRepoIdSecret: func(gotRepoId uint64, name, value string) (secrets.SecretRef, error) {
+					if gotRepoId != repoId {
+						t.Fatalf("unexpected repoId: %d", gotRepoId)
+					}
+					return secrets.SecretRef{Name: name, Id: 1}, tt.setSecretErr
+				},
+			}
+			h := handler{secrets: mockedSecrets}
+
+			httpReq := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
+			httpReq.Header.Set("Content-Type", "application/json")
+
+			rr := httptest.NewRecorder()
+			req := wrappers.UserRepoMuxRequest{
+				Request: httpReq,
+				Repo:    repo.Repo{Id: repoId},
+				Flags:   featureflags.Flags{RepoSecretsIsEnabled: tt.featureEnabled},
+			}
+
+			shouldCommit := h.handlePostSetRepoSecretsBulk(rr, req, nil)
+
+			if shouldCommit != tt.expectedShouldCommit {
+				t.Fatalf("expected shouldCommit %v, got %v",
+					tt.expectedShouldCommit, shouldCommit)
+			}
+			if rr.Code != tt.expectedStatus {
+				t.Fatalf("expected status %d, got %d", tt.expectedStatus, rr.Code)
+			}
+			if strings.TrimSpace(rr.Body.String()) != tt.expectedBody {
+				t.Fatalf("expected body %q, got %q",
+					tt.expectedBody, rr.Body.String())
+			}
+		})
+	}
+}
+
+type mockRepoSettingsSecrets struct {
+	repoIdHasSecret func(repoId uint64, name string) (bool, error)
+	setRepoIdSecret func(repoId uint64, name, value string) (secrets.SecretRef, error)
+}
+
+func (m mockRepoSettingsSecrets) SetRepoIdSecret(_ context.Context, repoId uint64, name string, value string) (secrets.SecretRef, error) {
+	return m.setRepoIdSecret(repoId, name, value)
+}
+func (m mockRepoSettingsSecrets) RepoIdHasSecret(_ context.Context, repoId uint64, name string) (bool, error) {
+	return m.repoIdHasSecret(repoId, name)
+}
+func (m mockRepoSettingsSecrets) GetRepoIdSecretsPage(_ context.Context, _ uint64, _ uint64) ([]secrets.SecretRef, error) {
+	panic("unexpected call to GetRepoIdSecretsPage")
+}
+func (m mockRepoSettingsSecrets) DeleteRepoIdSecretIfExists(_ context.Context, _ uint64, _ string) error {
+	panic("unexpected call to DeleteRepoIdSecretIfExists")
 }
