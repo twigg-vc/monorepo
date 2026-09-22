@@ -678,6 +678,72 @@ func (h handler) validateSecretsBulk(dbRead context.Context, repoId uint64,
 	return errs, nil
 }
 
+const maxSecretsPerBulkRequest = 200
+
+func (h handler) handlePostSetRepoSecretsBulk(w http.ResponseWriter,
+	r wrappers.UserRepoMuxRequest,
+	dbWrite context.Context) (shouldCommit bool) {
+	if !r.Flags.RepoSecretsIsEnabled {
+		http.Error(w, "feature is disabled", http.StatusServiceUnavailable)
+		return
+	}
+	var req setRepoSecretsBulkRequest
+	err := json.NewDecoder(r.Request.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "invalid json body", http.StatusBadRequest)
+		return
+	}
+	if len(req.Secrets) == 0 {
+		http.Error(w, "no secrets given", http.StatusBadRequest)
+		return
+	}
+	if len(req.Secrets) > maxSecretsPerBulkRequest {
+		http.Error(w, "too many secrets", http.StatusBadRequest)
+		return
+	}
+
+	errs, err := h.validateSecretsBulk(dbWrite, r.Repo.Id, req.Secrets)
+	if err != nil {
+		log.Printf("failed to validate repo secrets, repoId=%d. err=%q", r.Repo.Id, err)
+		http.Error(w, "failed to set repo secrets", http.StatusInternalServerError)
+		return
+	}
+	resp := setRepoSecretsBulkResponse{HasError: len(errs) > 0, Errors: errs, Secrets: []secrets.SecretRef{}}
+	if resp.HasError {
+		writeSecretsBulkResponse(w, resp, r.Repo.Id)
+		return
+	}
+
+	for _, entry := range req.Secrets {
+		newSecret, err := h.secrets.SetRepoIdSecret(dbWrite, r.Repo.Id, entry.Name, entry.Value)
+		if err != nil {
+			log.Printf("failed to set repo secret, repoId=%d secretName=%q. err=%q", r.Repo.Id, entry.Name, err)
+			http.Error(w, "failed to set repo secrets", http.StatusInternalServerError)
+			return
+		}
+		resp.Secrets = append(resp.Secrets, newSecret)
+	}
+
+	shouldCommit = writeSecretsBulkResponse(w, resp, r.Repo.Id)
+	return
+}
+
+func writeSecretsBulkResponse(w http.ResponseWriter,
+	resp setRepoSecretsBulkResponse, repoId uint64) (ok bool) {
+	body, err := json.Marshal(resp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return false
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, err = w.Write(body)
+	if err != nil {
+		log.Printf("failed to write response for set repo secrets bulk repoId=%d. err=%q", repoId, err)
+		return false
+	}
+	return true
+}
+
 const gitMirrorCommitMsgEnvVar = "TWIGG_MIRROR_COMMIT_MSG"
 
 // Points HEAD at the twigg branch of the mirror so the new commit lands on top

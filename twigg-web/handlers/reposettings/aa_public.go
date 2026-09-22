@@ -55,6 +55,7 @@ func AddHandlers(userRepoMux wrappers.UserRepoMux,
 	userRepoMux.HandleFuncW("PUT "+routes.RepoSettingsSecret, h.handlePutSetRepoSecret)
 	userRepoMux.HandleFuncW("POST "+routes.RepoSettingsSecret, h.handlePostSetRepoSecret)
 	userRepoMux.HandleFuncW("DELETE "+routes.RepoSettingsSecret, h.handleDeleteRepoSecret)
+	userRepoMux.HandleFuncW("POST "+routes.RepoSettingsSecretsBulk, h.handlePostSetRepoSecretsBulk)
 
 	onHandleQueuePushToGitMirrorDeadLetter := func(p []byte) error {
 		return nil
