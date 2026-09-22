@@ -245,7 +245,10 @@ func NewRollback(old Commit, hasRebaseConflicts bool, isOnServer bool, nextLocal
 }
 
 func (c Commit) IsDetachedOrRoot() bool {
-	return c.IsDetached || c.HasServerL && c.ServerL == 0
+	return c.IsDetached || c.IsRoot()
+}
+func (c Commit) IsRoot() bool {
+	return c.HasServerL && c.ServerL == 0
 }
 func (c Commit) IsOnServer() bool {
 	if c.HasServerV && !c.HasServerL {

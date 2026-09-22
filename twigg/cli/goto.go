@@ -50,7 +50,15 @@ func (a *app) down_(n int) {
 	var target commit.Commit
 	var err error
 	for i := 0; i < n; i++ {
-		if current.IsDetachedOrRoot() {
+		if current.IsDetached && !current.IsRoot() {
+			ok := a.pullParentOfDetached(&current)
+			if !ok {
+				return
+			}
+			if current.IsDetached {
+				panic("pullParentOfDetached didn't make current attached")
+			}
+		} else if current.IsRoot() {
 			a.logError(parentNotFound)
 			return
 		}

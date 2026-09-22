@@ -894,8 +894,12 @@ func TestClonePullsLastSubmittedOnly(t *testing.T) {
 		ServerV:     1,
 	})
 	h2.CheckLog(1)
+	// "down" pulls the parent automatically
 	h2.Run("down")
-	h2.CheckOutContains(parentNotFound)
+	h2.CheckOutContains("pulled commit")
+	h2.CheckActiveCommitServerId(1)
+	h2.CheckFile("a.txt", "aaa")
+	h2.CheckHasNoFile("b.txt")
 }
 
 func TestCantPullAndPushWithoutApiKey(t *testing.T) {
@@ -3829,17 +3833,12 @@ func TestPullDetachedTop(t *testing.T) {
 	})
 	h2.CheckFile("c.txt", "ccc")
 	h2.Run("down")
+	// The second "down" pulls c1 automatically
 	h2.Run("down")
-	// Can't go down twice because c1 was not pulled yet
-	h2.CheckOutContains(parentNotFound)
-	// Same if try to "goto down"
-	h2.Run("goto", "down")
-	h2.CheckOutContains(parentNotFound)
+	h2.CheckOutContains("pulled commit")
+	h2.CheckActiveCommitServerId(1)
 
 	h2.Run("goto", "c0")
-	h2.Run("up")
-	h2.CheckOutContains(childNotFound)
-	h2.Run("pull")
 	h2.Run("up")
 	h2.CheckActiveCommit(CheckCommitArg{
 		Id:          3,
@@ -3870,6 +3869,67 @@ func TestPullDetachedTop(t *testing.T) {
 		HasServerV:  true,
 		ServerV:     1,
 	})
+}
+
+func TestGotoParentAndDownOfDetachedAutoPullParent(t *testing.T) {
+	h1 := NewTestHelper(t)
+	h1.Run("init")
+	h2 := NewTestHelper2(t)
+	h2.Run("init")
+	srv := server.NewTestServer(FakeApiKey, t)
+	h1.SetServerRootUrl(srv.RootUrl())
+	h2.SetServerRootUrl(srv.RootUrl())
+
+	// Client 1 creates c1, c2 and c3 and pushes them
+	h1.WriteFile("a.txt", "aaa")
+	h1.Run("commit", "c1")
+	h1.WriteFile("b.txt", "bbb")
+	h1.Run("commit", "c2")
+	h1.WriteFile("c.txt", "ccc")
+	h1.Run("commit", "c3")
+	h1.Run("server", srv.ServerPath())
+	h1.Run("key", FakeApiKey)
+	h1.Run("push")
+
+	// Client 2 pulls only c3, so it is detached
+	h2.Run("server", srv.ServerPath())
+	h2.Run("key", FakeApiKey)
+	h2.Run("pull", "c3v0")
+	h2.CheckActiveCommitServerId(3)
+
+	// "goto parent" pulls c2 and switches to it
+	h2.Run("goto", "parent")
+	h2.CheckOutContains("pulled commit")
+	h2.CheckOutContains("switched to commit")
+	h2.CheckActiveCommitServerId(2)
+	h2.CheckFile("b.txt", "bbb")
+	h2.CheckHasNoFile("c.txt")
+
+	// c2 is detached too, so "down" pulls c1 and switches to it
+	h2.Run("down")
+	h2.CheckOutContains("pulled commit")
+	h2.CheckOutContains("switched to commit")
+	h2.CheckActiveCommitServerId(1)
+	h2.CheckFile("a.txt", "aaa")
+	h2.CheckHasNoFile("b.txt")
+}
+
+func TestGotoParentOfRootFails(t *testing.T) {
+	h := NewTestHelper(t)
+	h.Run("init")
+	srv := server.NewTestServer(FakeApiKey, t)
+	h.SetServerRootUrl(srv.RootUrl())
+
+	h.WriteFile("a.txt", "aaa")
+	h.Run("commit", "c1")
+	h.Run("server", srv.ServerPath())
+	h.Run("key", FakeApiKey)
+	h.Run("push")
+
+	// The root commit has no parent to pull
+	h.Run("goto", "c0")
+	h.Run("goto", "parent")
+	h.CheckOutContains(parentNotFound)
 }
 
 func TestRebaseOfDetachedAutoPullsParent(t *testing.T) {
@@ -4386,9 +4446,12 @@ func TestPullParentOfDetached(t *testing.T) {
 		ServerV:     0,
 	})
 	h2.CheckHasNoFile("e.txt")
-	// c3 was never pulled, so c4 is still detached
+	// c3 was never pulled, so "down" pulls it automatically
 	h2.Run("down")
-	h2.CheckOutContains(parentNotFound)
+	h2.CheckOutContains("pulled commit")
+	h2.CheckActiveCommitServerId(3)
+	h2.CheckFile("c.txt", "ccc")
+	h2.CheckHasNoFile("d.txt")
 }
 
 func TestDiffOfDetachedAutoPullsParent(t *testing.T) {

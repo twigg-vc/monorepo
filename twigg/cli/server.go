@@ -220,6 +220,7 @@ func (a *app) pullCommit(args commandArgs) {
 	a.pullCommit_(args.commit0InServerSyntax, args.stay)
 }
 
+// pulls a commit and updates the current commit and current state if neede.
 // returns false and logs any error
 func (a *app) pullCommit_(commit0InServerSyntax string, stay bool) (ok bool) {
 	defer func() {

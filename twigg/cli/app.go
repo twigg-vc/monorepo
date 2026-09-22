@@ -385,7 +385,7 @@ func (a *app) parseCommit(s string) (commit.Commit, bool) {
 	}
 
 	// Alias commits: top, parent, etc.
-	c, match, ok := a.tryParseAliasCommit(s)
+	c, match, ok := a.tryParseAliasCommitAndPullParentIfNeeded(s)
 	if !ok {
 		return commit.Commit{}, false
 	}
@@ -485,7 +485,7 @@ func (a *app) tryParseServerCommit(s string) (c commit.Commit, match bool, err e
 
 // handles aliases like "top" or "parent".
 // logs an error and returns ok=false when any happen.
-func (a *app) tryParseAliasCommit(s string) (c commit.Commit, found bool, ok bool) {
+func (a *app) tryParseAliasCommitAndPullParentIfNeeded(s string) (c commit.Commit, found bool, ok bool) {
 
 	var err error
 	if isTopCommitAlias(s) {
@@ -499,7 +499,12 @@ func (a *app) tryParseAliasCommit(s string) (c commit.Commit, found bool, ok boo
 		return
 	}
 	if isParentCommitAlias(s) {
-		if a.s.Current.IsDetachedOrRoot() {
+		if a.s.Current.IsDetached {
+			ok = a.pullParentOfDetached(&a.s.Current)
+			if !ok {
+				return
+			}
+		} else if a.s.Current.IsRoot() {
 			a.logError(parentNotFound)
 			return
 		}
