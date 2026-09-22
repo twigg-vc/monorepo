@@ -36,6 +36,7 @@ Or a list of jobs:
 | `"go"` | Docker image with the Go toolchain |
 | `"node-20"` | Docker image with node-20 toolchain |
 | `"bun"` | Docker image with the Bun/JS toolchain |
+| `"git"` | Docker image with git |
 | `"vm"` | a full LXD virtual machine instead of a container |
 
 ### Timeouts

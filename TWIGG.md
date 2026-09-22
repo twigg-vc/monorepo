@@ -1,7 +1,5 @@
-
 # Twigg version control
-This project uses Twigg for version control.
-It's a version control for trunk-based development with stacked commits.
+Twigg is a version control for trunk-based development with stacked commits.
 
 ## Concepts
 ### Commit IDs

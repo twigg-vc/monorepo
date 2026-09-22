@@ -23,11 +23,15 @@ COPY data /monorepo/data
 COPY twiggbuildflags /monorepo/twiggbuildflags
 RUN go build -ldflags "-X 'monorepo/buildmeta.Version=$TW_ID'" -o tw.bin ./tw
 
+# Each target sets its own WORKDIR: `tw init` turns the dir the steps run on
+# into the twigg workdir, and scanning an inherited "/" never finishes.
+
 # Base target
 FROM alpine:latest AS base
 COPY --from=builder /monorepo/twigg-runner.bin /twigg-runner.bin
 COPY --from=builder /monorepo/tw.bin /usr/local/bin/tw
 RUN chmod +x /usr/local/bin/tw
+WORKDIR /twigg-workdir
 ENTRYPOINT ["/twigg-runner.bin"]
 
 # Go target
@@ -35,6 +39,7 @@ FROM golang:1.26-alpine AS go
 COPY --from=builder /monorepo/twigg-runner.bin /twigg-runner.bin
 COPY --from=builder /monorepo/tw.bin /usr/local/bin/tw
 RUN chmod +x /usr/local/bin/tw
+WORKDIR /twigg-workdir
 ENTRYPOINT ["/twigg-runner.bin"]
 
 # Node target
@@ -42,6 +47,7 @@ FROM node:20-alpine AS node-20
 COPY --from=builder /monorepo/twigg-runner.bin /twigg-runner.bin
 COPY --from=builder /monorepo/tw.bin /usr/local/bin/tw
 RUN chmod +x /usr/local/bin/tw
+WORKDIR /twigg-workdir
 ENTRYPOINT ["/twigg-runner.bin"]
 
 # Bun target
@@ -49,4 +55,15 @@ FROM oven/bun:1-alpine AS bun
 COPY --from=builder /monorepo/twigg-runner.bin /twigg-runner.bin
 COPY --from=builder /monorepo/tw.bin /usr/local/bin/tw
 RUN chmod +x /usr/local/bin/tw
+WORKDIR /twigg-workdir
+ENTRYPOINT ["/twigg-runner.bin"]
+
+# Git mirror target
+FROM alpine:latest AS git
+# The mirror job needs a git client; apk before the COPYs keeps it cached
+RUN apk add --no-cache git
+COPY --from=builder /monorepo/twigg-runner.bin /twigg-runner.bin
+COPY --from=builder /monorepo/tw.bin /usr/local/bin/tw
+RUN chmod +x /usr/local/bin/tw
+WORKDIR /twigg-workdir
 ENTRYPOINT ["/twigg-runner.bin"]

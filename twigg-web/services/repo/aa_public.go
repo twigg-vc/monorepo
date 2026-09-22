@@ -65,6 +65,6 @@ func IsValidGitMirrorUrl(url string) bool {
 	return isValidGitMirrorUrl(url)
 }
 
-const GitMirrorUrlSecretName = "git-mirror-secret-ulr"
+const GitMirrorUrlSecretName = "GIT_MIRROR_SECRET_URL"
 
 const MaxDescriptionLength = 100

@@ -272,6 +272,7 @@ const (
 	dockerGoRunnerImage     = "twigg-go-runner:latest"
 	dockerNode20RunnerImage = "twigg-node-20-runner:latest"
 	dockerBunRunnerImage    = "twigg-bun-runner:latest"
+	dockerGitRunnerImage    = "twigg-git-runner:latest"
 )
 
 // Returns the name of the image the job must run under.
@@ -284,6 +285,8 @@ func resolveImage(j runnerlib.JobPayload) string {
 		return dockerNode20RunnerImage
 	case runnerlib.BunImage:
 		return dockerBunRunnerImage
+	case runnerlib.GitMirrorImage:
+		return dockerGitRunnerImage
 	default:
 		return dockerBaseRunnerImage
 	}

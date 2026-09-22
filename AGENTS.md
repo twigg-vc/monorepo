@@ -55,8 +55,7 @@ No ternaries. Use explicit `if/else` with both branches. Prefer `var x = undefin
 **twigg-track** — separate server. Receives job events from twigg-web via webhook, runs them in containers/VMs (using `twigg-runner`), stores logs, streams logs, and webhooks status back.
 
 ## Version Control
-
-@TWIGG.md
+This project uses Twigg for version control. See @TWIGG.md
 
 ## Commit messages
 

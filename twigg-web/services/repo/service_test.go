@@ -548,7 +548,7 @@ func TestIsValidGitMirrorUrl(t *testing.T) {
 }
 
 func TestGitMirrorUrlSecretName(t *testing.T) {
-	if GitMirrorUrlSecretName != "git-mirror-secret-ulr" {
+	if GitMirrorUrlSecretName != "GIT_MIRROR_SECRET_URL" {
 		t.Fatalf("webcomponent also use this value hardcoded, change in both places")
 	}
 }

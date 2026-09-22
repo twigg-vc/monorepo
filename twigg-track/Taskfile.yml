@@ -30,6 +30,7 @@ tasks:
           twigg-go-runner:latest \
           twigg-bun-runner:latest \
           twigg-node-20-runner:latest \
+          twigg-git-runner:latest \
           -o twigg-runners.tar"
       - task: build-track
   run:

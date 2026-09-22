@@ -3,34 +3,37 @@ package reposettings
 import (
 	"context"
 	"monorepo/base/iterator"
+	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/secrets"
-	"monorepo/twigg-web/services/mirror"
+	"monorepo/twigg-web/services/twiggtoken"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/server"
 )
 
 type handler struct {
-	userS     UserService
-	repoS     RepoService
-	mirrorSrv mirror.GitMirrorService
-	secrets   Secrets
-	db        Db
+	userS   UserService
+	repoS   RepoService
+	track   TrackClient
+	signer  twiggtoken.TokenSigner
+	secrets Secrets
+	db      Db
 }
 
 func AddHandlers(userRepoMux wrappers.UserRepoMux,
 	cliKeyAuthMux wrappers.CliKeyAuthMux, userS UserService,
 	db Db, repoS RepoService,
-	queueR Queue, mirrorSrv mirror.GitMirrorService, secrets Secrets) {
+	queueR Queue, track TrackClient, signer twiggtoken.TokenSigner, secrets Secrets) {
 
 	h := handler{
-		userS:     userS,
-		repoS:     repoS,
-		mirrorSrv: mirrorSrv,
-		secrets:   secrets,
-		db:        db,
+		userS:   userS,
+		repoS:   repoS,
+		track:   track,
+		signer:  signer,
+		secrets: secrets,
+		db:      db,
 	}
 	userRepoMux.HandleFuncR("GET "+routes.RepoSettingsPattern, h.handleGetRepoSettings)
 	// Permissions
@@ -61,9 +64,17 @@ func AddHandlers(userRepoMux wrappers.UserRepoMux,
 		h.getPayloadDisplayString, onHandleQueuePushToGitMirrorDeadLetter)
 }
 
-func PushTopToGitMirrorPayload(repoId uint64,
-	gitRepoUrl string) (payloadType string, payload []byte, err error) {
-	return pushToGitMirrorPayload(repoId, gitRepoUrl)
+func EnquePushToGitMirror(repoId uint64,
+	gitRepoUrl string, q Enqueuer) error {
+	payloadType, payload, err := pushToGitMirrorPayload(repoId, gitRepoUrl)
+	if err != nil {
+		return err
+	}
+	return q.Enqueue(payloadType, payload)
+}
+
+type Enqueuer interface {
+	Enqueue(payloadType string, payload []byte) error
 }
 
 type Queue interface {
@@ -105,4 +116,8 @@ type Db interface {
 	RevokePermissionIfExists(wl context.Context, userId int64, p permissions.Permission, assetId string) error
 	RevokeAllPermissionsToAsset(wl context.Context, assetId string) error
 	GetUsersWithPermission(rl context.Context, assetId string, p permissions.Permission) (iterator.I[int64], error)
+}
+
+type TrackClient interface {
+	PutSkipWebhook(jobId string, jobPayload runnerlib.JobPayload) error
 }

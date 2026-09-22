@@ -356,7 +356,7 @@ export function UrlToMarkAllNotificationsSeen() {
     return "/notifications/seen-all";
 }
 
-export const GitMirrorUrlSecretName = "git-mirror-secret-ulr"
+export const GitMirrorUrlSecretName = "GIT_MIRROR_SECRET_URL"
 
 export function UrlToPostRenameCommit(repoOwner: string, repoName: string, commit: number): string {
     return `/${repoOwner}/${repoName}/c/${commit}/rename`

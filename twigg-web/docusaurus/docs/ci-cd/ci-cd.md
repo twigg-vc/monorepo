@@ -67,6 +67,6 @@ tw ci-list
 
 ## Where jobs run
 
-Each job or stage runs in its own isolated environment, chosen with the `ImageName` field: a Docker container (`base`, `go`, `node-20`, `bun`) or an LXD virtual machine (`vm`). Twigg automatically injects a `TWIGG_TOKEN`, `COMMIT_ID` and `REPO_ID` environment variable into every step, and the `get-code` step template expands into the commands needed to pull your repository's code onto the runner. See the [CI.json reference](./ci-json-reference.md#step-fields) for details.
+Each job or stage runs in its own isolated environment, chosen with the `ImageName` field: a Docker container (`base`, `go`, `node-20`, `bun`, `git`) or an LXD virtual machine (`vm`). Twigg automatically injects a `TWIGG_TOKEN`, `COMMIT_ID` and `REPO_ID` environment variable into every step, and the `get-code` step template expands into the commands needed to pull your repository's code onto the runner. See the [CI.json reference](./ci-json-reference.md#step-fields) for details.
 
 <DocCardList />

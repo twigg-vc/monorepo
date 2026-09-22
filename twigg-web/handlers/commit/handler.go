@@ -1371,14 +1371,7 @@ func (hl handler) handlePostSubmit(w http.ResponseWriter,
 		return
 	}
 	if r.Repo.IsGitMirrorEnabled && !isNotFoundErr {
-		payloadType, payload, err := reposettings.PushTopToGitMirrorPayload(
-			r.Repo.Id, gitMirrorUrl)
-		if err != nil {
-			log.Printf("err=%s creating git mirror payload in handlePostSubmit", err)
-			http.Error(w, "internal err in git mirror", http.StatusInternalServerError)
-			return
-		}
-		err = hl.queue.Enqueue(payloadType, payload)
+		err := reposettings.EnquePushToGitMirror(r.Repo.Id, gitMirrorUrl, hl.queue)
 		if err != nil {
 			log.Printf("err=%s enqueuing git mirror payload in handlePostSubmit", err)
 			http.Error(w, "internal err in git mirror", http.StatusInternalServerError)

@@ -7,16 +7,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/secrets"
 	"monorepo/twigg-web/services/repo"
+	"monorepo/twigg-web/services/twiggtoken"
 	"monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/client"
 	"monorepo/twigg/xchange"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func (h handler) handleGetRepoSettings(w http.ResponseWriter, r wrappers.UserRepoMuxRequest, dbRead context.Context) {
@@ -548,39 +551,49 @@ func (h handler) getPayloadDisplayString(payload []byte) string {
 }
 
 func (h handler) handleQueuePushToGitMirror(payload []byte) error {
-	const gitMirrorIsEnabled = false
-	if !gitMirrorIsEnabled {
-		return nil
-	}
-
+	// Parse arguments
 	var args pushTopToGitMirrorPayloadArgs
-
 	err := args.decode(payload)
 	if err != nil {
 		return err
 	}
-
+	// Get a server to read the top commit
 	dbRead, closeDbRead, err := h.db.BeginRead()
 	defer closeDbRead()
 	if err != nil {
 		err = fmt.Errorf("got err=%s getting dbRead in handleQueuePushToGitMirror", err)
 		return err
 	}
-
 	s, err := h.repoS.GetServerByRepoId(dbRead, args.RepoId)
 	if err != nil {
 		err = fmt.Errorf("got err=%s getting Server in handleQueuePushToGitMirror", err)
 		return err
 	}
+	topCommit := s.Top()
 
-	const maxWorkdirSize = 500 * 1024 * 1024 // 500 MB
-	err = h.mirrorSrv.PushTopCommit(h.repoS.GetServerRead(dbRead), s,
-		args.GitRepoUrl, maxWorkdirSize)
+	// Get a token that will be used to pull the top commit
+	tokenActions := []twiggtoken.TokenAction{
+		twiggtoken.TokenActionPull,
+		twiggtoken.TokenActionGetSecret}
+	tokenActionsArg := []string{"", repo.GitMirrorUrlSecretName}
+	tokenDuration := time.Hour
+	token, err := twiggtoken.NewTwiggToken(
+		args.RepoId, topCommit.ServerL, topCommit.ServerV,
+		tokenActions,
+		tokenActionsArg,
+		tokenDuration,
+		h.signer,
+	)
 	if err != nil {
-		err = fmt.Errorf("got err=%s pushing to mirror in handleQueuePushToGitMirror", err)
 		return err
 	}
-	return nil
+	// Construct the payload that will be put to the track client
+	commitId := twiggCommitId(topCommit.ServerL, topCommit.ServerV)
+	jobPayload := pushToGitMirrorJobPayload(token, args.RepoId, commitId,
+		topCommit.Message+"\n\nTwigg mirror "+commitId)
+	// Put the job to be run on the track and skip a webhook bc we don't handle it
+	jobId := fmt.Sprintf("push-repo-%d-c%d", args.RepoId, topCommit.L)
+	return h.track.PutSkipWebhook(jobId, jobPayload)
 }
 
 type pushTopToGitMirrorPayloadArgs struct {
@@ -615,3 +628,55 @@ func pushToGitMirrorPayload(repoId uint64,
 }
 
 const pushToGitMirrorPayloadType = "push-to-git-mirror"
+
+const gitMirrorCommitMsgEnvVar = "TWIGG_MIRROR_COMMIT_MSG"
+
+// Identifies a commit on the server, e.g "c7v2".
+func twiggCommitId(commitServerId uint64, commitServerVersion uint64) string {
+	return fmt.Sprintf("c%dv%d", commitServerId, commitServerVersion)
+}
+
+// Points HEAD at the twigg branch of the mirror so the new commit lands on top
+// of the history that is already there, without checking out any of its files.
+// Creates the branch instead when the mirror does not have one yet.
+const reuseMirrorTwiggBranchOrCreateItStep = `set -e
+if git ls-remote --exit-code origin twigg >/dev/null; then
+	# Only the commit metadata is needed, so skip the files
+	git fetch -q --depth=1 --filter=blob:none origin twigg
+	git symbolic-ref HEAD refs/heads/twigg
+	git reset -q --soft origin/twigg
+else
+	git checkout -q -B twigg
+fi
+`
+
+func pushToGitMirrorJobPayload(twiggToken string, repoId uint64,
+	commitId string, commitMsg string) runnerlib.JobPayload {
+	return runnerlib.JobPayload{
+		Name:      "push to git mirror",
+		ImageName: runnerlib.GitMirrorImage,
+		Steps: []runnerlib.JobStep{
+			{Run: "tw init"},
+			{Run: fmt.Sprintf("tw key %s", twiggToken)},
+			{Run: fmt.Sprintf("tw server %d/%d", repoId, repoId)},
+			{Run: fmt.Sprintf("tw pull %s", commitId)},
+
+			{Run: "git init -q"},
+			{Run: "git config user.name Twigg"},
+			{Run: "git config user.email twigg@twigg.vc"},
+			// .twigg is the local twigg db and must never be mirrored
+			{Run: "echo .twigg >> .git/info/exclude"},
+			// The url is a secret, so it is read from the environment
+			{Run: `git remote add origin "$` + repo.GitMirrorUrlSecretName + `"`,
+				Secrets: []string{repo.GitMirrorUrlSecretName}},
+			{Run: reuseMirrorTwiggBranchOrCreateItStep},
+			{Run: "git add -A"},
+			// The message is written by users, so it comes from the environment
+			{Run: `git commit -q --allow-empty -m "$` + gitMirrorCommitMsgEnvVar + `"`,
+				Env: map[string]string{gitMirrorCommitMsgEnvVar: commitMsg}},
+			{Run: "git push -q origin twigg"},
+		},
+		TimeoutMilliSeconds: 5 * 60 * 1000, // 5 min
+		Token:               twiggToken,
+	}
+}

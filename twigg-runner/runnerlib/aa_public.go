@@ -118,11 +118,12 @@ const (
 	GoImage        ImageName = "go"
 	Node20Image    ImageName = "node-20"
 	BunImage       ImageName = "bun"
+	GitMirrorImage ImageName = "git"
 	VmImage        ImageName = "vm"
 )
 
 var (
-	SupportedImages        = []ImageName{BaseImageAlias, BaseImage, GoImage, Node20Image, BunImage, VmImage}
+	SupportedImages        = []ImageName{BaseImageAlias, BaseImage, GoImage, Node20Image, BunImage, VmImage, GitMirrorImage}
 	SupportedCiJobTriggers = []JobTrigger{"", OnPush, OnSumit}
 	SupportedCdJobTriggers = []JobTrigger{"", OnSumit, OnManual}
 )

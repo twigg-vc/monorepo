@@ -806,6 +806,7 @@ func (m mockRepoSettingsUserService) GetByUsername(_ context.Context, username s
 }
 
 type mockRepoSettingsDb struct {
+	beginRead                   func() (context.Context, func(), error)
 	hasPermission               func(userId int64, p permissions.Permission, assetId string) (bool, error)
 	revokePermissionIfExists    func(userId int64, p permissions.Permission, assetId string) error
 	grantPermissionIfNotExists  func(userId int64, p permissions.Permission, assetId string) (bool, error)
@@ -841,13 +842,17 @@ func (m mockRepoSettingsDb) GetUsersWithPermission(_ context.Context, _ string, 
 }
 
 func (m mockRepoSettingsDb) BeginRead() (context.Context, func(), error) {
-	panic("unexpected call to BeginRead")
+	if m.beginRead == nil {
+		panic("unexpected call to BeginRead")
+	}
+	return m.beginRead()
 }
 
 type mockRepoSettingsRepoService struct {
-	archiveRepo func(ownerId int64, repoId uint64) error
-	setPublic   func(ownerId int64, displayName string) error
-	setPrivate  func(ownerId int64, displayName string) error
+	archiveRepo       func(ownerId int64, repoId uint64) error
+	setPublic         func(ownerId int64, displayName string) error
+	setPrivate        func(ownerId int64, displayName string) error
+	getServerByRepoId func(repoId uint64) (server.Server, error)
 }
 
 func (m mockRepoSettingsRepoService) ArchiveRepo(_ context.Context, ownerId int64, repoId uint64) error {
@@ -865,8 +870,11 @@ func (m mockRepoSettingsRepoService) SetGitMirrorEnabled(_ context.Context, _ in
 func (m mockRepoSettingsRepoService) SetGitMirrorUrl(_ context.Context, _ uint64, _ int64, _ string, _ string) error {
 	panic("unexpected call to SetGitMirrorUrl")
 }
-func (m mockRepoSettingsRepoService) GetServerByRepoId(_ context.Context, _ uint64) (server.Server, error) {
-	panic("unexpected call to GetServerByRepoId")
+func (m mockRepoSettingsRepoService) GetServerByRepoId(_ context.Context, repoId uint64) (server.Server, error) {
+	if m.getServerByRepoId == nil {
+		panic("unexpected call to GetServerByRepoId")
+	}
+	return m.getServerByRepoId(repoId)
 }
 func (m mockRepoSettingsRepoService) GetServerRead(_ context.Context) server.Read {
 	panic("unexpected call to GetServerRead")

@@ -42,7 +42,6 @@ import (
 	jobsservice "monorepo/twigg-web/services/jobs"
 	"monorepo/twigg-web/services/keys"
 	"monorepo/twigg-web/services/memlogger"
-	"monorepo/twigg-web/services/mirror"
 	"monorepo/twigg-web/services/oauthclient"
 	"monorepo/twigg-web/services/orghelper"
 	"monorepo/twigg-web/services/owners"
@@ -247,11 +246,6 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 		log.Fatalf("s.c.StorageFolderAbsPath=%q in not abs", s.C.StorageFolderAbsPath)
 		return
 	}
-	mirrorSrv, err := mirror.New(filepath.Join(s.C.StorageFolderAbsPath, "git-mirror-wd"))
-	if err != nil {
-		log.Fatalf("failed to setup git mirror service: %s", err)
-		return
-	}
 	orgHelper := orghelper.NewHelper(sDb, getAllOrgRepoIdsAdaptor{repoService: rSrv})
 	if !s.C.SkipMigrations {
 		runGoMigrations(sDb)
@@ -324,7 +318,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 		userService: userSrv,
 	}
 	newrepo.AddHandlers(canCreateRepo, rSrv, sDb, userWithSubMux)
-	reposettings.AddHandlers(userRepoMux, cliKeyAuthMux, userSrv, sDb, rSrv, s.QueueRunner, mirrorSrv, secretsSrv)
+	reposettings.AddHandlers(userRepoMux, cliKeyAuthMux, userSrv, sDb, rSrv, s.QueueRunner, trackClient, tokenSigner, secretsSrv)
 	repository.AddHandlers(rSrv, revSrv, userSrv, sDb, userWithReadPermMux)
 	twigg.AddHandlers(sDb, userSrv, rSrv, ciQueue, s.mux, s.C.Name, tokenSigner, nil)
 	commit.AddHandlers(rt, sDb, rSrv, revSrv, userSrv, jobsService,

@@ -17,6 +17,8 @@ tasks:
         vars: { TARGET: node-20 }
       - task: _build_docker_image
         vars: { TARGET: bun }
+      - task: _build_docker_image
+        vars: { TARGET: git }
   _build_docker_image:
     desc: "Helper task to build a docker image"
     internal: true

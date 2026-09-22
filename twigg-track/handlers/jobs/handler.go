@@ -266,6 +266,9 @@ func (h handler) runJob(payload []byte) error {
 			// Populate the steps env with the provided secrets
 			for stepI := range jobPayload.Steps {
 				for _, secret := range jobPayload.Steps[stepI].Secrets {
+					if jobPayload.Steps[stepI].Env == nil {
+						jobPayload.Steps[stepI].Env = map[string]string{}
+					}
 					jobPayload.Steps[stepI].Env[secret] = requiredSecrets[secret]
 				}
 			}
