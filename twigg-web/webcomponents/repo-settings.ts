@@ -16,6 +16,16 @@ import { GetCsrfHeaders, HomeUrl, PathToAddRepoPermission, PathToArchiveRepo,
 import { GetFeatureFlags } from './feature-flags';
 import { Secret } from './interfaces';
 
+// One row of the bulk "Create Secrets" form.
+interface SecretDraft {
+    Name: string
+    Value: string
+    Error: string
+}
+function newSecretDraft(name = "", value = ""): SecretDraft {
+    return { Name: name, Value: value, Error: "" }
+}
+
 type Role = 'Read/Write'  | "Owner";
 type Member = { Username: string; Role: Role };
 
@@ -39,6 +49,7 @@ export class RepoSettings extends LitElement {
         isLoadingSaveDescription: { type: Boolean, state: true },
         isLoadingArchive: { type: Boolean, state: true },
         showCreateSecretModal: { type: Boolean, state: true },
+        secretDrafts: { type: Array, state: true },
         isLoadingCreateSecretBtn: { type: Boolean, state: true },
         secretsWithDeleteBtnLoading: { type: Array, state: true },
     };
@@ -62,6 +73,7 @@ export class RepoSettings extends LitElement {
     declare private isLoadingArchive: boolean;
     declare private showCreateSecretModal: boolean;
     declare private modalPointerDownOutside: boolean;
+    declare private secretDrafts: SecretDraft[];
     declare private isLoadingCreateSecretBtn: boolean;
     declare private secretsWithDeleteBtnLoading: string[];
 
@@ -87,6 +99,7 @@ export class RepoSettings extends LitElement {
         this.isLoadingArchive = false;
         this.showCreateSecretModal = false;
         this.modalPointerDownOutside = false;
+        this.secretDrafts = [newSecretDraft()];
         this.isLoadingCreateSecretBtn = false;
         this.secretsWithDeleteBtnLoading = [];
     }
@@ -99,6 +112,7 @@ export class RepoSettings extends LitElement {
         this.showArchiveModal = false;
     }
     openCreateSecretModal() {
+        this.secretDrafts = [newSecretDraft()];
         this.showCreateSecretModal = true;
     }
 
@@ -446,6 +460,107 @@ export class RepoSettings extends LitElement {
                 </div>
             </div>
         </div>`
+    }
+    private renderBulkSecretCreationModal() {
+        if (!this.showCreateSecretModal) {
+            return html``
+        }
+        return html`
+        <div class="modal-backdrop" @pointerdown=${this.onModalPointerDown} @pointerup=${this.onModalPointerUp}>
+            <div class="modal">
+                <h2 class="create-new-secret-modal-title">Create Secrets</h2>
+                <form class="form-of-create-secret-modal" @submit=${(e: Event) => e.preventDefault()}>
+                    <div>
+                        <span>Name</span>
+                        <span>Value</span>
+                        <span></span>
+                    </div>
+                    ${this.secretDrafts.map((draft, i) => this.renderSecretDraftRow(draft, i))}
+                </form>
+                <button class="btn" @click=${this.onAddSecretRowClicked}>
+                    + Add another
+                </button>
+
+                <div class="modal-buttons">
+                    <button @click=${this.closeCreateSecretModal}>Cancel</button>
+                    <button class="btn btn-primary" 
+                        ?disabled=${this.isLoadingCreateSecretBtn} 
+                        @click=${this.onCreateBulkSecretsClicked}
+                    >
+                        ${this.renderCreateSecretsBtnLabel()}
+                    </button>
+                </div>
+            </div>
+        </div>`
+    }
+    private renderSecretDraftRow(draft: SecretDraft, i: number) {
+        var error = html``
+        if (draft.Error !== "") {
+            error = html`<span class="reviewer-modal-error">${draft.Error}</span>`
+        }
+        var nameClass = "input"
+        if (draft.Error !== "") {
+            nameClass = "input input-error"
+        }
+        return html`
+        <div>
+            <input
+                class=${nameClass}
+                placeholder="e.g. CLIENT_KEY"
+                .value=${draft.Name}
+                @input=${(e: Event) => this.onSecretDraftNameInput(i, e)}
+            />
+            <textarea
+                class="input"
+                rows="1"
+                .value=${draft.Value}
+                @input=${(e: Event) => this.onSecretDraftValueInput(i, e)}
+            ></textarea>
+            <button
+                class="btn"
+                title="Remove"
+                ?disabled=${this.secretDrafts.length === 1}
+                @click=${() => this.onRemoveSecretRowClicked(i)}
+            >✕</button>
+            ${error}
+        </div>
+        `
+    }
+    private renderCreateSecretsBtnLabel() {
+        if (this.secretDrafts.length === 1) {
+            return html`Create secret`
+        } else {
+            return html`Create ${this.secretDrafts.length} secrets`
+        }
+    }
+    private onSecretDraftNameInput(i: number, e: Event) {
+        const input = e.target as HTMLInputElement
+        this.updateSecretDraft(i, { Name: input.value, Error: "" })
+    }
+    private onSecretDraftValueInput(i: number, e: Event) {
+        const input = e.target as HTMLTextAreaElement
+        this.updateSecretDraft(i, { Value: input.value, Error: "" })
+    }
+    private onAddSecretRowClicked() {
+        this.secretDrafts = [...this.secretDrafts, newSecretDraft()]
+    }
+    private onRemoveSecretRowClicked(i: number) {
+        if (this.secretDrafts.length === 1) {
+            return
+        }
+        this.secretDrafts = this.secretDrafts.filter((_, j) => j !== i)
+    }
+    private updateSecretDraft(i: number, patch: Partial<SecretDraft>) {
+        this.secretDrafts = this.secretDrafts.map((draft, j) => {
+            if (j === i) {
+                return { ...draft, ...patch }
+            } else {
+                return draft
+            }
+        })
+    }
+    private onCreateBulkSecretsClicked() {
+        alert("WIP")
     }
     private renderSecretRow(secret: Secret) {
         const isLoading = this.secretsWithDeleteBtnLoading.includes(secret.Name);
