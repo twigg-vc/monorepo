@@ -627,6 +627,24 @@ func pushToGitMirrorPayload(repoId uint64,
 
 const pushToGitMirrorPayloadType = "push-to-git-mirror"
 
+type setRepoSecretsBulkRequest struct {
+	Secrets []setRepoSecretsBulkEntry
+}
+
+type setRepoSecretsBulkEntry struct {
+	Name  string
+	Value string
+}
+
+// Response body of POST routes.RepoSettingsSecretsBulk. When HasError is set,
+// Errors maps each invalid secret name to its message and nothing is created.
+// Otherwise Secrets has every created secret.
+type setRepoSecretsBulkResponse struct {
+	HasError bool
+	Errors   map[string]string
+	Secrets  []secrets.SecretRef
+}
+
 const gitMirrorCommitMsgEnvVar = "TWIGG_MIRROR_COMMIT_MSG"
 
 // Points HEAD at the twigg branch of the mirror so the new commit lands on top
