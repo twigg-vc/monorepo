@@ -1059,7 +1059,7 @@ export class RepoSettings extends LitElement {
                 grid-template-columns: 1fr 2fr auto;
                 gap: var(--space2);
                 align-items: start;
-                margin-bottom: var(--space2);
+                margin-bottom: var(--space3);
             }
             .secret-draft-header {
                 color: var(--color-text-muted);
@@ -1077,7 +1077,6 @@ export class RepoSettings extends LitElement {
                 overflow-wrap: break-word;
             }
             .secret-draft-error {
-                grid-column: 1 / -1;
                 color: var(--color-danger);
                 font-size: var(--space3p);
             }
