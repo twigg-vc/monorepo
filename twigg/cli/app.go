@@ -385,9 +385,8 @@ func (a *app) parseCommit(s string) (commit.Commit, bool) {
 	}
 
 	// Alias commits: top, parent, etc.
-	c, match, err = a.tryParseAliasCommit(s)
-	if err != nil {
-		a.logError(err.Error())
+	c, match, ok := a.tryParseAliasCommit(s)
+	if !ok {
 		return commit.Commit{}, false
 	}
 	if match {
@@ -485,24 +484,46 @@ func (a *app) tryParseServerCommit(s string) (c commit.Commit, match bool, err e
 }
 
 // handles aliases like "top" or "parent".
-func (a *app) tryParseAliasCommit(s string) (commit.Commit, bool, error) {
+// logs an error and returns ok=false when any happen.
+func (a *app) tryParseAliasCommit(s string) (c commit.Commit, found bool, ok bool) {
 
+	var err error
 	if isTopCommitAlias(s) {
-		c, err := a.getTopCommit()
-		return c, true, err
+		c, err = a.getTopCommit()
+		if err != nil {
+			a.logError(err.Error())
+			return
+		}
+		ok = true
+		found = true
+		return
 	}
 	if isParentCommitAlias(s) {
 		if a.s.Current.IsDetachedOrRoot() {
-			return commit.Commit{}, false, errors.New(parentNotFound)
+			a.logError(parentNotFound)
+			return
 		}
-		c, err := a.ag.GetVersion(a.s.Current.ParentL, a.s.Current.ParentV, a.wl)
-		return c, true, err
+		c, err = a.ag.GetVersion(a.s.Current.ParentL, a.s.Current.ParentV, a.wl)
+		if err != nil {
+			a.logError(err.Error())
+			return
+		}
+		ok = true
+		found = true
+		return
 	}
 	if s == childCommitAlias {
-		c, err := a.getNthChildCommit(1)
-		return c, true, err
+		c, err = a.getNthChildCommit(1)
+		if err != nil {
+			a.logError(err.Error())
+			return
+		}
+		ok = true
+		found = true
+		return
 	}
-	return commit.Commit{}, false, nil
+	ok = true
+	return
 }
 
 func (a *app) commitHasExplicitVersion(s string) bool {
