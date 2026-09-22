@@ -9,6 +9,7 @@ import { GetCsrfHeaders, HomeUrl, PathToAddRepoPermission, PathToArchiveRepo,
     RepoSecretValueParamName,
     RepoSecretNameParamName,
     PathToSetRepoSecret,
+    PathToSetRepoSecretsBulk,
     UrlToDeleteRepoSecret,
     PathToSetRepoPublic,
     PathToSetRepoPrivate,
@@ -25,6 +26,15 @@ interface SecretDraft {
 }
 function newSecretDraft(name = "", value = ""): SecretDraft {
     return { Name: name, Value: value, Error: "" }
+}
+// Mirrors setRepoSecretsBulkRequest/Response in handlers/reposettings.
+interface SetRepoSecretsBulkRequest {
+    Secrets: { Name: string, Value: string }[]
+}
+interface SetRepoSecretsBulkResponse {
+    HasError: boolean
+    Errors: { [name: string]: string }
+    Secrets: Secret[]
 }
 
 type Role = 'Read/Write'  | "Owner";
@@ -588,8 +598,44 @@ export class RepoSettings extends LitElement {
             }
         })
     }
-    private onCreateBulkSecretsClicked() {
-        alert("WIP")
+    // Creates every draft row in one request. The server creates all of them
+    // or none: when any row is invalid, every row stays in the form and the
+    // invalid ones show their error so the user can fix and retry.
+    private async onCreateBulkSecretsClicked() {
+        if (this.isLoadingCreateSecretBtn) {
+            return
+        }
+        this.isLoadingCreateSecretBtn = true
+        try {
+            const body: SetRepoSecretsBulkRequest = {
+                Secrets: this.secretDrafts.map(draft => ({ Name: draft.Name.trim(), Value: draft.Value })),
+            }
+            const resp = await fetch(PathToSetRepoSecretsBulk(this.RepoOwnerName, this.RepoName), {
+                method: 'POST',
+                body: JSON.stringify(body),
+                headers: { ...GetCsrfHeaders(), "Content-Type": "application/json" },
+            });
+            if (!resp.ok) {
+                console.error("Request to create secrets failed: ", resp)
+                alert(await resp.text())
+                return
+            }
+            const result = await resp.json() as SetRepoSecretsBulkResponse
+            if (result.HasError) {
+                this.secretDrafts = this.secretDrafts.map(draft => ({
+                    ...draft,
+                    Error: result.Errors[draft.Name.trim()] ?? "",
+                }))
+            } else {
+                this.Secrets = [...this.Secrets, ...result.Secrets]
+                this.closeCreateSecretModal()
+            }
+        } catch (error) {
+            console.error("failed to create secrets: ", error)
+            alert(error)
+        } finally {
+            this.isLoadingCreateSecretBtn = false
+        }
     }
     private renderSecretRow(secret: Secret) {
         const isLoading = this.secretsWithDeleteBtnLoading.includes(secret.Name);

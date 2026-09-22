@@ -237,6 +237,10 @@ export function PathToSetRepoSecret(
     repoOwnerName: string, repoDisplayName: string): string {
     return `${PathToRepoSettings(repoOwnerName, repoDisplayName)}/repo-secret`
 }
+export function PathToSetRepoSecretsBulk(
+    repoOwnerName: string, repoDisplayName: string): string {
+    return `${PathToRepoSettings(repoOwnerName, repoDisplayName)}/repo-secrets`
+}
 export function UrlToDeleteRepoSecret(repoOwnerName: string, repoDisplayName: string, secretName): string {
     return PathToSetRepoSecret(repoOwnerName, repoDisplayName) + `?${RepoSecretNameParamName}=${encodeURIComponent(secretName)}`
 }
