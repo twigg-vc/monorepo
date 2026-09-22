@@ -450,7 +450,7 @@ export class RepoSettings extends LitElement {
                 <p class="create-secret-hint">
                     Tip: paste the contents of a <code>.env</code> file into a Name field to import several secrets at once.
                 </p>
-                <form class="form-of-create-secret-modal" @submit=${(e: Event) => e.preventDefault()}>
+                <form class="form-of-create-secret-modal twigg-scroll" @submit=${(e: Event) => e.preventDefault()}>
                     <div class="secret-draft-header">
                         <span>Name</span>
                         <span>Value</span>
@@ -1030,7 +1030,17 @@ export class RepoSettings extends LitElement {
             .create-secret-modal {
                 width: min(90vw, var(--size3));
                 max-width: var(--size3);
+                max-height: 90vh;
+                display: flex;
+                flex-direction: column;
                 text-align: left;
+            }
+            /* Only the rows scroll, so the title, tip and buttons stay visible
+               when many secrets are pasted. */
+            .create-secret-modal .form-of-create-secret-modal {
+                overflow-y: auto;
+                min-height: 0;
+                padding: var(--space1) var(--space2) var(--space1) var(--space1);
             }
             .create-secret-hint {
                 color: var(--color-text-muted);
@@ -1066,6 +1076,7 @@ export class RepoSettings extends LitElement {
             }
             .add-secret-row-btn {
                 margin-bottom: var(--space3);
+                flex-shrink: 0;
             }
         `,
     ];
