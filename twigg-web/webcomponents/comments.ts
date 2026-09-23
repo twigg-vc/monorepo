@@ -179,6 +179,10 @@ export class CommentThread extends LitElement {
                 </lgtm-thread>
             `;
         }
+        if (this.Thread.Type == "AddReviewer" || this.Thread.Type == "RemoveReviewer") {
+            // TODO: not implemented
+            return html``;
+        }
 
         return html`
             <div class="thread ${this.Thread.IsResolved ? "resolved" : "not-resolved"}">

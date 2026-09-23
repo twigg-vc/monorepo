@@ -37,7 +37,7 @@ export interface ServerThread {
 
 export interface Thread {
     Id: number // (RepoId + commitId + threadId) uniquely identify a thread
-    Type: "CommentsOnFileOnCommitVersion" | "CommentsOnCommitVersion" | "AddLGTM" | "RemoveLGTM"
+    Type: "CommentsOnFileOnCommitVersion" | "CommentsOnCommitVersion" | "AddLGTM" | "RemoveLGTM" | "AddReviewer" | "RemoveReviewer"
     CommitVersion: number
     Filename: string
     Line: number // 1-based. 0 means the thread is anchored to the whole file
