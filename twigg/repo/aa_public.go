@@ -68,6 +68,20 @@ type Repo interface {
 	// Just like Save, but for a DeltaIter.
 	// It must use the same base that was used to creat the DeltaIter.
 	SaveDelta(d DeltaIter, base TreeVersion, l Write) (v TreeVersion, rootDirHash [32]byte, err error)
+
+	// Reserves a TreeVersion of the root to be used by the SaveFile and SaveDir
+	GrabRootTreeVersion(l Write) (TreeVersion, error)
+	// Saves the data and blob of a file in a version of the root
+	SaveFile(rootTreeVersion TreeVersion, treePath string, d tree.Data, wt io.WriterTo, base TreeVersion, l Write) error
+	// Saves a directory at a version of the root. The provided data must have
+	// HasChildrenData=true when it has children. Children that are unchanged
+	// wrt `base` reuse their version from it, so `base` must be a committed
+	// version and every other child must be saved at rootTreeVersion.
+	SaveDir(rootTreeVersion TreeVersion, treePath string, d tree.Data, base TreeVersion, l Write) error
+	// Simple wrapper that walks a root and calls SaveFile/SaveDir for the
+	// modified paths.
+	// Returns ErrNoChange if the root didn't change compared to base.
+	SaveRoot(r tree.Root, base TreeVersion, l Write) (TreeVersion, [32]byte, error)
 }
 
 // This is basically a "delta-compressed" tree iterator.

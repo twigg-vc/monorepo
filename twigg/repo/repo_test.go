@@ -57,6 +57,32 @@ func TestNoChangeDoesntGrabVersion(t *testing.T) {
 	}
 }
 
+func TestSaveFileAndSaveDir_SingleFile(t *testing.T) {
+	v0, wd, l, r := setup(t)
+
+	// Write a single file to the workdir
+	wd.WriteFile("a.txt", "a")
+	// Use the SaveRoot helper for simplicity.
+	// It calls SaveFile/SaveDir many times
+	v1, _, err := r.SaveRoot(wd, v0, l)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Clear the workdir and load the new version to it to test if it worked
+	wd.Purge()
+	if wd.HasFile("a.txt") {
+		t.Fatal("a.txt not purged")
+	}
+	err = r.Load(v1, wd, l)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !wd.HasFile("a.txt") {
+		t.Fatal("a.txt not found")
+	}
+}
+
 func TestSaveSingleFile(t *testing.T) {
 	v0, wd, l, r := setup(t)
 

@@ -2,6 +2,8 @@ package repo
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"monorepo/twigg/tree"
 	"monorepo/twigg/treev"
 	"path"
@@ -25,6 +27,203 @@ func (r repo) Init(l Write) (TreeVersion, [32]byte, error) {
 		return 0, [32]byte{}, err
 	}
 	return RootTreeVersion, tr.Data().ContentHash, err
+}
+
+func (r repo) GrabRootTreeVersion(l Write) (TreeVersion, error) {
+	return l.GrabRootTreeVersion(r.id)
+}
+func (r repo) SaveFile(rootTreeVersion TreeVersion, treePath string,
+	data tree.Data, wt io.WriterTo, baseV TreeVersion, l Write) error {
+	if data.IsDir {
+		return errors.New("data must be of file")
+	}
+	err := l.SetTreeData(r.quotaOwner, r.id, treePath,
+		rootTreeVersion, treev.TreeDataV{
+			Data:             data,
+			ChildrenVersions: nil,
+			BlobVersion:      rootTreeVersion,
+		})
+	if err != nil {
+		return err
+	}
+	return l.SetTreeBlob(r.quotaOwner, r.id, treePath, rootTreeVersion, wt)
+}
+func (r repo) SaveDir(rootTreeVersion TreeVersion, treePath string,
+	d tree.Data, baseV TreeVersion, l Write) error {
+	if !d.IsDir {
+		return errors.New("data must be of directory")
+	}
+	if len(d.ChildrenBaseNames) > 0 && !d.HasChildrenData {
+		return errors.New("SaveDir requires HasChildrenData")
+	}
+	if len(d.ChildrenData) != len(d.ChildrenBaseNames) {
+		return fmt.Errorf(
+			"bad tree data: %d ChildrenData and %d ChildrenBaseNames",
+			len(d.ChildrenData), len(d.ChildrenBaseNames))
+	}
+	baseRoot := r.getRoot_(baseV, l)
+	_, treeOnBase, err := baseRoot.getTree(treePath)
+	if err != nil && !errors.Is(err, tree.ErrTreeNotFound) {
+		return err
+	}
+	hasTreeOnBase := !errors.Is(err, tree.ErrTreeNotFound)
+
+	// Before saving, we must find the versions of all children.
+	// The versions will either be rootTreeVersion if this version of the
+	// root tree modified that child (when compared to base); or the version
+	// that it was in the base.
+	n := len(d.ChildrenBaseNames)
+	newTree := treev.TreeDataV{
+		Data:             d,
+		BlobVersion:      0,
+		ChildrenVersions: make([]TreeVersion, 0, n),
+	}
+	for childI := range d.ChildrenBaseNames {
+		childName := d.ChildrenBaseNames[childI]
+		childData := d.ChildrenData[childI]
+
+		childVersion := func() TreeVersion {
+			if !hasTreeOnBase {
+				return rootTreeVersion
+			}
+			if !treeOnBase.Data().IsDir {
+				return rootTreeVersion
+			}
+			// The only case when we'll point to the tree on the base:
+			// the base tree has a child with the same name and same content
+			for i := range treeOnBase.Data().ChildrenBaseNames {
+				if treeOnBase.Data().ChildrenBaseNames[i] == childName &&
+					treeOnBase.Data().ChildrenData[i].ContentHash ==
+						childData.ContentHash {
+					return treeOnBase.d.ChildrenVersions[i]
+				}
+			}
+			return rootTreeVersion
+		}()
+		newTree.ChildrenVersions = append(newTree.ChildrenVersions, childVersion)
+	}
+
+	return l.SetTreeData(r.quotaOwner, r.id, treePath, rootTreeVersion, newTree)
+}
+func (r repo) saveDirOrSaveFile(rootTreeVersion TreeVersion, treePath string,
+	tr tree.Tree, base TreeVersion, l Write) error {
+	if !tr.DataIsComplete() || tr.IsRemovedChild() {
+		panic("called saveDirOrSaveFile for bad tree")
+	}
+	if tr.Data().IsDir {
+		return r.SaveDir(rootTreeVersion, treePath, tr.Data(), base, l)
+	}
+	wt, err := tr.GetFile()
+	if err != nil {
+		return err
+	}
+	return r.SaveFile(rootTreeVersion, treePath, tr.Data(), wt, base, l)
+}
+func (r repo) SaveRoot(root tree.Root, base TreeVersion,
+	l Write) (TreeVersion, [32]byte, error) {
+	baseRootTree, err := r.Tree(tree.RootPath, base, l)
+	if err != nil {
+		return 0, [32]byte{}, err
+	}
+	baseHash := baseRootTree.Data().ContentHash
+
+	iter, err := tree.Walk2(root, r.Root(base, l))
+	if err != nil {
+		return 0, [32]byte{}, err
+	}
+	var newV TreeVersion
+	g := newOnceGrabber(&newV, r.id, l)
+	var rootHash [32]byte
+	savedRoot := false
+	for iter.CanGet() {
+		diff := iter.GetDiff()
+		switch diff.Type {
+		case tree.DiffTypeUndefined:
+			err = iter.Next()
+			if err != nil {
+				return newV, rootHash, err
+			}
+			continue
+		case tree.DiffTypeDeleted, tree.DiffTypeNoChange:
+			iter.SkipChildrenOnNext()
+			err = iter.Next()
+			if err != nil {
+				return newV, rootHash, err
+			}
+			continue
+		case tree.DiffTypeCreated, tree.DiffTypeAnyModified:
+		default:
+			panic("unexpected diff type")
+		}
+
+		trPath, trPathDepth, visitStatus, tr := iter.Get()
+		// Should be skipped by the undefined diff
+		if tr.IsRemovedChild() {
+			panic("unexpected removedChild")
+		}
+		// A file<->dir swap is reported before the new dir's data is
+		// complete. Keep iterating until it is.
+		if !tr.DataIsComplete() {
+			err = iter.Next()
+			if err != nil {
+				return newV, rootHash, err
+			}
+			continue
+		}
+		// Skip directories that have no children; as those are not saved
+		if trPathDepth != 0 &&
+			tr.Data().IsDir &&
+			len(tr.Data().ChildrenBaseNames) == 0 {
+			err = iter.Next()
+			if err != nil {
+				return newV, rootHash, err
+			}
+			continue
+		}
+		// Only save directories in the second visit. This is not strictly
+		// necessary, but we just need some way to avoid saving them twice.
+		if tr.Data().IsDir && visitStatus == tree.FirstVisit {
+			err = iter.Next()
+			if err != nil {
+				return newV, rootHash, err
+			}
+			continue
+		}
+		// Walk2 reports a file again on the second visit of the dir it replaced
+		if !tr.Data().IsDir && visitStatus == tree.SecondVisit {
+			err = iter.Next()
+			if err != nil {
+				return newV, rootHash, err
+			}
+			continue
+		}
+
+		// Populate the rootHash when we're at the root
+		if trPathDepth == 0 {
+			rootHash = tr.Data().ContentHash
+			savedRoot = true
+		}
+
+		// Save the file/dir
+		err = g.GrabOnce()
+		if err != nil {
+			return newV, rootHash, err
+		}
+		err = r.saveDirOrSaveFile(newV, trPath, tr, base, l)
+		if err != nil {
+			return newV, rootHash, err
+		}
+
+		// Keep iterating
+		err = iter.Next()
+		if err != nil {
+			return newV, rootHash, err
+		}
+	}
+	if !savedRoot {
+		return base, baseHash, ErrNoChange
+	}
+	return newV, rootHash, nil
 }
 
 func (r repo) Save(root tree.Root, baseV TreeVersion, l Write) (TreeVersion, [32]byte, error) {
