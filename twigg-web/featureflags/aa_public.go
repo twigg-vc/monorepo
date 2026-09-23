@@ -25,9 +25,7 @@ func GetFlags(configName string, repoOwnerUsername string, currentUsername strin
 		DummyFlag: EnabledOutsideProd(configName) ||
 			EnabledForReposOfTwiggers(repoOwnerUsername) ||
 			EnabledForReposOfFriends(repoOwnerUsername),
-		UseVSCodeDiff: EnabledOutsideProd(configName) ||
-			EnabledForReposOfTwiggers(repoOwnerUsername) ||
-			EnabledForTwiggers(currentUsername),
+		UseVSCodeDiff:   true,
 		SearchCommitsUi: true,
 	}
 }
