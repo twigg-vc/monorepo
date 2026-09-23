@@ -230,6 +230,7 @@ func (a *app) pullCommit_(commit0InServerSyntax string, stay bool) (ok bool) {
 
 	var pulledCommitServerId uint64
 	onPull := func(pulled commit.Commit, hasLocal bool, local commit.Commit) error {
+		a.logDebug(fmt.Sprintf("pulled c%dv%d", pulled.ServerL, pulled.ServerV))
 		pulledCommitServerId = pulled.ServerL
 		return a.onPull(pulled, hasLocal, local)
 	}
