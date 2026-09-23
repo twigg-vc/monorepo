@@ -38,6 +38,21 @@ func (db db) GrabBlobVersion(writeCtx context.Context,
 	return db.m.GrabMetadataVersion(writeCtx, idPrefix, id)
 }
 
+// returns either the underlying log or a limitWriter to that log
+func (db db) getSetBlobDestination(quotaOwner string) (io.Writer, error) {
+	var dest io.Writer
+	dest = db.log
+	if db.enforceQuota {
+		var bytesLeft int64
+		bytesLeft, err := db.q.GetQuotaLeft(quotaOwner)
+		if err != nil {
+			return nil, err
+		}
+		dest = limitwriter.New(db.log, bytesLeft)
+	}
+	return dest, nil
+}
+
 func (db db) SetBlobVersion(writeCtx context.Context,
 	quotaOwner string, idPrefix, id string, v Version, wt io.WriterTo) (err error) {
 	parentM, parentNotFound, err := db.m.GetLatestMetadata(writeCtx, idPrefix, id)
@@ -80,16 +95,9 @@ func (db db) SetBlobVersion(writeCtx context.Context,
 	if err != nil {
 		return
 	}
-
-	var dest io.Writer
-	dest = db.log
-	if db.enforceQuota {
-		var bytesLeft int64
-		bytesLeft, err = db.q.GetQuotaLeft(quotaOwner)
-		if err != nil {
-			return
-		}
-		dest = limitwriter.New(db.log, bytesLeft)
+	dest, err := db.getSetBlobDestination(quotaOwner)
+	if err != nil {
+		return
 	}
 
 	destWriteCounter := writeCounter{w: dest, n: 0}
@@ -100,6 +108,7 @@ func (db db) SetBlobVersion(writeCtx context.Context,
 		closeCompressor()
 		return
 	}
+
 	gotQuotaLimited := errors.Is(err, limitwriter.ErrNotEnoughQuota)
 	err = closeCompressor()
 	if err != nil && !errors.Is(err, limitwriter.ErrNotEnoughQuota) {
