@@ -358,6 +358,7 @@ func (a *app) pullParentOfDetached(c *commit.Commit) (ok bool) {
 		panic("called pullParentOfDetached for non detached")
 	}
 	parentServerCommitId := fmt.Sprintf("c%dv%d", c.ParentServerL, c.ParentServerV)
+	a.logDebug(fmt.Sprintf("pullParentOfDetached: %s", parentServerCommitId))
 	const stay = true
 	ok = a.pullCommit_(parentServerCommitId, stay)
 	if !ok {
