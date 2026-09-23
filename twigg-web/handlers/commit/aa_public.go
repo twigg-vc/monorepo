@@ -92,6 +92,7 @@ type FrontendThread struct {
 	Line           uint64
 	IsLgtm         bool
 	AuthorUsername string
+	TargetUsername string
 	CreatedOn      time.Time
 }
 

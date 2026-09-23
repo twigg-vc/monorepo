@@ -795,7 +795,18 @@ func (hl handler) handleGetThreads(w http.ResponseWriter,
 			http.Error(w, "failed to get user", http.StatusInternalServerError)
 			return
 		}
-		err = encoder.Encode(newFrontendThread(th, threadAuthorUser.Username))
+		targetUsername := ""
+		if th.Type == review.ThreadType_AddReviewer || th.Type == review.ThreadType_RemoveReviewer {
+			threadTargetUser, _, err := hl.userS.Get(dbRead, th.TargetUserId)
+			if err != nil {
+				log.Printf("error getting thread (id=%d, target_id=%d) target user in handleGetThreads, err: %v",
+					th.Id, th.TargetUserId, err)
+				http.Error(w, "failed to get user", http.StatusInternalServerError)
+				return
+			}
+			targetUsername = threadTargetUser.Username
+		}
+		err = encoder.Encode(newFrontendThread(th, threadAuthorUser.Username, targetUsername))
 		if err != nil {
 			log.Printf("error writing thread (id=%d, author_username=%q) in handleGetThreads, err: %v",
 				th.Id, threadAuthorUser.Username, err)
@@ -990,7 +1001,7 @@ func (hl handler) handlePostNewThread(w http.ResponseWriter,
 
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(newFrontendThread(newThread,
-		r.UserWithWritePermission.Username))
+		r.UserWithWritePermission.Username, ""))
 	shouldCommit = true
 	return
 }
@@ -1579,7 +1590,7 @@ func (hl handler) handlePostAddLgtm(w http.ResponseWriter,
 	}
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(newFrontendThread(newThread,
-		r.UserWithWritePermission.Username))
+		r.UserWithWritePermission.Username, ""))
 	if err != nil {
 		log.Printf("failed to write encoded thread response: %s", err)
 		http.Error(w, "failed to write encoded thread response", http.StatusInternalServerError)
@@ -1655,7 +1666,7 @@ func (hl handler) handlePostRemoveLgtm(w http.ResponseWriter,
 
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(newFrontendThread(newThread,
-		r.UserWithWritePermission.Username))
+		r.UserWithWritePermission.Username, ""))
 	if err != nil {
 		http.Error(w, "failed to write thread", http.StatusInternalServerError)
 		return
@@ -1688,7 +1699,7 @@ func (hl handler) handlePostRemoveLgtm(w http.ResponseWriter,
 	return
 }
 
-func newFrontendThread(t review.Thread, authorUsername string) FrontendThread {
+func newFrontendThread(t review.Thread, authorUsername string, targetUsername string) FrontendThread {
 
 	var typeString string
 	switch t.Type {
@@ -1700,6 +1711,10 @@ func newFrontendThread(t review.Thread, authorUsername string) FrontendThread {
 		typeString = "AddLGTM"
 	case review.ThreadType_RemoveLGTM:
 		typeString = "RemoveLGTM"
+	case review.ThreadType_AddReviewer:
+		typeString = "AddReviewer"
+	case review.ThreadType_RemoveReviewer:
+		typeString = "RemoveReviewer"
 	default:
 		panic("got unknown type")
 	}
@@ -1713,6 +1728,7 @@ func newFrontendThread(t review.Thread, authorUsername string) FrontendThread {
 		Filename:       t.Filename,
 		Line:           t.Line,
 		AuthorUsername: authorUsername,
+		TargetUsername: targetUsername,
 		CreatedOn:      t.CreatedOn,
 	}
 }
