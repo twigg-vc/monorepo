@@ -28,8 +28,7 @@ func GetFlags(configName string, repoOwnerUsername string, currentUsername strin
 		UseVSCodeDiff: EnabledOutsideProd(configName) ||
 			EnabledForReposOfTwiggers(repoOwnerUsername) ||
 			EnabledForTwiggers(currentUsername),
-		SearchCommitsUi: EnabledOutsideProd(configName) ||
-			EnabledForReposOfTwiggers(repoOwnerUsername),
+		SearchCommitsUi: true,
 	}
 }
 
