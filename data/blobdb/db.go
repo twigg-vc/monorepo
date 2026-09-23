@@ -53,43 +53,42 @@ func (db db) getSetBlobDestination(quotaOwner string) (io.Writer, error) {
 	return dest, nil
 }
 
-func (db db) SetBlobVersion(writeCtx context.Context,
-	quotaOwner string, idPrefix, id string, v Version, wt io.WriterTo) (err error) {
+func (db db) getDeltaEncodingBase(writeCtx context.Context,
+	idPrefix, id string) (
+	deltaEncodingBaseR io.Reader, closeDeltaEncodingBaseR func(), deltaEncodingBaseV Version,
+	nextDistanceToNonDelta int64, err error) {
+	// Try reading the parent. Reset error on parentNotFound errors
 	parentM, parentNotFound, err := db.m.GetLatestMetadata(writeCtx, idPrefix, id)
 	if err != nil && !parentNotFound {
 		return
 	}
 	err = nil
+
+	// We only use delta encoding if:
+	// There is a previous version &&
+	// the previous version is not deleted &&
+	// the previous version is not a too long chain of consecutive deltas
 	hasParent := !parentNotFound
-	hasDeltaEncodingBase := false
-	var deltaEncodingBase Version
-	var parentR io.Reader
-	if !hasParent {
-		// Set to -1 bc then we can always say that the new DistanceToNonDelta
-		// is just DistanceToNonDelta + 1 without needing an extra variable
-		// for this.
-		parentM.DistanceToNonDelta = -1
-	}
-	if hasParent && !parentM.IsDeleted {
-		// Only get the parentReader if the parent is not already too distant
-		// from a non-delta encoded. This is done to not have endless chains
-		// of delta encoded data. By leaving parentR=nil, we force delta
-		// encoding not to be used
-		if parentM.DistanceToNonDelta < maxConsecutiveDeltaEncoded {
-			var closeParentR func()
-			parentR, closeParentR, err = db.getReader(writeCtx, parentM)
-			defer closeParentR()
-			if err != nil {
-				return
-			}
-			hasDeltaEncodingBase = true
-			deltaEncodingBase = parentM.Version
-		} else {
-			// We use parentM.DistanceToNonDelta+1 for the DistanceToNonDelta
-			// of this new entry, so we set it to -1 here to use the value 0
-			parentM.DistanceToNonDelta = -1
+	if hasParent && !parentM.IsDeleted && parentM.DistanceToNonDelta < maxConsecutiveDeltaEncoded {
+		deltaEncodingBaseR, closeDeltaEncodingBaseR, err = db.getReader(writeCtx, parentM)
+		if err != nil {
+			return
 		}
+		deltaEncodingBaseV = parentM.Version
+		nextDistanceToNonDelta = parentM.DistanceToNonDelta + 1
+		return
 	}
+
+	deltaEncodingBaseR = nil
+	closeDeltaEncodingBaseR = func() {}
+	deltaEncodingBaseV = 0
+	nextDistanceToNonDelta = 0
+	err = nil
+	return
+}
+
+func (db db) SetBlobVersion(writeCtx context.Context,
+	quotaOwner string, idPrefix, id string, v Version, wt io.WriterTo) (err error) {
 
 	offset, err := db.log.Size()
 	if err != nil {
@@ -100,8 +99,15 @@ func (db db) SetBlobVersion(writeCtx context.Context,
 		return
 	}
 
+	deltaEncodingBaseR, closeDeltaEncodingBaseR, deltaEncodingBaseV,
+		nextDistanceToNonDelta, err := db.getDeltaEncodingBase(writeCtx, idPrefix, id)
+	if err != nil {
+		return
+	}
+	defer closeDeltaEncodingBaseR()
+
 	destWriteCounter := writeCounter{w: dest, n: 0}
-	compressor, closeCompressor := deltastream.GetCompressor(parentR,
+	compressor, closeCompressor := deltastream.GetCompressor(deltaEncodingBaseR,
 		&destWriteCounter)
 	nWritten, err := wt.WriteTo(compressor)
 	if err != nil && !errors.Is(err, limitwriter.ErrNotEnoughQuota) {
@@ -132,10 +138,10 @@ func (db db) SetBlobVersion(writeCtx context.Context,
 		QuotaOwner:           quotaOwner,
 		Datastrip:            db.log.Name(),
 		Offset:               offset,
-		DistanceToNonDelta:   parentM.DistanceToNonDelta + 1,
+		DistanceToNonDelta:   nextDistanceToNonDelta,
 		Encoding:             compressor.Data().Method,
-		HasDeltaEncodingBase: hasDeltaEncodingBase,
-		DeltaEncodingBase:    deltaEncodingBase,
+		HasDeltaEncodingBase: deltaEncodingBaseR != nil,
+		DeltaEncodingBase:    deltaEncodingBaseV,
 	})
 	if err != nil {
 		return
