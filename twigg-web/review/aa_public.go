@@ -110,6 +110,13 @@ const (
 	ThreadType_RemoveReviewer
 )
 
+// ThreadsWithoutComments lists all the "fake threads", i.e.
+// those that don't actually contain coments
+var ThreadsWithoutComments = []ThreadType{
+	ThreadType_AddLGTM, ThreadType_RemoveLGTM,
+	ThreadType_AddReviewer, ThreadType_RemoveReviewer,
+}
+
 type ReviewStatus uint32
 
 const (

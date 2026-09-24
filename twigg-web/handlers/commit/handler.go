@@ -683,9 +683,8 @@ func (hl handler) handleGetComments(w http.ResponseWriter,
 			errMsg = "err getting thread"
 			return
 		}
-		// Lgtm "threads" don't have comments
-		if thread.Type == review.ThreadType_AddLGTM ||
-			thread.Type == review.ThreadType_RemoveLGTM {
+		// remove "threads" that don't have comments
+		if slices.Contains(review.ThreadsWithoutComments, thread.Type) {
 			continue
 		}
 
