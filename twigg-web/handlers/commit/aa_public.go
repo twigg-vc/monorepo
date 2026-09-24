@@ -96,6 +96,14 @@ type FrontendThread struct {
 	CreatedOn      time.Time
 }
 
+// This is the comment that is sent to the frontend
+type FrontendComment struct {
+	ThreadId       int64
+	AuthorUsername string
+	Text           string
+	T              time.Time
+}
+
 // commit id to canSubmitResult
 type HandleGetCanSubmitCommitsResponse = map[string]CanSubmitResult
 

@@ -1484,6 +1484,84 @@ func TestCommitPage(t *testing.T) {
 		t.Fatalf("got blob %s", b.lastResponse)
 	}
 }
+func TestComments(t *testing.T) {
+	// Get a logged-in browser and a tw with key setup
+	srv := GetMockServer(t)
+	b := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, b, "aang@twigg.vc")
+	b.Get(routes.UserSettings)
+	b.CheckCurrentPath(routes.UserSettings)
+	b.Post(routes.GenerateCLIKey, nil)
+	tw := cli.NewTestHelper(t)
+	tw.SetServerRootUrl(srv.C.PublicUrl)
+	tw.Run("init")
+	tw.Run("server", "aang/BookOne")
+	tw.Run("key", srv.KeysMock.GetLastRandomCliKey())
+
+	// Push one commit
+	tw.WriteFile("a.txt", "v0 a.txt")
+	tw.Run("commit", "create a.txt")
+	tw.Run("push")
+	tw.CheckOutContains("push succeeded")
+
+	// Post new comment thread
+	b.Post("/aang/BookOne/c/1/new-thread?version=0", map[string]string{
+		"comment": "my comment",
+	})
+	// Post a new an inline comment thread
+	b.Post("/aang/BookOne/c/1/new-thread?version=0&file=a.txt&line=1",
+		map[string]string{
+			"comment": "my inline comment",
+		})
+	// Add an lgtm "thread"
+	b.Post("/aang/BookOne/c/1/lgtm", map[string]string{
+		"version": "0",
+	})
+	// Remove the lgtm "thread"
+	b.Post("/aang/BookOne/c/1/r-lgtm", map[string]string{
+		"version": "0",
+	})
+	// Add reviewers
+	type reviewersBody struct {
+		Usernames []string
+	}
+	status := b.PostJson("/aang/BookOne/c/1/reviewers",
+		reviewersBody{Usernames: []string{"katara"}})
+	if status != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", status, b.lastResponse)
+	}
+	// Remove reviewers
+	status = b.PostJson("/aang/BookOne/c/1/rm-reviewers",
+		reviewersBody{Usernames: []string{"katara"}})
+	if status != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", status, b.lastResponse)
+	}
+
+	// Get all the threads:
+	// comment, inline comment, add lgtm, rm lgtm, add reviewer, rm reviewer
+	// -> 6 in total
+	b.Get("/aang/BookOne/c/1/threads")
+	var threads []commit.FrontendThread
+	if err := json.Unmarshal(b.lastResponse, &threads); err != nil {
+		t.Fatalf("failed to unmarshal threads: %v body=%q",
+			err, string(b.lastResponse))
+	}
+	if len(threads) != 6 {
+		t.Fatalf("got %d threads, expected 6", len(threads))
+	}
+
+	// Get all the comments from the threads.
+	// AddLGTM/RemoveLgtm, AddReviewer/RemoveReviewer should not appear
+	b.Get("/aang/BookOne/c/1/threads/comments")
+	var comments []commit.FrontendComment
+	if err := json.Unmarshal(b.lastResponse, &comments); err != nil {
+		t.Fatalf("failed to unmarshal comments: %v body=%q",
+			err, string(b.lastResponse))
+	}
+	if len(comments) != 2 {
+		t.Fatalf("got %d comments, expected 2", len(comments))
+	}
+}
 func TestNotifications(t *testing.T) {
 	srv := GetMockServer(t)
 

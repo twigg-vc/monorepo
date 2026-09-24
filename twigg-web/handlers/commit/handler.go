@@ -29,7 +29,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type handler struct {
@@ -1732,17 +1731,9 @@ func newFrontendThread(t review.Thread, authorUsername string, targetUsername st
 	}
 }
 
-// This is the comment that is sent to the frontend
-type frontendComment struct {
-	ThreadId       int64
-	AuthorUsername string
-	Text           string
-	T              time.Time
-}
-
 func newFrontendComment(cm review.Comment,
-	authorUsername string) frontendComment {
-	return frontendComment{
+	authorUsername string) FrontendComment {
+	return FrontendComment{
 		ThreadId:       cm.ThreadId,
 		AuthorUsername: authorUsername,
 		Text:           cm.Text,
