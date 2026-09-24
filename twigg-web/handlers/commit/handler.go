@@ -692,7 +692,7 @@ func (hl handler) handleGetComments(w http.ResponseWriter,
 			w.Write([]byte(","))
 		}
 		first = false
-		ok := hl.writeCommitsOfThread(dbRead, r.Repo.Id, cI, thread.Id, w, encoder)
+		ok := hl.writeCommentsOfThread(dbRead, r.Repo.Id, cI, thread.Id, w, encoder)
 		if !ok {
 			return
 		}
@@ -711,7 +711,7 @@ func (hl handler) handleGetComments(w http.ResponseWriter,
 
 }
 
-func (hl handler) writeCommitsOfThread(dbRead context.Context, repoId uint64, cId uint64, threadId int64, w http.ResponseWriter, js *json.Encoder) (ok bool) {
+func (hl handler) writeCommentsOfThread(dbRead context.Context, repoId uint64, cId uint64, threadId int64, w http.ResponseWriter, js *json.Encoder) (ok bool) {
 	comments, err := hl.revSrv.GetComments(dbRead, repoId, cId, threadId)
 	if err != nil {
 		http.Error(w, "err getting comments", http.StatusInternalServerError)
