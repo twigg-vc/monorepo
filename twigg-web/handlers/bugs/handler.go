@@ -36,12 +36,23 @@ func (h handler) handleGetBugs(w http.ResponseWriter,
 		http.Error(w, "failed to get the bugs", http.StatusInternalServerError)
 		return
 	}
+	open, closed, err := h.db.CountRepoBugs(dbRead, r.Repo.Id)
+	if err != nil {
+		log.Printf("failed to count the bugs of repo id=%d: %s", r.Repo.Id, err)
+		http.Error(w, "failed to count the bugs", http.StatusInternalServerError)
+		return
+	}
 	frontendBugs, ok := newUsernames(h.db, dbRead, w).getFrontendBugs(bugs)
 	if !ok {
 		return
 	}
 
-	respJson, err := json.Marshal(GetBugsResponse{Bugs: frontendBugs, NextCursor: nextCursor})
+	respJson, err := json.Marshal(GetBugsResponse{
+		Bugs:        frontendBugs,
+		NextCursor:  nextCursor,
+		OpenCount:   open,
+		ClosedCount: closed,
+	})
 	if err != nil {
 		panic(fmt.Sprintf("failed to marshal the bugs: %s", err))
 	}

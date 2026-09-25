@@ -17,10 +17,13 @@ type Db interface {
 	GetUsername(ctx context.Context, userId int64) (username string, isNotFoundErr bool, err error)
 	GetBugsPage(ctx context.Context, repoId uint64, status bug.Status,
 		cursor string, limit int) (bugs []bug.Bug, nextCursor string, err error)
+	CountRepoBugs(ctx context.Context, repoId uint64) (open, closed int64, err error)
 }
 
-// NextCursor is empty on the last page.
+// NextCursor is empty on the last page. The counts are of the whole repo.
 type GetBugsResponse struct {
-	Bugs       []twiggwc.FrontendBug
-	NextCursor string
+	Bugs        []twiggwc.FrontendBug
+	NextCursor  string
+	OpenCount   int64
+	ClosedCount int64
 }

@@ -49,7 +49,7 @@ func newReadReq(target string) wrappers.UserWithReadPermissionMuxRequest {
 
 func TestGetBugs(t *testing.T) {
 	h, db, w, zukoId := newTestHandler(t)
-	for range 2 {
+	for range 3 {
 		if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", "The tea is cold"); err != nil {
 			t.Fatal(err)
 		}
@@ -73,6 +73,9 @@ func TestGetBugs(t *testing.T) {
 	}
 	if !reflect.DeepEqual(numbers, []uint64{1}) || !reflect.DeepEqual(authors, []string{"zuko"}) || resp.NextCursor != "" {
 		t.Fatalf("expected the closed b/1 by zuko and no cursor, got %+v", resp)
+	}
+	if resp.OpenCount != 2 || resp.ClosedCount != 1 {
+		t.Fatalf("expected the counts of the whole repo, got open=%d closed=%d", resp.OpenCount, resp.ClosedCount)
 	}
 }
 
