@@ -46,7 +46,8 @@ func NewBug(number uint64, title, body string, status Status,
 type EventKind uint8
 
 const (
-	EventKind_Comment EventKind = 1
+	EventKind_Comment      EventKind = 1
+	EventKind_StatusChange EventKind = 2
 )
 
 // Something that happened to a bug, shown in its timeline. Only the details
@@ -57,6 +58,7 @@ type Event struct {
 	AuthorUserId int64
 	CreatedOn    time.Time
 	Comment      Comment
+	StatusChange StatusChange
 }
 
 func NewEvent(id uint64, kind EventKind, authorUserId int64, createdOn time.Time) Event {
@@ -74,4 +76,12 @@ type Comment struct {
 
 func NewComment(body string) Comment {
 	return Comment{Body: body}
+}
+
+type StatusChange struct {
+	NewStatus Status
+}
+
+func NewStatusChange(newStatus Status) StatusChange {
+	return StatusChange{NewStatus: newStatus}
 }
