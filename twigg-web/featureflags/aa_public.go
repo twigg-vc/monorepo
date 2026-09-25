@@ -12,6 +12,7 @@ type Flags struct {
 	DummyFlag                    bool // Example flag just to serve as an example
 	UseVSCodeDiff                bool // If set, the diff viewer uses the vendored VS Code diff engine
 	SearchCommitsUi              bool // If set, the repo page searches its commits
+	ShowBugs                     bool // If set, repos have a bug tracker
 }
 
 func GetFlags(configName string, repoOwnerUsername string, currentUsername string) Flags {
@@ -27,6 +28,8 @@ func GetFlags(configName string, repoOwnerUsername string, currentUsername strin
 			EnabledForReposOfFriends(repoOwnerUsername),
 		UseVSCodeDiff:   true,
 		SearchCommitsUi: true,
+		ShowBugs: EnabledOutsideProd(configName) ||
+			EnabledForReposOfTwiggers(repoOwnerUsername),
 	}
 }
 
