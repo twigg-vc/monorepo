@@ -122,7 +122,8 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 	if err != nil {
 		return nil, "", err
 	}
-	before := uint64(math.MaxUint64)
+	// database/sql rejects uint64 values above MaxInt64.
+	before := uint64(math.MaxInt64)
 	if c.BeforeEventId != 0 {
 		before = c.BeforeEventId
 	}
