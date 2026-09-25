@@ -30,15 +30,27 @@ func newBugsDb(t *testing.T) (b webdb.WebDb, w context.Context) {
 	return b, w
 }
 
+type mockNow struct {
+	now time.Time
+}
+
+func (m mockNow) Now() time.Time {
+	return m.now
+}
+
 func TestCreateAndGetBug(t *testing.T) {
 	b, w := newBugsDb(t)
+	now := mockNow{
+		now: time.UnixMilli(199),
+	}
+	b.SetNower(now, t)
 
 	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "Uncle Iroh's tea is cold and must be warmed")
 	if err != nil {
 		t.Fatal(err)
 	}
 	// reflect.DeepEqual doesn't work well with dates
-	if created.CreatedOn.IsZero() || !created.UpdatedOn.Equal(created.CreatedOn) {
+	if created.CreatedOn.UnixMilli() != 199 || created.UpdatedOn.UnixMilli() != 199 {
 		t.Fatalf("unexpected timestamps: created %+v", created)
 	}
 	originalCreatedOn := created.CreatedOn

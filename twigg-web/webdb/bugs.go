@@ -27,7 +27,7 @@ func (db webDb) CreateBug(writeCtx context.Context, repoId uint64, authorId int6
 	if title == "" {
 		return bug.Bug{}, fmt.Errorf("missing title")
 	}
-	now := time.Now().UnixMilli()
+	now := db.getNow().UnixMilli()
 	var number uint64
 	err := db.s.QueryRow(writeCtx, `
 		INSERT INTO bugs (repoId, number, authorId, title, body, status,
@@ -84,7 +84,7 @@ func (db webDb) AddBugComment(writeCtx context.Context, repoId uint64, number ui
 // Also bumps the bug's updatedOn. The caller must insert the kind's details.
 func (db webDb) insertBugEvent(writeCtx context.Context, repoId uint64, number uint64,
 	kind bug.EventKind, authorId int64) (e bug.Event, isNotFoundErr bool, err error) {
-	now := time.Now().UnixMilli()
+	now := db.getNow().UnixMilli()
 	var bugId uint64
 	err = db.s.QueryRow(writeCtx, `
 		UPDATE bugs SET updatedOnUnixMilli = ?

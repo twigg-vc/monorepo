@@ -18,6 +18,8 @@ import (
 	"monorepo/twigg/commit"
 	"monorepo/twigg/server"
 	"monorepo/twigg/treev"
+	"testing"
+	"time"
 )
 
 // Implements the database used by Twigg Web
@@ -1010,6 +1012,15 @@ func (db WebDb) SetTrackQueueJobStatus(writeCtx context.Context, jobId string,
 func (db WebDb) GetTrackQueueJobIdsByStatus(ctx context.Context,
 	status string) (iterator.I[string], error) {
 	return db.db.GetTrackQueueJobIdsByStatus(ctx, status)
+}
+
+type Nower interface {
+	Now() time.Time
+}
+
+// Sets the "now provider" for tests
+func (db WebDb) SetNower(now Nower, t *testing.T) {
+	db.db.now = now
 }
 
 // Creates an open bug with the next number of the repo.

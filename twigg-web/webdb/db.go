@@ -10,6 +10,7 @@ import (
 	"monorepo/data/appendlog/tiered"
 	"monorepo/data/blobdb"
 	"monorepo/data/sqlitehelper"
+	"time"
 )
 
 //go:embed migrations/*.sql
@@ -33,6 +34,7 @@ type webDb struct {
 	log   blobAppendLog
 	blobs blobdb.BlobDb
 	quota quotaDb
+	now   Nower
 }
 
 func newWebDb(pathToDir, dbFileName string, blockSize int64, bs BlobStorage,
@@ -114,6 +116,13 @@ func (db webDb) BeginWrite() (ctx context.Context, closeTx func(), commitTx func
 
 func (db webDb) BeginRead() (ctx context.Context, closeTx func(), err error) {
 	return db.s.BeginRead()
+}
+
+func (db webDb) getNow() time.Time {
+	if db.now != nil {
+		return db.now.Now()
+	}
+	return time.Now()
 }
 
 func (db webDb) GetRepoNextLocalId(ctx context.Context, repoId uint64) (n uint64, isNotFoundErr bool, err error) {
