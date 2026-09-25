@@ -46,19 +46,21 @@ func NewBug(number uint64, title, body string, status Status,
 type EventKind uint8
 
 const (
-	EventKind_Comment      EventKind = 1
-	EventKind_StatusChange EventKind = 2
+	EventKind_Comment         EventKind = 1
+	EventKind_StatusChange    EventKind = 2
+	EventKind_DescriptionEdit EventKind = 3
 )
 
 // Something that happened to a bug, shown in its timeline. Only the details
 // field matching Kind is set.
 type Event struct {
-	Id           uint64
-	Kind         EventKind
-	AuthorUserId int64
-	CreatedOn    time.Time
-	Comment      Comment
-	StatusChange StatusChange
+	Id              uint64
+	Kind            EventKind
+	AuthorUserId    int64
+	CreatedOn       time.Time
+	Comment         Comment
+	StatusChange    StatusChange
+	DescriptionEdit DescriptionEdit
 }
 
 func NewEvent(id uint64, kind EventKind, authorUserId int64, createdOn time.Time) Event {
@@ -84,4 +86,14 @@ type StatusChange struct {
 
 func NewStatusChange(newStatus Status) StatusChange {
 	return StatusChange{NewStatus: newStatus}
+}
+
+// The new body is the OldBody of the next edit, or the bug's Body for the
+// latest edit.
+type DescriptionEdit struct {
+	OldBody string
+}
+
+func NewDescriptionEdit(oldBody string) DescriptionEdit {
+	return DescriptionEdit{OldBody: oldBody}
 }
