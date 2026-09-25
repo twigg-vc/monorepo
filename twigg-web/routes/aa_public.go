@@ -166,6 +166,16 @@ const (
 	PostRemoveReviewersPattern = CommitPattern + "/rm-reviewers"
 
 	GetCanSubmitCommitsPattern = RepoPattern + "/can-submit-commits"
+
+	BugNumberParamName       = "bug"
+	BugsPattern              = RepoPattern + "/bugs"
+	BugPattern               = RepoPattern + "/b/{bug}"
+	BugCommentsPattern       = BugPattern + "/comments"
+	BugStatusPattern         = BugPattern + "/status"
+	BugDescriptionPattern    = BugPattern + "/description"
+	BugTitlePattern          = BugPattern + "/title"
+	BugsStatusQueryParamName = "status" // "open", "closed" or empty for all
+	BugsCursorQueryParamName = "cursor" // reads the bugs after a page
 )
 
 // Used to setup server routes (with the *Patters methods) and get the
@@ -233,6 +243,9 @@ var _ = func() int {
 	}
 	if !strings.Contains(PostAddReviewersPattern, CommitPattern) {
 		panic("PostAddReviewersPattern should contain CommitPattern")
+	}
+	if !strings.Contains(BugPattern, BugNumberParamName) {
+		panic("BugPattern should contain BugNumberParamName")
 	}
 	if !strings.Contains(RefPipelinesPattern, PipelineRefPathPathParamName) {
 		panic("RefPipelinesPattern should contain PathOfPipelinePathParamName")
