@@ -217,3 +217,47 @@ func TestGetBugEvents(t *testing.T) {
 		t.Fatalf("expected %+v, got %+v", want, events)
 	}
 }
+func TestGetBugEventsPages(t *testing.T) {
+	b, w := newBugsDb(t)
+	for range 2 {
+		if _, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// b/1 gets the events 1, 2, 4, 5 and 6; b/2 gets 3.
+	for _, number := range []uint64{1, 1, 2, 1, 1, 1} {
+		if _, _, err := b.AddBugComment(w, bugsRepoId, number, bugsAuthorId, "Try jasmine"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	getPage := func(cursor string, limit int) (ids []uint64, nextCursor string) {
+		t.Helper()
+		events, nextCursor, err := b.GetBugEvents(w, bugsRepoId, 1, cursor, limit)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = []uint64{}
+		for _, e := range events {
+			ids = append(ids, e.Id)
+		}
+		return ids, nextCursor
+	}
+
+	ids, cursor := getPage("", 2)
+	if !reflect.DeepEqual(ids, []uint64{5, 6}) || cursor == "" {
+		t.Fatalf("page 1: expected [5 6] and a cursor, got %v cursor=%q", ids, cursor)
+	}
+	ids, cursor = getPage(cursor, 2)
+	if !reflect.DeepEqual(ids, []uint64{2, 4}) || cursor == "" {
+		t.Fatalf("page 2: expected [2 4] and a cursor, got %v cursor=%q", ids, cursor)
+	}
+	ids, cursor = getPage(cursor, 2)
+	if !reflect.DeepEqual(ids, []uint64{1}) || cursor != "" {
+		t.Fatalf("page 3: expected [1] and no cursor, got %v cursor=%q", ids, cursor)
+	}
+
+	ids, cursor = getPage("", 5)
+	if !reflect.DeepEqual(ids, []uint64{1, 2, 4, 5, 6}) || cursor != "" {
+		t.Fatalf("exact page: expected [1 2 4 5 6] and no cursor, got %v cursor=%q", ids, cursor)
+	}
+}
