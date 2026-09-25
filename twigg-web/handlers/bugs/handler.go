@@ -7,6 +7,7 @@ import (
 	"log"
 	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/routes"
+	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
 )
@@ -14,7 +15,8 @@ import (
 const bugsPageSize = 25
 
 type handler struct {
-	db Db
+	db    Db
+	perms Permissions
 }
 
 func (h handler) handleGetBugs(w http.ResponseWriter,
@@ -42,6 +44,12 @@ func (h handler) handleGetBugs(w http.ResponseWriter,
 		http.Error(w, "failed to count the bugs", http.StatusInternalServerError)
 		return
 	}
+	canCreate, err := h.perms.CanCreateBugs(dbRead, viewer(r), r.Repo)
+	if err != nil {
+		log.Printf("failed to check if bugs can be created in repo id=%d: %s", r.Repo.Id, err)
+		http.Error(w, "failed to check the permission", http.StatusInternalServerError)
+		return
+	}
 	frontendBugs, ok := newUsernames(h.db, dbRead, w).getFrontendBugs(bugs)
 	if !ok {
 		return
@@ -52,6 +60,7 @@ func (h handler) handleGetBugs(w http.ResponseWriter,
 		NextCursor:  nextCursor,
 		OpenCount:   open,
 		ClosedCount: closed,
+		CanCreate:   canCreate,
 	})
 	if err != nil {
 		panic(fmt.Sprintf("failed to marshal the bugs: %s", err))
@@ -60,4 +69,12 @@ func (h handler) handleGetBugs(w http.ResponseWriter,
 	if err != nil {
 		log.Printf("failed to write the bugs: %s", err)
 	}
+}
+
+// Returns nil for anonymous users.
+func viewer(r wrappers.UserWithReadPermissionMuxRequest) *user.User {
+	if !r.IsLoggedIn {
+		return nil
+	}
+	return r.MaybeUserWithReadPermission
 }

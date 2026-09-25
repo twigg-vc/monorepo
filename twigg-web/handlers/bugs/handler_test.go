@@ -6,6 +6,7 @@ import (
 	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/featureflags"
 	"monorepo/twigg-web/repo"
+	"monorepo/twigg-web/services/bugpermissions"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
@@ -36,7 +37,7 @@ func newTestHandler(t *testing.T) (h handler, db webdb.WebDb, w context.Context,
 	if err != nil {
 		t.Fatal(err)
 	}
-	return handler{db: db}, db, w, zukoId
+	return handler{db: db, perms: bugpermissions.NewService(db)}, db, w, zukoId
 }
 
 func newReadReq(target string) wrappers.UserWithReadPermissionMuxRequest {
@@ -76,6 +77,27 @@ func TestGetBugs(t *testing.T) {
 	}
 	if resp.OpenCount != 2 || resp.ClosedCount != 1 {
 		t.Fatalf("expected the counts of the whole repo, got open=%d closed=%d", resp.OpenCount, resp.ClosedCount)
+	}
+	if resp.CanCreate {
+		t.Fatal("expected anonymous users to not be able to create bugs")
+	}
+}
+
+func TestGetBugsLetsTheRepoOwnerCreate(t *testing.T) {
+	h, _, w, zukoId := newTestHandler(t)
+	req := newReadReq("/zuko/tea/bugs")
+	req.Repo.OwnerId = zukoId
+	req.IsLoggedIn = true
+	req.MaybeUserWithReadPermission = &user.User{Id: zukoId}
+
+	rec := httptest.NewRecorder()
+	h.handleGetBugs(rec, req, w)
+	var resp GetBugsResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if !resp.CanCreate {
+		t.Fatalf("expected the owner to be able to create bugs, got %+v", resp)
 	}
 }
 
