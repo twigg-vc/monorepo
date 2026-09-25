@@ -183,3 +183,37 @@ func TestAddBugCommentFails(t *testing.T) {
 		t.Fatalf("expected an error for an empty comment, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
 	}
 }
+func TestGetBugEvents(t *testing.T) {
+	b, w := newBugsDb(t)
+	for range 2 {
+		if _, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i, c := range []struct {
+		number uint64
+		body   string
+	}{{1, "Try jasmine"}, {2, "Not this bug"}, {1, "Try ginseng"}} {
+		b.SetNower(mockNow{now: time.UnixMilli(200 + int64(i))}, t)
+		if _, _, err := b.AddBugComment(w, bugsRepoId, c.number, bugsAuthorId, c.body); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	events, nextCursor, err := b.GetBugEvents(w, bugsRepoId, 1, "", 10)
+	if err != nil || nextCursor != "" {
+		t.Fatalf("GetBugEvents: nextCursor=%q err=%v", nextCursor, err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if len(events) != 2 || events[0].CreatedOn.UnixMilli() != 200 || events[1].CreatedOn.UnixMilli() != 202 {
+		t.Fatalf("unexpected timestamps: %+v", events)
+	}
+	events[0].CreatedOn, events[1].CreatedOn = time.Time{}, time.Time{}
+	want := []bug.Event{
+		{Id: 1, Kind: bug.EventKind_Comment, AuthorUserId: bugsAuthorId, Comment: bug.Comment{Body: "Try jasmine"}},
+		{Id: 3, Kind: bug.EventKind_Comment, AuthorUserId: bugsAuthorId, Comment: bug.Comment{Body: "Try ginseng"}},
+	}
+	if !reflect.DeepEqual(events, want) {
+		t.Fatalf("expected %+v, got %+v", want, events)
+	}
+}
