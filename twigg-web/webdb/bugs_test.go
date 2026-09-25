@@ -2,6 +2,7 @@ package webdb_test
 
 import (
 	"context"
+	"errors"
 	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/webdb"
 	"reflect"
@@ -69,5 +70,48 @@ func TestCreateAndGetBug(t *testing.T) {
 	got.CreatedOn, got.UpdatedOn = time.Time{}, time.Time{}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("GetBug: expected %+v, got %+v", want, got)
+	}
+}
+
+func TestGetBugNotFound(t *testing.T) {
+	b, w := newBugsDb(t)
+	_, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, isNotFoundErr, err := b.GetBug(w, bugsRepoId, 2)
+	if !isNotFoundErr || !errors.Is(err, webdb.ErrNotFound) {
+		t.Fatalf("expected not found, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	_, isNotFoundErr, err = b.GetBug(w, bugsRepoId+1, 1)
+	if !isNotFoundErr || !errors.Is(err, webdb.ErrNotFound) {
+		t.Fatalf("expected bug of another repo to not be found, got isNotFoundErr=%v err=%v",
+			isNotFoundErr, err)
+	}
+}
+
+func TestBugNumbersAreSequentialPerRepo(t *testing.T) {
+	b, w := newBugsDb(t)
+
+	for _, want := range []struct {
+		repoId uint64
+		number uint64
+	}{{bugsRepoId, 1}, {bugsRepoId, 2}, {bugsRepoId + 1, 1}, {bugsRepoId, 3}} {
+		created, err := b.CreateBug(w, want.repoId, bugsAuthorId, "Fix Iroh's tea", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if created.Number != want.number {
+			t.Fatalf("repo %d: expected number %d, got %d", want.repoId, want.number, created.Number)
+		}
+	}
+}
+
+func TestCreateBugWithoutTitleFails(t *testing.T) {
+	b, w := newBugsDb(t)
+	_, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "", "Uncle Iroh's tea is cold")
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }
