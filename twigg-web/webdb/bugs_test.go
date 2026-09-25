@@ -261,3 +261,17 @@ func TestGetBugEventsPages(t *testing.T) {
 		t.Fatalf("exact page: expected [1 2 4 5 6] and no cursor, got %v cursor=%q", ids, cursor)
 	}
 }
+
+func TestGetBugEventsFails(t *testing.T) {
+	b, w := newBugsDb(t)
+	if _, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, _, err := b.GetBugEvents(w, bugsRepoId, 1, "not a cursor!", 2); err == nil {
+		t.Fatal("expected an error for a malformed cursor")
+	}
+	if _, _, err := b.GetBugEvents(w, bugsRepoId, 1, "", 0); err == nil {
+		t.Fatal("expected an error for a zero limit")
+	}
+}
