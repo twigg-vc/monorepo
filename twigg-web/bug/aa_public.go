@@ -39,3 +39,37 @@ func NewBug(number uint64, title, body string, status Status,
 		UpdatedOn:      updatedOn,
 	}
 }
+
+// Identifies what happened in an Event. Stored in the db: never reuse a value.
+type EventKind uint8
+
+const (
+	EventKind_Comment EventKind = 1
+)
+
+// Something that happened to a bug, shown in its timeline. Only the details
+// field matching Kind is set.
+type Event struct {
+	Id           uint64
+	Kind         EventKind
+	AuthorUserId int64
+	CreatedOn    time.Time
+	Comment      Comment
+}
+
+func NewEvent(id uint64, kind EventKind, authorUserId int64, createdOn time.Time) Event {
+	return Event{
+		Id:           id,
+		Kind:         kind,
+		AuthorUserId: authorUserId,
+		CreatedOn:    createdOn,
+	}
+}
+
+type Comment struct {
+	Body string
+}
+
+func NewComment(body string) Comment {
+	return Comment{Body: body}
+}
