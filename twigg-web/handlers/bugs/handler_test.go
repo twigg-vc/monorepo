@@ -175,3 +175,33 @@ type mockNow struct {
 func (m mockNow) Now() time.Time {
 	return m.now
 }
+
+func TestPostBugFails(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	post := func(u user.User, flag bool, body string) int {
+		t.Helper()
+		req := newWriteReq(u, zukoId, body)
+		req.Flags.ShowBugs = flag
+		rec := httptest.NewRecorder()
+		if h.handlePostBug(rec, req, w) {
+			t.Fatalf("expected no commit, got %d: %s", rec.Code, rec.Body)
+		}
+		return rec.Code
+	}
+
+	if code := post(user.User{Id: zukoId + 1}, true, `{"Title": "Fix Iroh's tea"}`); code != http.StatusForbidden {
+		t.Fatalf("stranger: expected 403, got %d", code)
+	}
+	if _, isNotFoundErr, _ := db.GetBug(w, testRepoId, 1); !isNotFoundErr {
+		t.Fatal("expected the stranger's bug to not be created")
+	}
+	if code := post(user.User{Id: zukoId}, false, `{"Title": "Fix Iroh's tea"}`); code != http.StatusNotFound {
+		t.Fatalf("flag off: expected 404, got %d", code)
+	}
+	if code := post(user.User{Id: zukoId}, true, `{"Title": "   "}`); code != http.StatusBadRequest {
+		t.Fatalf("blank title: expected 400, got %d", code)
+	}
+	if code := post(user.User{Id: zukoId}, true, `not json`); code != http.StatusBadRequest {
+		t.Fatalf("invalid json: expected 400, got %d", code)
+	}
+}
