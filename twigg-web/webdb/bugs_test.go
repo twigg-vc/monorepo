@@ -394,3 +394,59 @@ func TestSetBugStatusFails(t *testing.T) {
 		t.Fatalf("expected the bug to stay open, got %+v (err=%v)", got, err)
 	}
 }
+
+func TestGetBugsPage(t *testing.T) {
+	b, w := newBugsDb(t)
+	b.SetNower(mockNow{now: time.UnixMilli(199)}, t)
+	for range 5 {
+		if _, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "Uncle Iroh's tea is cold"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := b.CreateBug(w, bugsRepoId+1, bugsAuthorId, "Not this repo", ""); err != nil {
+		t.Fatal(err)
+	}
+	b.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+	// Add a comment just for some noise in CommentCount
+	if _, _, err := b.AddBugComment(w, bugsRepoId, 5, bugsAuthorId, "Try jasmine"); err != nil {
+		t.Fatal(err)
+	}
+	getPage := func(cursor string, limit int) (bugs []bug.Bug, numbers []uint64, nextCursor string) {
+		t.Helper()
+		bugs, nextCursor, err := b.GetBugsPage(w, bugsRepoId, "", cursor, limit)
+		if err != nil {
+			t.Fatal(err)
+		}
+		numbers = []uint64{}
+		for _, bg := range bugs {
+			numbers = append(numbers, bg.Number)
+		}
+		return bugs, numbers, nextCursor
+	}
+
+	bugs, numbers, cursor := getPage("", 2)
+	if !reflect.DeepEqual(numbers, []uint64{5, 4}) || cursor == "" {
+		t.Fatalf("page 1: expected [5 4] and a cursor, got %v cursor=%q", numbers, cursor)
+	}
+	want, _, err := b.GetBug(w, bugsRepoId, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want.Body = "" // Body is stripped when GetBugsPage is used
+	if !reflect.DeepEqual(bugs[0], want) {
+		t.Fatalf("expected pages to have the bug without its body %+v, got %+v", want, bugs[0])
+	}
+	_, numbers, cursor = getPage(cursor, 2)
+	if !reflect.DeepEqual(numbers, []uint64{3, 2}) || cursor == "" {
+		t.Fatalf("page 2: expected [3 2] and a cursor, got %v cursor=%q", numbers, cursor)
+	}
+	_, numbers, cursor = getPage(cursor, 2)
+	if !reflect.DeepEqual(numbers, []uint64{1}) || cursor != "" {
+		t.Fatalf("page 3: expected [1] and no cursor, got %v cursor=%q", numbers, cursor)
+	}
+
+	_, numbers, cursor = getPage("", 5)
+	if !reflect.DeepEqual(numbers, []uint64{5, 4, 3, 2, 1}) || cursor != "" {
+		t.Fatalf("exact page: expected [5 4 3 2 1] and no cursor, got %v cursor=%q", numbers, cursor)
+	}
+}
