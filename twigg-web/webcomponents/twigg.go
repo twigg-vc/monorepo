@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"monorepo/buildmeta"
+	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/cacheheaders"
 	"monorepo/twigg-web/cicdqueue"
 	"monorepo/twigg-web/featureflags"
@@ -375,6 +376,20 @@ func userToFrontendUser(u user.User) frontendUser {
 		TotalQuota:     u.TotalQuota,
 		QuotaUsed:      u.QuotaUsed,
 		QuotaLimmitted: u.QuotaLimmitted,
+	}
+}
+
+func bugToFrontend(b bug.Bug, authorUsername, assigneeUsername string) FrontendBug {
+	return FrontendBug{
+		Number:           b.Number,
+		Title:            b.Title,
+		Body:             b.Body,
+		Status:           b.Status,
+		AuthorUsername:   authorUsername,
+		AssigneeUsername: assigneeUsername,
+		CommentCount:     b.CommentCount,
+		CreatedOn:        b.CreatedOn,
+		UpdatedOn:        b.UpdatedOn,
 	}
 }
 

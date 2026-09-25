@@ -3,6 +3,7 @@ package webcomponents
 import (
 	"encoding/json"
 	"fmt"
+	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/cicdqueue"
 	"monorepo/twigg-web/featureflags"
 	"monorepo/twigg-web/repo"
@@ -239,6 +240,23 @@ type FrontendCommit struct {
 func CommitToFrontend(c commit.Commit, authorUsername string,
 	reviewStatus review.ReviewStatus) FrontendCommit {
 	return commitToFrontend(c, authorUsername, reviewStatus)
+}
+
+// AssigneeUsername is empty when unassigned
+type FrontendBug struct {
+	Number           uint64
+	Title            string
+	Body             string
+	Status           bug.Status
+	AuthorUsername   string
+	AssigneeUsername string
+	CommentCount     int64
+	CreatedOn        time.Time
+	UpdatedOn        time.Time
+}
+
+func BugToFrontend(b bug.Bug, authorUsername, assigneeUsername string) FrontendBug {
+	return bugToFrontend(b, authorUsername, assigneeUsername)
 }
 
 type FrontendQueueItem struct {
