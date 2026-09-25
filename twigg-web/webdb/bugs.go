@@ -86,6 +86,32 @@ func (db webDb) AddBugComment(writeCtx context.Context, repoId uint64, number ui
 	return e, false, nil
 }
 
+func (db webDb) SetBugStatus(writeCtx context.Context, repoId uint64, number uint64,
+	authorId int64, status bug.Status) (e bug.Event, isNotFoundErr bool, err error) {
+	if !status.IsValid() {
+		return bug.Event{}, false, fmt.Errorf("invalid status %q", status)
+	}
+	e, isNotFoundErr, err = db.insertBugEvent(writeCtx, repoId, number,
+		bug.EventKind_StatusChange, authorId)
+	if err != nil {
+		return bug.Event{}, isNotFoundErr, err
+	}
+	_, err = db.s.Exec(writeCtx, `
+		INSERT INTO bug_status_changes (eventId, newStatus) VALUES (?, ?)
+	`, e.Id, status)
+	if err != nil {
+		return bug.Event{}, false, fmt.Errorf("failed inserting bug status change: %w", err)
+	}
+	_, err = db.s.Exec(writeCtx, `
+		UPDATE bugs SET status = ? WHERE repoId = ? AND number = ?
+	`, status, repoId, number)
+	if err != nil {
+		return bug.Event{}, false, fmt.Errorf("failed setting bug status (repoId=%v number=%v): %w", repoId, number, err)
+	}
+	e.StatusChange = bug.NewStatusChange(status)
+	return e, false, nil
+}
+
 // Also bumps the bug's updatedOn. The caller must insert the kind's details.
 // Returns ErrTooManyBugEvents if the bug has MaxBugEvents already.
 func (db webDb) insertBugEvent(writeCtx context.Context, repoId uint64, number uint64,
@@ -142,9 +168,11 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 	}
 	rows, err := db.s.Query(ctx, `
 		SELECT e.eventId, e.kind, e.authorId, e.createdOnUnixMilli,
-			COALESCE(c.body, '')
+			COALESCE(c.body, ''),
+			COALESCE(s.newStatus, '')
 		FROM bug_events e
 		LEFT JOIN bug_comments c ON c.eventId = e.eventId
+		LEFT JOIN bug_status_changes s ON s.eventId = e.eventId
 		WHERE e.bugId = (SELECT bugId FROM bugs WHERE repoId = ? AND number = ?)
 			AND e.eventId < ?
 		ORDER BY e.eventId DESC
@@ -159,7 +187,8 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 		var e bug.Event
 		var createdOn int64
 		var commentBody string
-		err := rows.Scan(&e.Id, &e.Kind, &e.AuthorUserId, &createdOn, &commentBody)
+		var newStatus bug.Status
+		err := rows.Scan(&e.Id, &e.Kind, &e.AuthorUserId, &createdOn, &commentBody, &newStatus)
 		if err != nil {
 			return nil, "", fmt.Errorf("failed scanning bug event: %w", err)
 		}
@@ -167,6 +196,8 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 		switch e.Kind {
 		case bug.EventKind_Comment:
 			e.Comment = bug.NewComment(commentBody)
+		case bug.EventKind_StatusChange:
+			e.StatusChange = bug.NewStatusChange(newStatus)
 		default:
 			return nil, "", fmt.Errorf("unknown bug event kind %d (eventId=%d)", e.Kind, e.Id)
 		}
