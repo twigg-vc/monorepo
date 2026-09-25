@@ -13,6 +13,7 @@ import (
 	"monorepo/twigg-web/docusaurus"
 	"monorepo/twigg-web/featureflags"
 	"monorepo/twigg-web/handlers/admindash"
+	"monorepo/twigg-web/handlers/bugs"
 	"monorepo/twigg-web/handlers/commit"
 	"monorepo/twigg-web/handlers/home"
 	"monorepo/twigg-web/handlers/jobshandler"
@@ -320,6 +321,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 	newrepo.AddHandlers(canCreateRepo, rSrv, sDb, userWithSubMux)
 	reposettings.AddHandlers(userRepoMux, cliKeyAuthMux, userSrv, sDb, rSrv, s.QueueRunner, trackClient, tokenSigner, secretsSrv)
 	repository.AddHandlers(rSrv, revSrv, userSrv, sDb, userWithReadPermMux)
+	bugs.AddHandlers(sDb, userWithReadPermMux)
 	twigg.AddHandlers(sDb, userSrv, rSrv, ciQueue, s.mux, s.C.Name, tokenSigner, nil)
 	commit.AddHandlers(rt, sDb, rSrv, revSrv, userSrv, jobsService,
 		ciQueue, ciCdFileParser, trackClient, userRepoMux, userWithReadPermMux,
