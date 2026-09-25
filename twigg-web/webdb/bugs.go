@@ -241,6 +241,35 @@ func (db webDb) EditBugDescription(writeCtx context.Context, repoId uint64, numb
 	return e, false, nil
 }
 
+func (db webDb) EditBugTitle(writeCtx context.Context, repoId uint64, number uint64,
+	authorId int64, newTitle string) (e bug.Event, isNotFoundErr bool, err error) {
+	if newTitle == "" {
+		return bug.Event{}, false, fmt.Errorf("missing title")
+	}
+	e, isNotFoundErr, err = db.insertBugEvent(writeCtx, repoId, number,
+		bug.EventKind_TitleEdit, authorId)
+	if err != nil {
+		return bug.Event{}, isNotFoundErr, err
+	}
+	var oldTitle string
+	err = db.s.QueryRow(writeCtx, `
+		INSERT INTO bug_title_edits (eventId, oldTitle)
+		SELECT ?, title FROM bugs WHERE repoId = ? AND number = ?
+		RETURNING oldTitle
+	`, e.Id, repoId, number).Scan(&oldTitle)
+	if err != nil {
+		return bug.Event{}, false, fmt.Errorf("failed inserting bug title edit: %w", err)
+	}
+	_, err = db.s.Exec(writeCtx, `
+		UPDATE bugs SET title = ? WHERE repoId = ? AND number = ?
+	`, newTitle, repoId, number)
+	if err != nil {
+		return bug.Event{}, false, fmt.Errorf("failed editing bug title (repoId=%v number=%v): %w", repoId, number, err)
+	}
+	e.TitleEdit = bug.NewTitleEdit(oldTitle)
+	return e, false, nil
+}
+
 // Also bumps the bug's updatedOn and its count of the kind. The caller must
 // insert the kind's details.
 func (db webDb) insertBugEvent(writeCtx context.Context, repoId uint64, number uint64,
@@ -295,11 +324,13 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 		SELECT e.eventId, e.kind, e.authorId, e.createdOnUnixMilli,
 			COALESCE(c.body, ''),
 			COALESCE(s.newStatus, ''),
-			COALESCE(d.oldBody, '')
+			COALESCE(d.oldBody, ''),
+			COALESCE(t.oldTitle, '')
 		FROM bug_events e
 		LEFT JOIN bug_comments c ON c.eventId = e.eventId
 		LEFT JOIN bug_status_changes s ON s.eventId = e.eventId
 		LEFT JOIN bug_description_edits d ON d.eventId = e.eventId
+		LEFT JOIN bug_title_edits t ON t.eventId = e.eventId
 		WHERE e.bugId = (SELECT bugId FROM bugs WHERE repoId = ? AND number = ?)
 			AND e.eventId < ?
 		ORDER BY e.eventId DESC
@@ -315,9 +346,9 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 		var createdOn int64
 		var commentBody string
 		var newStatus bug.Status
-		var oldBody string
+		var oldBody, oldTitle string
 		err := rows.Scan(&e.Id, &e.Kind, &e.AuthorUserId, &createdOn, &commentBody,
-			&newStatus, &oldBody)
+			&newStatus, &oldBody, &oldTitle)
 		if err != nil {
 			return nil, "", fmt.Errorf("failed scanning bug event: %w", err)
 		}
@@ -329,6 +360,8 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 			e.StatusChange = bug.NewStatusChange(newStatus)
 		case bug.EventKind_DescriptionEdit:
 			e.DescriptionEdit = bug.NewDescriptionEdit(oldBody)
+		case bug.EventKind_TitleEdit:
+			e.TitleEdit = bug.NewTitleEdit(oldTitle)
 		default:
 			return nil, "", fmt.Errorf("unknown bug event kind %d (eventId=%d)", e.Kind, e.Id)
 		}
