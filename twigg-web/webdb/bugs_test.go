@@ -603,3 +603,28 @@ func TestEditBugTitle(t *testing.T) {
 		t.Fatalf("expected the old titles in order, got %+v (err=%v)", events, err)
 	}
 }
+
+func TestEditBugTitleFails(t *testing.T) {
+	b, w := newBugsDb(t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, isNotFoundErr, err := b.EditBugTitle(w, bugsRepoId, created.Number+1, bugsAuthorId, "Fix Zuko's tea")
+	if !isNotFoundErr || !errors.Is(err, webdb.ErrNotFound) {
+		t.Fatalf("expected not found, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	_, isNotFoundErr, err = b.EditBugTitle(w, bugsRepoId, created.Number, bugsAuthorId, "")
+	if err == nil || isNotFoundErr {
+		t.Fatalf("expected an error for an empty title, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	got, _, err := b.GetBug(w, bugsRepoId, created.Number)
+	if err != nil || got.Title != "Fix Iroh's tea" {
+		t.Fatalf("expected the title to stay, got %+v (err=%v)", got, err)
+	}
+	events, _, err := b.GetBugEvents(w, bugsRepoId, created.Number, "", 10)
+	if err != nil || len(events) != 0 {
+		t.Fatalf("expected no events, got %+v (err=%v)", events, err)
+	}
+}
