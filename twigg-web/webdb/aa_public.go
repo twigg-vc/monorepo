@@ -2,7 +2,6 @@ package webdb
 
 import (
 	"context"
-	"errors"
 	"io"
 	"monorepo/base/iterator"
 	"monorepo/data/blobdb"
@@ -1036,16 +1035,8 @@ func (db WebDb) GetBug(ctx context.Context, repoId uint64, number uint64) (
 	return db.db.GetBug(ctx, repoId, number)
 }
 
-// The most events (comments, status changes, ...) a bug can have. Some queries
-// COUNT(*) a bug's events, which is O(n), so the db enforces this cap. Normal
-// usage shouldn't reach it.
-var MaxBugEvents = 10_000
-
-var ErrTooManyBugEvents = errors.New("the bug has too many events")
-
 // Records a comment in the bug's timeline. Returns ErrNotFound if the repo
-// has no bug with the number, and ErrTooManyBugEvents if it has
-// MaxBugEvents already.
+// has no bug with the number.
 func (db WebDb) AddBugComment(writeCtx context.Context, repoId uint64, number uint64,
 	authorId int64, body string) (e bug.Event, isNotFoundErr bool, err error) {
 	return db.db.AddBugComment(writeCtx, repoId, number, authorId, body)
@@ -1060,8 +1051,7 @@ func (db WebDb) GetBugsPage(ctx context.Context, repoId uint64, status bug.Statu
 }
 
 // Sets the status and records it in the bug's timeline. Returns ErrNotFound
-// if the repo has no bug with the number, and ErrTooManyBugEvents if it has
-// MaxBugEvents already.
+// if the repo has no bug with the number.
 func (db WebDb) SetBugStatus(writeCtx context.Context, repoId uint64, number uint64,
 	authorId int64, status bug.Status) (e bug.Event, isNotFoundErr bool, err error) {
 	return db.db.SetBugStatus(writeCtx, repoId, number, authorId, status)

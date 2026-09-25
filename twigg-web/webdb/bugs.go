@@ -51,7 +51,7 @@ func (db webDb) GetBug(ctx context.Context, repoId uint64, number uint64) (
 	b bug.Bug, isNotFoundErr bool, err error) {
 	row := db.s.QueryRow(ctx, `
 		SELECT b.number, b.title, b.body, b.status, b.authorId, b.assigneeUserId,
-			(SELECT COUNT(*) FROM bug_events e WHERE e.bugId = b.bugId AND e.kind = ?),
+			COALESCE((SELECT count FROM bug_event_counts c WHERE c.bugId = b.bugId AND c.kind = ?), 0),
 			b.createdOnUnixMilli, b.updatedOnUnixMilli
 		FROM bugs b
 		WHERE b.repoId = ? AND b.number = ?
@@ -102,7 +102,7 @@ func (db webDb) GetBugsPage(ctx context.Context, repoId uint64, status bug.Statu
 	}
 	const selectBugsWithoutBody = `
 		SELECT b.number, b.title, '' AS body, b.status, b.authorId, b.assigneeUserId,
-			(SELECT COUNT(*) FROM bug_events e WHERE e.bugId = b.bugId AND e.kind = ?),
+			COALESCE((SELECT count FROM bug_event_counts c WHERE c.bugId = b.bugId AND c.kind = ?), 0),
 			b.createdOnUnixMilli, b.updatedOnUnixMilli
 		FROM bugs b
 	`
@@ -170,21 +170,10 @@ func (db webDb) SetBugStatus(writeCtx context.Context, repoId uint64, number uin
 	return e, false, nil
 }
 
-// Also bumps the bug's updatedOn. The caller must insert the kind's details.
-// Returns ErrTooManyBugEvents if the bug has MaxBugEvents already.
+// Also bumps the bug's updatedOn and its count of the kind. The caller must
+// insert the kind's details.
 func (db webDb) insertBugEvent(writeCtx context.Context, repoId uint64, number uint64,
 	kind bug.EventKind, authorId int64) (e bug.Event, isNotFoundErr bool, err error) {
-	var events int
-	err = db.s.QueryRow(writeCtx, `
-		SELECT COUNT(*) FROM bug_events
-		WHERE bugId = (SELECT bugId FROM bugs WHERE repoId = ? AND number = ?)
-	`, repoId, number).Scan(&events)
-	if err != nil {
-		return bug.Event{}, false, fmt.Errorf("failed counting bug events (repoId=%v number=%v): %w", repoId, number, err)
-	}
-	if events >= MaxBugEvents {
-		return bug.Event{}, false, ErrTooManyBugEvents
-	}
 	now := db.getNow().UnixMilli()
 	var bugId uint64
 	err = db.s.QueryRow(writeCtx, `
@@ -206,6 +195,13 @@ func (db webDb) insertBugEvent(writeCtx context.Context, repoId uint64, number u
 	`, bugId, kind, authorId, now).Scan(&eventId)
 	if err != nil {
 		return bug.Event{}, false, fmt.Errorf("failed inserting bug event (bugId=%v): %w", bugId, err)
+	}
+	_, err = db.s.Exec(writeCtx, `
+		INSERT INTO bug_event_counts (bugId, kind, count) VALUES (?, ?, 1)
+		ON CONFLICT (bugId, kind) DO UPDATE SET count = count + 1
+	`, bugId, kind)
+	if err != nil {
+		return bug.Event{}, false, fmt.Errorf("failed counting bug event (bugId=%v): %w", bugId, err)
 	}
 	return bug.NewEvent(eventId, kind, authorId, time.UnixMilli(now).UTC()), false, nil
 }

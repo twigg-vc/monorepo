@@ -277,36 +277,6 @@ func TestGetBugEventsFails(t *testing.T) {
 	}
 }
 
-func TestBugEventsLimit(t *testing.T) {
-	originalMax := webdb.MaxBugEvents
-	webdb.MaxBugEvents = 2
-	t.Cleanup(func() { webdb.MaxBugEvents = originalMax })
-	b, w := newBugsDb(t)
-	for range 2 {
-		if _, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", ""); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	for range 2 {
-		if _, _, err := b.AddBugComment(w, bugsRepoId, 1, bugsAuthorId, "Try jasmine"); err != nil {
-			t.Fatal(err)
-		}
-	}
-	b.SetNower(mockNow{now: time.UnixMilli(300)}, t)
-	_, isNotFoundErr, err := b.AddBugComment(w, bugsRepoId, 1, bugsAuthorId, "Try ginseng")
-	if !errors.Is(err, webdb.ErrTooManyBugEvents) || isNotFoundErr {
-		t.Fatalf("expected ErrTooManyBugEvents, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
-	}
-	got, _, err := b.GetBug(w, bugsRepoId, 1)
-	if err != nil || got.UpdatedOn.UnixMilli() == 300 {
-		t.Fatalf("expected the rejected comment to not bump UpdatedOn, got %v (err=%v)", got.UpdatedOn, err)
-	}
-	if _, _, err := b.AddBugComment(w, bugsRepoId, 2, bugsAuthorId, "Try ginseng"); err != nil {
-		t.Fatalf("expected other bugs to still accept comments, got %v", err)
-	}
-}
-
 func TestGetBugCountsComments(t *testing.T) {
 	b, w := newBugsDb(t)
 	for range 2 {
@@ -318,6 +288,9 @@ func TestGetBugCountsComments(t *testing.T) {
 		if _, _, err := b.AddBugComment(w, bugsRepoId, number, bugsAuthorId, "Try jasmine"); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if _, _, err := b.SetBugStatus(w, bugsRepoId, 1, bugsAuthorId, bug.Status_Closed); err != nil {
+		t.Fatal(err)
 	}
 
 	b1, _, err := b.GetBug(w, bugsRepoId, 1)
