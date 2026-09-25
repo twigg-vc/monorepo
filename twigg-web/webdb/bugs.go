@@ -86,8 +86,20 @@ func (db webDb) AddBugComment(writeCtx context.Context, repoId uint64, number ui
 }
 
 // Also bumps the bug's updatedOn. The caller must insert the kind's details.
+// Returns ErrTooManyBugEvents if the bug has MaxBugEvents already.
 func (db webDb) insertBugEvent(writeCtx context.Context, repoId uint64, number uint64,
 	kind bug.EventKind, authorId int64) (e bug.Event, isNotFoundErr bool, err error) {
+	var events int
+	err = db.s.QueryRow(writeCtx, `
+		SELECT COUNT(*) FROM bug_events
+		WHERE bugId = (SELECT bugId FROM bugs WHERE repoId = ? AND number = ?)
+	`, repoId, number).Scan(&events)
+	if err != nil {
+		return bug.Event{}, false, fmt.Errorf("failed counting bug events (repoId=%v number=%v): %w", repoId, number, err)
+	}
+	if events >= MaxBugEvents {
+		return bug.Event{}, false, ErrTooManyBugEvents
+	}
 	now := db.getNow().UnixMilli()
 	var bugId uint64
 	err = db.s.QueryRow(writeCtx, `
