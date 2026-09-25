@@ -465,3 +465,32 @@ func TestGetBugsPageFiltersByStatus(t *testing.T) {
 		t.Fatalf("closed: expected [3 2] and no cursor, got %v cursor=%q", numbers, cursor)
 	}
 }
+
+func TestCountRepoBugs(t *testing.T) {
+	b, w := newBugsDb(t)
+	for range 3 {
+		if _, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := b.CreateBug(w, bugsRepoId+1, bugsAuthorId, "Not this repo", ""); err != nil {
+		t.Fatal(err)
+	}
+	for _, change := range []struct {
+		number uint64
+		status bug.Status
+	}{{1, bug.Status_Closed}, {1, bug.Status_Closed}, {2, bug.Status_Closed}, {1, bug.Status_Open}} {
+		if _, _, err := b.SetBugStatus(w, bugsRepoId, change.number, bugsAuthorId, change.status); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	open, closed, err := b.CountRepoBugs(w, bugsRepoId)
+	if err != nil || open != 2 || closed != 1 {
+		t.Fatalf("expected 2 open and 1 closed, got open=%d closed=%d (err=%v)", open, closed, err)
+	}
+	open, closed, err = b.CountRepoBugs(w, bugsRepoId+2)
+	if err != nil || open != 0 || closed != 0 {
+		t.Fatalf("expected no bugs in a repo without them, got open=%d closed=%d (err=%v)", open, closed, err)
+	}
+}
