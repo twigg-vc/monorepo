@@ -494,3 +494,49 @@ func TestCountRepoBugs(t *testing.T) {
 		t.Fatalf("expected no bugs in a repo without them, got open=%d closed=%d (err=%v)", open, closed, err)
 	}
 }
+
+func TestEditBugDescription(t *testing.T) {
+	b, w := newBugsDb(t)
+	b.SetNower(mockNow{now: time.UnixMilli(199)}, t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "The tea is cold")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const editorId = bugsAuthorId + 1
+
+	b.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+	e, isNotFoundErr, err := b.EditBugDescription(w, bugsRepoId, created.Number, editorId, "The tea is lukewarm")
+	if err != nil || isNotFoundErr {
+		t.Fatalf("EditBugDescription: isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if e.CreatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamp: event %+v", e)
+	}
+	e.CreatedOn = time.Time{}
+	want := bug.Event{
+		Id:              1,
+		Kind:            bug.EventKind_DescriptionEdit,
+		AuthorUserId:    editorId,
+		CreatedOn:       time.Time{},
+		DescriptionEdit: bug.DescriptionEdit{OldBody: "The tea is cold"},
+	}
+	if !reflect.DeepEqual(e, want) {
+		t.Fatalf("EditBugDescription: expected %+v, got %+v", want, e)
+	}
+	b.SetNower(mockNow{now: time.UnixMilli(201)}, t)
+	if _, _, err := b.EditBugDescription(w, bugsRepoId, created.Number, editorId, "The tea is hot"); err != nil {
+		t.Fatal(err)
+	}
+
+	got, _, err := b.GetBug(w, bugsRepoId, created.Number)
+	if err != nil || got.Body != "The tea is hot" || got.UpdatedOn.UnixMilli() != 201 {
+		t.Fatalf("expected the latest body updated at 201, got %+v (err=%v)", got, err)
+	}
+	events, _, err := b.GetBugEvents(w, bugsRepoId, created.Number, "", 10)
+	if err != nil || len(events) != 2 ||
+		events[0].DescriptionEdit.OldBody != "The tea is cold" ||
+		events[1].DescriptionEdit.OldBody != "The tea is lukewarm" {
+		t.Fatalf("expected the old bodies in order, got %+v (err=%v)", events, err)
+	}
+}
