@@ -2,7 +2,6 @@ package wrappers
 
 import (
 	"monorepo/twigg-web/featureflags"
-	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/session"
 	"net/http"
 )
@@ -22,7 +21,7 @@ func (m authMux) HandleFunc(
 			return
 		}
 		if !ok {
-			http.Redirect(w, r, routes.LoginPage, http.StatusSeeOther)
+			redirectToLoginOrUnauthorized(w, r)
 			return
 		}
 		handler(w, AuthMuxRequest{Request: r, Username: username, UserId: userId,
