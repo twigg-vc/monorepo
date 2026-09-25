@@ -43,8 +43,36 @@ func (db webDb) CreateBug(writeCtx context.Context, repoId uint64, authorId int6
 	if err != nil {
 		return bug.Bug{}, fmt.Errorf("failed inserting bug (repoId=%v): %w", repoId, err)
 	}
+	err = db.addRepoBugCount(writeCtx, repoId, bug.Status_Open, 1)
+	if err != nil {
+		return bug.Bug{}, err
+	}
 	b, _, err := db.GetBug(writeCtx, repoId, number)
 	return b, err
+}
+
+func (db webDb) addRepoBugCount(writeCtx context.Context, repoId uint64,
+	status bug.Status, delta int64) error {
+	_, err := db.s.Exec(writeCtx, `
+		INSERT INTO repo_bug_counts (repoId, status, count) VALUES (?, ?, ?)
+		ON CONFLICT (repoId, status) DO UPDATE SET count = count + excluded.count
+	`, repoId, status, delta)
+	if err != nil {
+		return fmt.Errorf("failed counting %s bugs (repoId=%v): %w", status, repoId, err)
+	}
+	return nil
+}
+
+func (db webDb) CountRepoBugs(ctx context.Context, repoId uint64) (open, closed int64, err error) {
+	err = db.s.QueryRow(ctx, `
+		SELECT
+			COALESCE((SELECT count FROM repo_bug_counts WHERE repoId = ? AND status = ?), 0),
+			COALESCE((SELECT count FROM repo_bug_counts WHERE repoId = ? AND status = ?), 0)
+	`, repoId, bug.Status_Open, repoId, bug.Status_Closed).Scan(&open, &closed)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed counting bugs (repoId=%v): %w", repoId, err)
+	}
+	return open, closed, nil
 }
 
 func (db webDb) GetBug(ctx context.Context, repoId uint64, number uint64) (
@@ -160,11 +188,28 @@ func (db webDb) SetBugStatus(writeCtx context.Context, repoId uint64, number uin
 	if err != nil {
 		return bug.Event{}, false, fmt.Errorf("failed inserting bug status change: %w", err)
 	}
+	var oldStatus bug.Status
+	err = db.s.QueryRow(writeCtx, `
+		SELECT status FROM bugs WHERE repoId = ? AND number = ?
+	`, repoId, number).Scan(&oldStatus)
+	if err != nil {
+		return bug.Event{}, false, fmt.Errorf("failed getting bug status (repoId=%v number=%v): %w", repoId, number, err)
+	}
 	_, err = db.s.Exec(writeCtx, `
 		UPDATE bugs SET status = ? WHERE repoId = ? AND number = ?
 	`, status, repoId, number)
 	if err != nil {
 		return bug.Event{}, false, fmt.Errorf("failed setting bug status (repoId=%v number=%v): %w", repoId, number, err)
+	}
+	if oldStatus != status {
+		err = db.addRepoBugCount(writeCtx, repoId, oldStatus, -1)
+		if err != nil {
+			return bug.Event{}, false, err
+		}
+		err = db.addRepoBugCount(writeCtx, repoId, status, 1)
+		if err != nil {
+			return bug.Event{}, false, err
+		}
 	}
 	e.StatusChange = bug.NewStatusChange(status)
 	return e, false, nil

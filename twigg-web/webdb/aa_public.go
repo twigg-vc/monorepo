@@ -1050,6 +1050,11 @@ func (db WebDb) GetBugsPage(ctx context.Context, repoId uint64, status bug.Statu
 	return db.db.GetBugsPage(ctx, repoId, status, cursor, limit)
 }
 
+// Returns how many open and closed bugs the repo has.
+func (db WebDb) CountRepoBugs(ctx context.Context, repoId uint64) (open, closed int64, err error) {
+	return db.db.CountRepoBugs(ctx, repoId)
+}
+
 // Sets the status and records it in the bug's timeline. Returns ErrNotFound
 // if the repo has no bug with the number.
 func (db WebDb) SetBugStatus(writeCtx context.Context, repoId uint64, number uint64,
