@@ -1051,6 +1051,14 @@ func (db WebDb) AddBugComment(writeCtx context.Context, repoId uint64, number ui
 	return db.db.AddBugComment(writeCtx, repoId, number, authorId, body)
 }
 
+// Returns up to limit of the repo's newest bugs, without their Body, and the
+// cursor of the older bugs after them. status="" returns bugs of any status.
+// An empty cursor reads the newest ones, and the last page returns an empty one.
+func (db WebDb) GetBugsPage(ctx context.Context, repoId uint64, status bug.Status,
+	cursor string, limit int) (bugs []bug.Bug, nextCursor string, err error) {
+	return db.db.GetBugsPage(ctx, repoId, status, cursor, limit)
+}
+
 // Sets the status and records it in the bug's timeline. Returns ErrNotFound
 // if the repo has no bug with the number, and ErrTooManyBugEvents if it has
 // MaxBugEvents already.
