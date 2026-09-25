@@ -329,3 +329,47 @@ func TestGetBugCountsComments(t *testing.T) {
 		t.Fatalf("b/2: expected 1 comment, got %d (err=%v)", b2.CommentCount, err)
 	}
 }
+
+func TestSetBugStatus(t *testing.T) {
+	b, w := newBugsDb(t)
+	b.SetNower(mockNow{now: time.UnixMilli(199)}, t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const closerId = bugsAuthorId + 1
+	b.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+
+	e, isNotFoundErr, err := b.SetBugStatus(w, bugsRepoId, created.Number, closerId, bug.Status_Closed)
+	if err != nil || isNotFoundErr {
+		t.Fatalf("SetBugStatus: isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if e.CreatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamp: event %+v", e)
+	}
+	e.CreatedOn = time.Time{}
+	want := bug.Event{
+		Id:           1,
+		Kind:         bug.EventKind_StatusChange,
+		AuthorUserId: closerId,
+		CreatedOn:    time.Time{},
+		StatusChange: bug.StatusChange{NewStatus: bug.Status_Closed},
+	}
+	if !reflect.DeepEqual(e, want) {
+		t.Fatalf("SetBugStatus: expected %+v, got %+v", want, e)
+	}
+
+	got, _, err := b.GetBug(w, bugsRepoId, created.Number)
+	if err != nil || got.Status != bug.Status_Closed || got.UpdatedOn.UnixMilli() != 200 {
+		t.Fatalf("expected a closed bug updated at 200, got %+v (err=%v)", got, err)
+	}
+	events, _, err := b.GetBugEvents(w, bugsRepoId, created.Number, "", 10)
+	if err != nil || len(events) != 1 {
+		t.Fatalf("expected 1 event, got %+v (err=%v)", events, err)
+	}
+	events[0].CreatedOn = time.Time{}
+	if !reflect.DeepEqual(events[0], want) {
+		t.Fatalf("GetBugEvents: expected %+v, got %+v", want, events[0])
+	}
+}
