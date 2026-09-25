@@ -49,6 +49,7 @@ const (
 	EventKind_Comment         EventKind = 1
 	EventKind_StatusChange    EventKind = 2
 	EventKind_DescriptionEdit EventKind = 3
+	EventKind_TitleEdit       EventKind = 4
 )
 
 // Something that happened to a bug, shown in its timeline. Only the details
@@ -61,6 +62,7 @@ type Event struct {
 	Comment         Comment
 	StatusChange    StatusChange
 	DescriptionEdit DescriptionEdit
+	TitleEdit       TitleEdit
 }
 
 func NewEvent(id uint64, kind EventKind, authorUserId int64, createdOn time.Time) Event {
@@ -96,4 +98,14 @@ type DescriptionEdit struct {
 
 func NewDescriptionEdit(oldBody string) DescriptionEdit {
 	return DescriptionEdit{OldBody: oldBody}
+}
+
+// The new title is the OldTitle of the next edit, or the bug's Title for the
+// latest edit.
+type TitleEdit struct {
+	OldTitle string
+}
+
+func NewTitleEdit(oldTitle string) TitleEdit {
+	return TitleEdit{OldTitle: oldTitle}
 }
