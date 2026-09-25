@@ -85,7 +85,7 @@ func (m userWithReadPermissionMux) HandleFuncR(pattern string, handler func(w ht
 		// owner or has read or write permission.
 		if !repo.IsPublic {
 			if !isLoggedIn {
-				http.Redirect(w, r, routes.LoginPage, http.StatusSeeOther)
+				redirectToLoginOrUnauthorized(w, r)
 				return
 			}
 			if usr.Id != ownerUsr.Id {
