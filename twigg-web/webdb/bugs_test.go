@@ -540,3 +540,20 @@ func TestEditBugDescription(t *testing.T) {
 		t.Fatalf("expected the old bodies in order, got %+v (err=%v)", events, err)
 	}
 }
+
+func TestEditBugDescriptionFails(t *testing.T) {
+	b, w := newBugsDb(t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "The tea is cold")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, isNotFoundErr, err := b.EditBugDescription(w, bugsRepoId, created.Number+1, bugsAuthorId, "The tea is hot")
+	if !isNotFoundErr || !errors.Is(err, webdb.ErrNotFound) {
+		t.Fatalf("expected not found, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	events, _, err := b.GetBugEvents(w, bugsRepoId, created.Number, "", 10)
+	if err != nil || len(events) != 0 {
+		t.Fatalf("expected no events, got %+v (err=%v)", events, err)
+	}
+}
