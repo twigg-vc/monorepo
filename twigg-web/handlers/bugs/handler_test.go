@@ -8,12 +8,15 @@ import (
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/services/bugpermissions"
 	"monorepo/twigg-web/user"
+	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 )
 
 const testRepoId = uint64(7)
@@ -45,6 +48,53 @@ func newReadReq(target string) wrappers.UserWithReadPermissionMuxRequest {
 		Request: httptest.NewRequest("GET", target, nil),
 		Repo:    repo.Repo{Id: testRepoId},
 		Flags:   featureflags.Flags{ShowBugs: true},
+	}
+}
+
+func newWriteReq(u user.User, repoOwnerId int64, body string) wrappers.UserRepoMuxRequest {
+	return wrappers.UserRepoMuxRequest{
+		Request:                 httptest.NewRequest("POST", "/zuko/tea/bugs", strings.NewReader(body)),
+		UserWithWritePermission: u,
+		Repo:                    repo.Repo{Id: testRepoId, OwnerId: repoOwnerId},
+		Flags:                   featureflags.Flags{ShowBugs: true},
+	}
+}
+
+func TestPostBug(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+
+	rec := httptest.NewRecorder()
+	shouldCommit := h.handlePostBug(rec, newWriteReq(user.User{Id: zukoId}, zukoId,
+		`{"Title": "  Fix Iroh's tea  ", "Body": "The tea is cold"}`), w)
+	if rec.Code != http.StatusOK || !shouldCommit {
+		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
+	}
+	var got twiggwc.FrontendBug
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if got.CreatedOn.UnixMilli() != 200 || got.UpdatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamps: %+v", got)
+	}
+	got.CreatedOn, got.UpdatedOn = time.Time{}, time.Time{}
+	want := twiggwc.FrontendBug{
+		Number:           1,
+		Title:            "Fix Iroh's tea",
+		Body:             "The tea is cold",
+		Status:           bug.Status_Open,
+		AuthorUsername:   "zuko",
+		AssigneeUsername: "",
+		CommentCount:     0,
+		CreatedOn:        time.Time{},
+		UpdatedOn:        time.Time{},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("expected %+v, got %+v", want, got)
+	}
+	if _, isNotFoundErr, err := db.GetBug(w, testRepoId, 1); err != nil || isNotFoundErr {
+		t.Fatalf("expected b/1 to be created, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
 	}
 }
 
@@ -116,4 +166,12 @@ func TestGetBugsFails(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("bad status: expected 400, got %d", rec.Code)
 	}
+}
+
+type mockNow struct {
+	now time.Time
+}
+
+func (m mockNow) Now() time.Time {
+	return m.now
 }
