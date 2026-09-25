@@ -3,9 +3,13 @@ package webdb
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"math"
 	"monorepo/twigg-web/bug"
+	"monorepo/twigg-web/services/gobencoding"
+	"slices"
 	"time"
 )
 
@@ -107,4 +111,85 @@ func (db webDb) insertBugEvent(writeCtx context.Context, repoId uint64, number u
 		return bug.Event{}, false, fmt.Errorf("failed inserting bug event (bugId=%v): %w", bugId, err)
 	}
 	return bug.NewEvent(eventId, kind, authorId, time.UnixMilli(now).UTC()), false, nil
+}
+
+func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
+	cursor string, limit int) (events []bug.Event, nextCursor string, err error) {
+	if limit <= 0 {
+		return nil, "", fmt.Errorf("invalid limit %d", limit)
+	}
+	c, err := decodeBugEventsCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	before := uint64(math.MaxUint64)
+	if c.BeforeEventId != 0 {
+		before = c.BeforeEventId
+	}
+	rows, err := db.s.Query(ctx, `
+		SELECT e.eventId, e.kind, e.authorId, e.createdOnUnixMilli,
+			COALESCE(c.body, '')
+		FROM bug_events e
+		LEFT JOIN bug_comments c ON c.eventId = e.eventId
+		WHERE e.bugId = (SELECT bugId FROM bugs WHERE repoId = ? AND number = ?)
+			AND e.eventId < ?
+		ORDER BY e.eventId DESC
+		LIMIT ?
+	`, repoId, number, before, limit+1)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed getting bug events (repoId=%v number=%v): %w", repoId, number, err)
+	}
+	defer rows.Close()
+	events = []bug.Event{}
+	for rows.Next() {
+		var e bug.Event
+		var createdOn int64
+		var commentBody string
+		err := rows.Scan(&e.Id, &e.Kind, &e.AuthorUserId, &createdOn, &commentBody)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed scanning bug event: %w", err)
+		}
+		e.CreatedOn = time.UnixMilli(createdOn).UTC()
+		switch e.Kind {
+		case bug.EventKind_Comment:
+			e.Comment = bug.NewComment(commentBody)
+		default:
+			return nil, "", fmt.Errorf("unknown bug event kind %d (eventId=%d)", e.Kind, e.Id)
+		}
+		events = append(events, e)
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, "", fmt.Errorf("failed iterating bug events: %w", err)
+	}
+	if len(events) > limit {
+		events = events[:limit]
+		nextCursor = bugEventsCursor{BeforeEventId: events[limit-1].Id}.encode()
+	}
+	slices.Reverse(events)
+	return events, nextCursor, nil
+}
+
+type bugEventsCursor struct {
+	BeforeEventId uint64
+}
+
+func (c bugEventsCursor) encode() string {
+	return base64.RawURLEncoding.EncodeToString(gobencoding.Encode(c))
+}
+
+// An empty cursor starts at the newest event.
+func decodeBugEventsCursor(cursor string) (bugEventsCursor, error) {
+	if cursor == "" {
+		return bugEventsCursor{}, nil
+	}
+	encoded, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil {
+		return bugEventsCursor{}, fmt.Errorf("bad cursor: %w", err)
+	}
+	c, err := gobencoding.Decode[bugEventsCursor](encoded)
+	if err != nil {
+		return bugEventsCursor{}, fmt.Errorf("bad cursor: %w", err)
+	}
+	return c, nil
 }

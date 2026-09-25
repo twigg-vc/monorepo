@@ -1041,3 +1041,11 @@ func (db WebDb) AddBugComment(writeCtx context.Context, repoId uint64, number ui
 	authorId int64, body string) (e bug.Event, isNotFoundErr bool, err error) {
 	return db.db.AddBugComment(writeCtx, repoId, number, authorId, body)
 }
+
+// Returns up to limit of the newest events of the bug's timeline, ordered
+// oldest first, and the cursor of the older events before them. An empty
+// cursor reads the newest ones, and the page with the oldest returns an empty one.
+func (db WebDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
+	cursor string, limit int) (events []bug.Event, nextCursor string, err error) {
+	return db.db.GetBugEvents(ctx, repoId, number, cursor, limit)
+}
