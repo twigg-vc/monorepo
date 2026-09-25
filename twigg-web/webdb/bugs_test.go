@@ -450,3 +450,45 @@ func TestGetBugsPage(t *testing.T) {
 		t.Fatalf("exact page: expected [5 4 3 2 1] and no cursor, got %v cursor=%q", numbers, cursor)
 	}
 }
+
+func TestGetBugsPageFiltersByStatus(t *testing.T) {
+	b, w := newBugsDb(t)
+	for range 5 {
+		if _, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, number := range []uint64{2, 3} {
+		if _, _, err := b.SetBugStatus(w, bugsRepoId, number, bugsAuthorId, bug.Status_Closed); err != nil {
+			t.Fatal(err)
+		}
+	}
+	getPage := func(status bug.Status, cursor string, limit int) (numbers []uint64, nextCursor string) {
+		t.Helper()
+		bugs, nextCursor, err := b.GetBugsPage(w, bugsRepoId, status, cursor, limit)
+		if err != nil {
+			t.Fatal(err)
+		}
+		numbers = []uint64{}
+		for _, bg := range bugs {
+			if bg.Status != status {
+				t.Fatalf("expected only %s bugs, got %+v", status, bg)
+			}
+			numbers = append(numbers, bg.Number)
+		}
+		return numbers, nextCursor
+	}
+
+	numbers, cursor := getPage(bug.Status_Open, "", 2)
+	if !reflect.DeepEqual(numbers, []uint64{5, 4}) || cursor == "" {
+		t.Fatalf("open page 1: expected [5 4] and a cursor, got %v cursor=%q", numbers, cursor)
+	}
+	numbers, cursor = getPage(bug.Status_Open, cursor, 2)
+	if !reflect.DeepEqual(numbers, []uint64{1}) || cursor != "" {
+		t.Fatalf("open page 2: expected [1] and no cursor, got %v cursor=%q", numbers, cursor)
+	}
+	numbers, cursor = getPage(bug.Status_Closed, "", 2)
+	if !reflect.DeepEqual(numbers, []uint64{3, 2}) || cursor != "" {
+		t.Fatalf("closed: expected [3 2] and no cursor, got %v cursor=%q", numbers, cursor)
+	}
+}
