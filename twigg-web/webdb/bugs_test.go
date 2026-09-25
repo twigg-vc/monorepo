@@ -373,3 +373,24 @@ func TestSetBugStatus(t *testing.T) {
 		t.Fatalf("GetBugEvents: expected %+v, got %+v", want, events[0])
 	}
 }
+
+func TestSetBugStatusFails(t *testing.T) {
+	b, w := newBugsDb(t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, isNotFoundErr, err := b.SetBugStatus(w, bugsRepoId, created.Number+1, bugsAuthorId, bug.Status_Closed)
+	if !isNotFoundErr || !errors.Is(err, webdb.ErrNotFound) {
+		t.Fatalf("expected not found, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	_, isNotFoundErr, err = b.SetBugStatus(w, bugsRepoId, created.Number, bugsAuthorId, "resolved")
+	if err == nil || isNotFoundErr {
+		t.Fatalf("expected an error for an invalid status, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	got, _, err := b.GetBug(w, bugsRepoId, created.Number)
+	if err != nil || got.Status != bug.Status_Open {
+		t.Fatalf("expected the bug to stay open, got %+v (err=%v)", got, err)
+	}
+}
