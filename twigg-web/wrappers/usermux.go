@@ -46,7 +46,7 @@ func (m userMux) HandleFuncR(pattern string,
 		}
 		usr, isUserNotFoundErr, err := m.userService.Get(dbRead, r.UserId)
 		if isUserNotFoundErr {
-			http.Redirect(w, r.Request, routes.LoginPage, http.StatusSeeOther)
+			redirectToLoginOrUnauthorized(w, r.Request)
 			return
 		}
 		if err != nil {
@@ -114,7 +114,7 @@ func (m userMux) HandleFuncW(pattern string,
 		}
 		usr, isUserNotFoundErr, err := m.userService.Get(dbWrite, r.UserId)
 		if isUserNotFoundErr {
-			http.Redirect(w, r.Request, routes.LoginPage, http.StatusSeeOther)
+			redirectToLoginOrUnauthorized(w, r.Request)
 			return
 		}
 		if err != nil {
