@@ -5,6 +5,7 @@ import (
 	"io"
 	"monorepo/base/iterator"
 	"monorepo/data/blobdb"
+	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/commitsearch"
 	"monorepo/twigg-web/education"
 	"monorepo/twigg-web/job"
@@ -1009,4 +1010,16 @@ func (db WebDb) SetTrackQueueJobStatus(writeCtx context.Context, jobId string,
 func (db WebDb) GetTrackQueueJobIdsByStatus(ctx context.Context,
 	status string) (iterator.I[string], error) {
 	return db.db.GetTrackQueueJobIdsByStatus(ctx, status)
+}
+
+// Creates an open bug with the next number of the repo.
+func (db WebDb) CreateBug(writeCtx context.Context, repoId uint64, authorId int64,
+	title, body string) (bug.Bug, error) {
+	return db.db.CreateBug(writeCtx, repoId, authorId, title, body)
+}
+
+// Returns ErrNotFound if the repo has no bug with the number.
+func (db WebDb) GetBug(ctx context.Context, repoId uint64, number uint64) (
+	b bug.Bug, isNotFoundErr bool, err error) {
+	return db.db.GetBug(ctx, repoId, number)
 }
