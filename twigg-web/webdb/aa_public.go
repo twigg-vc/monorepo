@@ -1023,3 +1023,10 @@ func (db WebDb) GetBug(ctx context.Context, repoId uint64, number uint64) (
 	b bug.Bug, isNotFoundErr bool, err error) {
 	return db.db.GetBug(ctx, repoId, number)
 }
+
+// Records a comment in the bug's timeline. Returns ErrNotFound if the repo
+// has no bug with the number.
+func (db WebDb) AddBugComment(writeCtx context.Context, repoId uint64, number uint64,
+	authorId int64, body string) (e bug.Event, isNotFoundErr bool, err error) {
+	return db.db.AddBugComment(writeCtx, repoId, number, authorId, body)
+}
