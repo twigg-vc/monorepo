@@ -166,3 +166,20 @@ func TestAddBugComment(t *testing.T) {
 		t.Fatalf("expected the comment to bump UpdatedOn to 200, got %v", got.UpdatedOn.UnixMilli())
 	}
 }
+
+func TestAddBugCommentFails(t *testing.T) {
+	b, w := newBugsDb(t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, isNotFoundErr, err := b.AddBugComment(w, bugsRepoId, created.Number+1, bugsAuthorId, "Try jasmine")
+	if !isNotFoundErr || !errors.Is(err, webdb.ErrNotFound) {
+		t.Fatalf("expected not found, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	_, isNotFoundErr, err = b.AddBugComment(w, bugsRepoId, created.Number, bugsAuthorId, "")
+	if err == nil || isNotFoundErr {
+		t.Fatalf("expected an error for an empty comment, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+}
