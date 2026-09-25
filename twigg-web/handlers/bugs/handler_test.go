@@ -75,3 +75,20 @@ func TestGetBugs(t *testing.T) {
 		t.Fatalf("expected the closed b/1 by zuko and no cursor, got %+v", resp)
 	}
 }
+
+func TestGetBugsFails(t *testing.T) {
+	h, _, w, _ := newTestHandler(t)
+
+	req := newReadReq("/zuko/tea/bugs")
+	req.Flags.ShowBugs = false
+	rec := httptest.NewRecorder()
+	h.handleGetBugs(rec, req, w)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("flag off: expected 404, got %d", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	h.handleGetBugs(rec, newReadReq("/zuko/tea/bugs?status=resolved"), w)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("bad status: expected 400, got %d", rec.Code)
+	}
+}
