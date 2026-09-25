@@ -127,3 +127,42 @@ func TestCreateBugWithoutTitleFails(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestAddBugComment(t *testing.T) {
+	b, w := newBugsDb(t)
+	b.SetNower(mockNow{now: time.UnixMilli(199)}, t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const commenterId = bugsAuthorId + 1
+	b.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+
+	e, isNotFoundErr, err := b.AddBugComment(w, bugsRepoId, created.Number, commenterId, "Try jasmine")
+	if err != nil || isNotFoundErr {
+		t.Fatalf("AddBugComment: isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if e.CreatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamp: event %+v", e)
+	}
+	e.CreatedOn = time.Time{}
+	want := bug.Event{
+		Id:           1,
+		Kind:         bug.EventKind_Comment,
+		AuthorUserId: commenterId,
+		CreatedOn:    time.Time{},
+		Comment:      bug.Comment{Body: "Try jasmine"},
+	}
+	if !reflect.DeepEqual(e, want) {
+		t.Fatalf("AddBugComment: expected %+v, got %+v", want, e)
+	}
+
+	got, _, err := b.GetBug(w, bugsRepoId, created.Number)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.UpdatedOn.UnixMilli() != 200 {
+		t.Fatalf("expected the comment to bump UpdatedOn to 200, got %v", got.UpdatedOn.UnixMilli())
+	}
+}
