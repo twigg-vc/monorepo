@@ -1062,6 +1062,13 @@ func (db WebDb) SetBugStatus(writeCtx context.Context, repoId uint64, number uin
 	return db.db.SetBugStatus(writeCtx, repoId, number, authorId, status)
 }
 
+// Replaces the body and records the old one in the bug's timeline. Returns
+// ErrNotFound if the repo has no bug with the number.
+func (db WebDb) EditBugDescription(writeCtx context.Context, repoId uint64, number uint64,
+	authorId int64, newBody string) (e bug.Event, isNotFoundErr bool, err error) {
+	return db.db.EditBugDescription(writeCtx, repoId, number, authorId, newBody)
+}
+
 // Returns up to limit of the newest events of the bug's timeline, ordered
 // oldest first, and the cursor of the older events before them. An empty
 // cursor reads the newest ones, and the page with the oldest returns an empty one.
