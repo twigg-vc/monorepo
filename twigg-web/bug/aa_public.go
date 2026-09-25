@@ -13,6 +13,11 @@ func (s Status) IsValid() bool {
 	return s == Status_Open || s == Status_Closed
 }
 
+const (
+	MaxTitleLen = 200 // in characters
+	MaxBodyLen  = 64 * 1024
+)
+
 // Number is sequential per repo and is what users see (e.g. "b/3").
 // AssigneeUserId is 0 when unassigned.
 type Bug struct {

@@ -11,9 +11,13 @@ import (
 	"monorepo/twigg-web/wrappers"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 )
 
 const bugsPageSize = 25
+
+// JSON escapes can make the body take more bytes than its text.
+const maxRequestBytes = 2*bug.MaxBodyLen + 1024
 
 type handler struct {
 	db    Db
@@ -89,7 +93,7 @@ func (h handler) handlePostBug(w http.ResponseWriter,
 		return false
 	}
 	var req PostBugRequest
-	err = json.NewDecoder(r.Request.Body).Decode(&req)
+	err = json.NewDecoder(http.MaxBytesReader(w, r.Request.Body, maxRequestBytes)).Decode(&req)
 	if err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return false
@@ -97,6 +101,14 @@ func (h handler) handlePostBug(w http.ResponseWriter,
 	req.Title = strings.TrimSpace(req.Title)
 	if req.Title == "" {
 		http.Error(w, "the title is required", http.StatusBadRequest)
+		return false
+	}
+	if utf8.RuneCountInString(req.Title) > bug.MaxTitleLen {
+		http.Error(w, "the title is too long", http.StatusBadRequest)
+		return false
+	}
+	if len(req.Body) > bug.MaxBodyLen {
+		http.Error(w, "the body is too long", http.StatusBadRequest)
 		return false
 	}
 	b, err := h.db.CreateBug(dbWrite, r.Repo.Id, r.UserWithWritePermission.Id, req.Title, req.Body)

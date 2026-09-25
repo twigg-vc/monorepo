@@ -205,3 +205,27 @@ func TestPostBugFails(t *testing.T) {
 		t.Fatalf("invalid json: expected 400, got %d", code)
 	}
 }
+
+func TestPostBugLimitsItsSize(t *testing.T) {
+	h, _, w, zukoId := newTestHandler(t)
+	post := func(title, body string) int {
+		t.Helper()
+		reqBody, err := json.Marshal(PostBugRequest{Title: title, Body: body})
+		if err != nil {
+			t.Fatal(err)
+		}
+		rec := httptest.NewRecorder()
+		h.handlePostBug(rec, newWriteReq(user.User{Id: zukoId}, zukoId, string(reqBody)), w)
+		return rec.Code
+	}
+
+	if code := post(strings.Repeat("茶", bug.MaxTitleLen), ""); code != http.StatusOK {
+		t.Fatalf("title of %d characters: expected 200, got %d", bug.MaxTitleLen, code)
+	}
+	if code := post(strings.Repeat("a", bug.MaxTitleLen+1), ""); code != http.StatusBadRequest {
+		t.Fatalf("title too long: expected 400, got %d", code)
+	}
+	if code := post("Fix Iroh's tea", strings.Repeat("a", bug.MaxBodyLen+1)); code != http.StatusBadRequest {
+		t.Fatalf("body too long: expected 400, got %d", code)
+	}
+}
