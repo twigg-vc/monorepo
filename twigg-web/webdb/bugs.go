@@ -17,7 +17,7 @@ func scanBug(s rowScanner) (bug.Bug, error) {
 	var b bug.Bug
 	var createdOn, updatedOn int64
 	err := s.Scan(&b.Number, &b.Title, &b.Body, &b.Status, &b.AuthorUserId,
-		&b.AssigneeUserId, &createdOn, &updatedOn)
+		&b.AssigneeUserId, &b.CommentCount, &createdOn, &updatedOn)
 	if err != nil {
 		return bug.Bug{}, err
 	}
@@ -50,11 +50,12 @@ func (db webDb) CreateBug(writeCtx context.Context, repoId uint64, authorId int6
 func (db webDb) GetBug(ctx context.Context, repoId uint64, number uint64) (
 	b bug.Bug, isNotFoundErr bool, err error) {
 	row := db.s.QueryRow(ctx, `
-		SELECT number, title, body, status, authorId, assigneeUserId,
-			createdOnUnixMilli, updatedOnUnixMilli
-		FROM bugs
-		WHERE repoId = ? AND number = ?
-	`, repoId, number)
+		SELECT b.number, b.title, b.body, b.status, b.authorId, b.assigneeUserId,
+			(SELECT COUNT(*) FROM bug_events e WHERE e.bugId = b.bugId AND e.kind = ?),
+			b.createdOnUnixMilli, b.updatedOnUnixMilli
+		FROM bugs b
+		WHERE b.repoId = ? AND b.number = ?
+	`, bug.EventKind_Comment, repoId, number)
 	b, err = scanBug(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return bug.Bug{}, true, ErrNotFound

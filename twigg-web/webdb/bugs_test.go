@@ -63,6 +63,7 @@ func TestCreateAndGetBug(t *testing.T) {
 		Status:         bug.Status_Open,
 		AuthorUserId:   bugsAuthorId,
 		AssigneeUserId: 0,
+		CommentCount:   0,
 		CreatedOn:      time.Time{},
 		UpdatedOn:      time.Time{},
 	}
@@ -303,5 +304,28 @@ func TestBugEventsLimit(t *testing.T) {
 	}
 	if _, _, err := b.AddBugComment(w, bugsRepoId, 2, bugsAuthorId, "Try ginseng"); err != nil {
 		t.Fatalf("expected other bugs to still accept comments, got %v", err)
+	}
+}
+
+func TestGetBugCountsComments(t *testing.T) {
+	b, w := newBugsDb(t)
+	for range 2 {
+		if _, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, number := range []uint64{1, 2, 1} {
+		if _, _, err := b.AddBugComment(w, bugsRepoId, number, bugsAuthorId, "Try jasmine"); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	b1, _, err := b.GetBug(w, bugsRepoId, 1)
+	if err != nil || b1.CommentCount != 2 {
+		t.Fatalf("b/1: expected 2 comments, got %d (err=%v)", b1.CommentCount, err)
+	}
+	b2, _, err := b.GetBug(w, bugsRepoId, 2)
+	if err != nil || b2.CommentCount != 1 {
+		t.Fatalf("b/2: expected 1 comment, got %d (err=%v)", b2.CommentCount, err)
 	}
 }
