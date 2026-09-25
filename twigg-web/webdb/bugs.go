@@ -157,7 +157,7 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 	if limit <= 0 {
 		return nil, "", fmt.Errorf("invalid limit %d", limit)
 	}
-	c, err := decodeBugEventsCursor(cursor)
+	c, err := decodeCursor[bugEventsCursor](cursor)
 	if err != nil {
 		return nil, "", err
 	}
@@ -209,7 +209,7 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 	}
 	if len(events) > limit {
 		events = events[:limit]
-		nextCursor = bugEventsCursor{BeforeEventId: events[limit-1].Id}.encode()
+		nextCursor = encodeCursor(bugEventsCursor{BeforeEventId: events[limit-1].Id})
 	}
 	slices.Reverse(events)
 	return events, nextCursor, nil
@@ -219,22 +219,23 @@ type bugEventsCursor struct {
 	BeforeEventId uint64
 }
 
-func (c bugEventsCursor) encode() string {
+func encodeCursor[C any](c C) string {
 	return base64.RawURLEncoding.EncodeToString(gobencoding.Encode(c))
 }
 
-// An empty cursor starts at the newest event.
-func decodeBugEventsCursor(cursor string) (bugEventsCursor, error) {
+// An empty cursor decodes to the zero C, which starts at the newest.
+func decodeCursor[C any](cursor string) (C, error) {
+	var zero C
 	if cursor == "" {
-		return bugEventsCursor{}, nil
+		return zero, nil
 	}
 	encoded, err := base64.RawURLEncoding.DecodeString(cursor)
 	if err != nil {
-		return bugEventsCursor{}, fmt.Errorf("bad cursor: %w", err)
+		return zero, fmt.Errorf("bad cursor: %w", err)
 	}
-	c, err := gobencoding.Decode[bugEventsCursor](encoded)
+	c, err := gobencoding.Decode[C](encoded)
 	if err != nil {
-		return bugEventsCursor{}, fmt.Errorf("bad cursor: %w", err)
+		return zero, fmt.Errorf("bad cursor: %w", err)
 	}
 	return c, nil
 }
