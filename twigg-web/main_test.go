@@ -3386,3 +3386,19 @@ func TestBugs(t *testing.T) {
 	b.Get("/aang/BookOne/b/1")
 	b.CheckCurrentPageContains("<title>b/1</title>", "appa did it", "found it", "it was appa", "</bug-page>")
 }
+
+func TestBugsLetCollaboratorsWrite(t *testing.T) {
+	srv := GetMockServer(t)
+	katara := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, katara, "katara@twigg.vc") // has write permission on aang/BookOne
+	post := func(path string, body any) {
+		t.Helper()
+		if code := katara.PostJson(path, body); code != http.StatusOK {
+			t.Fatalf("post %s: expected 200, got %d: %s", path, code, katara.lastResponse)
+		}
+	}
+
+	post("/aang/BookOne/bugs", bugs.PostBugRequest{Title: "Momo ate the moon peach"})
+	post("/aang/BookOne/b/1/comments", bugs.PostCommentRequest{Body: "It was Appa"})
+	post("/aang/BookOne/b/1/status", bugs.PostStatusRequest{Status: bug.Status_Closed})
+}
