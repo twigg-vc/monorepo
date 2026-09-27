@@ -416,3 +416,48 @@ func TestPostComment(t *testing.T) {
 		t.Fatalf("expected the comment to be stored, got %+v (err=%v)", events, err)
 	}
 }
+
+func TestPostCommentFails(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	zuko, stranger := user.User{Id: zukoId, Username: "zuko"}, user.User{Id: zukoId + 1}
+	post := func(u user.User, number string, flag bool, body string) int {
+		t.Helper()
+		req := newBugWriteReq(u, zukoId, number, body)
+		req.Flags.ShowBugs = flag
+		rec := httptest.NewRecorder()
+		if h.handlePostComment(rec, req, w) {
+			t.Fatalf("expected no commit, got %d: %s", rec.Code, rec.Body)
+		}
+		return rec.Code
+	}
+	const comment = `{"Body": "Try jasmine"}`
+
+	if code := post(stranger, "1", true, comment); code != http.StatusForbidden {
+		t.Fatalf("stranger: expected 403, got %d", code)
+	}
+	if events, _, _ := db.GetBugEvents(w, testRepoId, 1, "", 10); len(events) != 0 {
+		t.Fatalf("expected the stranger's comment to not be stored, got %+v", events)
+	}
+	if code := post(zuko, "1", false, comment); code != http.StatusNotFound {
+		t.Fatalf("flag off: expected 404, got %d", code)
+	}
+	if code := post(zuko, "tea", true, comment); code != http.StatusBadRequest {
+		t.Fatalf("bad number: expected 400, got %d", code)
+	}
+	if code := post(zuko, "2", true, comment); code != http.StatusNotFound {
+		t.Fatalf("missing bug: expected 404, got %d", code)
+	}
+	if code := post(zuko, "1", true, `{"Body": "   "}`); code != http.StatusBadRequest {
+		t.Fatalf("blank comment: expected 400, got %d", code)
+	}
+	tooLong, err := json.Marshal(PostCommentRequest{Body: strings.Repeat("a", bug.MaxBodyLen+1)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code := post(zuko, "1", true, string(tooLong)); code != http.StatusBadRequest {
+		t.Fatalf("comment too long: expected 400, got %d", code)
+	}
+}
