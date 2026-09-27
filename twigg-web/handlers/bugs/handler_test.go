@@ -678,3 +678,55 @@ func TestPostDescriptionFails(t *testing.T) {
 		t.Fatalf("unchanged description: expected 409, got %d", code)
 	}
 }
+
+func TestPostTitle(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	db.SetNower(mockNow{now: time.UnixMilli(199)}, t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+
+	rec := httptest.NewRecorder()
+	shouldCommit := h.handlePostTitle(rec, newBugWriteReq(user.User{Id: zukoId, Username: "zuko"},
+		zukoId, "1", `{"Title": "  Fix Iroh's tea  "}`), w)
+	if rec.Code != http.StatusOK || !shouldCommit {
+		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
+	}
+	var got PostEditResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if got.Bug.CreatedOn.UnixMilli() != 199 || got.Bug.UpdatedOn.UnixMilli() != 200 ||
+		got.Event.CreatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamps: %+v", got)
+	}
+	got.Bug.CreatedOn, got.Bug.UpdatedOn, got.Event.CreatedOn = time.Time{}, time.Time{}, time.Time{}
+	want := PostEditResponse{
+		Bug: twiggwc.FrontendBug{
+			Number:           1,
+			Title:            "Fix Iroh's tea",
+			Body:             "",
+			Status:           bug.Status_Open,
+			AuthorUsername:   "zuko",
+			AssigneeUsername: "",
+			CommentCount:     0,
+			CreatedOn:        time.Time{},
+			UpdatedOn:        time.Time{},
+		},
+		Event: twiggwc.FrontendBugEvent{
+			Id:              1,
+			Kind:            twiggwc.FrontendBugEventKind_TitleEdit,
+			AuthorUsername:  "zuko",
+			CreatedOn:       time.Time{},
+			Comment:         nil,
+			StatusChange:    nil,
+			DescriptionEdit: nil,
+			TitleEdit:       &bug.TitleEdit{OldTitle: "Iroh's tea"},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("expected %+v, got %+v", want, got)
+	}
+}
