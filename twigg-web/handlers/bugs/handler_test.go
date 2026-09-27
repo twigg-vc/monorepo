@@ -730,3 +730,44 @@ func TestPostTitle(t *testing.T) {
 		t.Fatalf("expected %+v, got %+v", want, got)
 	}
 }
+
+func TestPostTitleFails(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	zuko, stranger := user.User{Id: zukoId, Username: "zuko"}, user.User{Id: zukoId + 1}
+	post := func(u user.User, number string, flag bool, body string) int {
+		t.Helper()
+		req := newBugWriteReq(u, zukoId, number, body)
+		req.Flags.ShowBugs = flag
+		rec := httptest.NewRecorder()
+		if h.handlePostTitle(rec, req, w) {
+			t.Fatalf("expected no commit, got %d: %s", rec.Code, rec.Body)
+		}
+		return rec.Code
+	}
+	const newTitle = `{"Title": "Fix Zuko's tea"}`
+
+	if code := post(stranger, "1", true, newTitle); code != http.StatusForbidden {
+		t.Fatalf("stranger: expected 403, got %d", code)
+	}
+	if b, _, _ := db.GetBug(w, testRepoId, 1); b.Title != "Fix Iroh's tea" {
+		t.Fatalf("expected the title to stay, got %+v", b)
+	}
+	if code := post(zuko, "1", false, newTitle); code != http.StatusNotFound {
+		t.Fatalf("flag off: expected 404, got %d", code)
+	}
+	if code := post(zuko, "2", true, newTitle); code != http.StatusNotFound {
+		t.Fatalf("missing bug: expected 404, got %d", code)
+	}
+	if code := post(zuko, "1", true, `{"Title": "   "}`); code != http.StatusBadRequest {
+		t.Fatalf("blank title: expected 400, got %d", code)
+	}
+	if code := post(zuko, "1", true, `{"Title": "`+strings.Repeat("a", bug.MaxTitleLen+1)+`"}`); code != http.StatusBadRequest {
+		t.Fatalf("title too long: expected 400, got %d", code)
+	}
+	if code := post(zuko, "1", true, `{"Title": " Fix Iroh's tea "}`); code != http.StatusConflict {
+		t.Fatalf("unchanged title: expected 409, got %d", code)
+	}
+}
