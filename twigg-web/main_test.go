@@ -3425,3 +3425,31 @@ func TestBugsOfPrivateReposAreHidden(t *testing.T) {
 	anonymous.Get("/aang/BookOne/b/1")
 	anonymous.CheckCurrentPath(routes.LoginPage)
 }
+
+func TestBugsOfPublicReposAreReadOnlyForOthers(t *testing.T) {
+	srv := GetMockServer(t)
+	aang := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, aang, "aang@twigg.vc")
+	if code := aang.PostJson("/aang/BookOne/bugs", bugs.PostBugRequest{Title: "Momo ate the moon peach"}); code != http.StatusOK {
+		t.Fatalf("create bug: expected 200, got %d: %s", code, aang.lastResponse)
+	}
+	aang.Post("/aang/BookOne/settings/set-public", nil)
+	momo := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthRegistration(srv, momo, "momo@northern-temple.air", "momo")
+	anonymous := NewTestBrowser(srv.C.PublicUrl, t)
+	readsButCanNotWrite := func(b *TestBrowser) {
+		t.Helper()
+		b.Get("/aang/BookOne/bugs")
+		var list bugs.GetBugsResponse
+		if err := json.Unmarshal(b.lastResponse, &list); err != nil || len(list.Bugs) != 1 || list.CanCreate {
+			t.Fatalf("expected to read the bug but not create, got %+v (err=%v)", list, err)
+		}
+		b.Get("/aang/BookOne/b/1")
+		b.CheckCurrentPageNotContains("canwrite")
+		b.CheckPostJsonErrors("/aang/BookOne/bugs", bugs.PostBugRequest{Title: "Mine now"})
+		b.CheckPostJsonErrors("/aang/BookOne/b/1/comments", bugs.PostCommentRequest{Body: "Mine now"})
+	}
+
+	readsButCanNotWrite(momo)
+	readsButCanNotWrite(anonymous)
+}
