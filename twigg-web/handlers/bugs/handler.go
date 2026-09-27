@@ -296,6 +296,64 @@ func (h handler) handlePostStatus(w http.ResponseWriter,
 	return true
 }
 
+// Takes the "description" form field, which is what <cl-description> posts.
+func (h handler) handlePostDescription(w http.ResponseWriter,
+	r wrappers.UserRepoMuxRequest, dbWrite context.Context) (shouldCommit bool) {
+	if !r.Flags.ShowBugs {
+		http.NotFound(w, r.Request)
+		return false
+	}
+	b, ok := h.getWritableBug(w, r, dbWrite)
+	if !ok {
+		return false
+	}
+	r.Request.Body = http.MaxBytesReader(w, r.Request.Body, maxRequestBytes)
+	newBody := twiggwc.ParsePostClDescription(r.Request)
+	if len(newBody) > bug.MaxBodyLen {
+		http.Error(w, "the description is too long", http.StatusBadRequest)
+		return false
+	}
+	if newBody == b.Body {
+		http.Error(w, "the description is unchanged", http.StatusConflict)
+		return false
+	}
+	e, _, err := h.db.EditBugDescription(dbWrite, r.Repo.Id, b.Number, r.UserWithWritePermission.Id, newBody)
+	if err != nil {
+		log.Printf("failed to edit the description of b/%d of repo id=%d: %s", b.Number, r.Repo.Id, err)
+		http.Error(w, "failed to edit the description", http.StatusInternalServerError)
+		return false
+	}
+	return h.writeEditResponse(w, r, dbWrite, b.Number, e)
+}
+
+// Writes the edited bug and its new event. Returns whether it succeeded.
+func (h handler) writeEditResponse(w http.ResponseWriter, r wrappers.UserRepoMuxRequest,
+	dbWrite context.Context, number uint64, e bug.Event) (ok bool) {
+	b, _, err := h.db.GetBug(dbWrite, r.Repo.Id, number)
+	if err != nil {
+		log.Printf("failed to get bug b/%d of repo id=%d: %s", number, r.Repo.Id, err)
+		http.Error(w, "failed to get the bug", http.StatusInternalServerError)
+		return false
+	}
+	frontendBug, ok := newUsernames(h.db, dbWrite, w).getFrontendBug(b)
+	if !ok {
+		return false
+	}
+
+	respJson, err := json.Marshal(PostEditResponse{
+		Bug:   frontendBug,
+		Event: twiggwc.BugEventToFrontend(e, r.UserWithWritePermission.Username),
+	})
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal the edit: %s", err))
+	}
+	_, err = w.Write(respJson)
+	if err != nil {
+		log.Printf("failed to write the edit: %s", err)
+	}
+	return true
+}
+
 // Loads the bug of the request and checks the user can write it. On any
 // error, writes an error to the response and returns ok=false.
 func (h handler) getWritableBug(w http.ResponseWriter, r wrappers.UserRepoMuxRequest,
