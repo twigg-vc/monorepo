@@ -3,9 +3,11 @@ package bugs
 import (
 	"context"
 	"encoding/json"
+	"html"
 	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/featureflags"
 	"monorepo/twigg-web/repo"
+	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/bugpermissions"
 	"monorepo/twigg-web/user"
 	twiggwc "monorepo/twigg-web/webcomponents"
@@ -14,6 +16,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -227,5 +230,86 @@ func TestPostBugLimitsItsSize(t *testing.T) {
 	}
 	if code := post("Fix Iroh's tea", strings.Repeat("a", bug.MaxBodyLen+1)); code != http.StatusBadRequest {
 		t.Fatalf("body too long: expected 400, got %d", code)
+	}
+}
+
+func newBugPageReq(number string, viewer *user.User) wrappers.UserWithReadPermissionMuxRequest {
+	req := newReadReq("/zuko/tea/b/" + number)
+	req.SetPathValue(routes.BugNumberParamName, number)
+	if viewer != nil {
+		req.IsLoggedIn = true
+		req.MaybeUserWithReadPermission = viewer
+	}
+	return req
+}
+
+// Returns the unescaped value of the <bug-page> attribute, or "" without it.
+func bugPageAttr(t *testing.T, page, name string) string {
+	t.Helper()
+	m := regexp.MustCompile(`<bug-page[^>]* ` + name + `(?:="([^"]*)")?[ >]`).FindStringSubmatch(page)
+	if m == nil {
+		return ""
+	}
+	return html.UnescapeString(m[1])
+}
+
+func TestGetBug(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", "The tea is cold"); err != nil {
+		t.Fatal(err)
+	}
+	db.SetNower(mockNow{now: time.UnixMilli(201)}, t)
+	if _, _, err := db.AddBugComment(w, testRepoId, 1, zukoId, "Try jasmine"); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+	h.handleGetBug(rec, newBugPageReq("1", nil), w)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body)
+	}
+	var b twiggwc.FrontendBug
+	if err := json.Unmarshal([]byte(bugPageAttr(t, rec.Body.String(), "Bug")), &b); err != nil {
+		t.Fatal(err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if b.CreatedOn.UnixMilli() != 200 || b.UpdatedOn.UnixMilli() != 201 {
+		t.Fatalf("unexpected timestamps: %+v", b)
+	}
+	b.CreatedOn, b.UpdatedOn = time.Time{}, time.Time{}
+	wantBug := twiggwc.FrontendBug{
+		Number:           1,
+		Title:            "Fix Iroh's tea",
+		Body:             "The tea is cold",
+		Status:           bug.Status_Open,
+		AuthorUsername:   "zuko",
+		AssigneeUsername: "",
+		CommentCount:     1,
+		CreatedOn:        time.Time{},
+		UpdatedOn:        time.Time{},
+	}
+	if !reflect.DeepEqual(b, wantBug) {
+		t.Fatalf("expected %+v, got %+v", wantBug, b)
+	}
+
+	var events []twiggwc.FrontendBugEvent
+	if err := json.Unmarshal([]byte(bugPageAttr(t, rec.Body.String(), "Events")), &events); err != nil {
+		t.Fatal(err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if len(events) != 1 || events[0].CreatedOn.UnixMilli() != 201 {
+		t.Fatalf("unexpected events %+v", events)
+	}
+	events[0].CreatedOn = time.Time{}
+	wantEvents := []twiggwc.FrontendBugEvent{{
+		Id:             1,
+		Kind:           twiggwc.FrontendBugEventKind_Comment,
+		AuthorUsername: "zuko",
+		CreatedOn:      time.Time{},
+		Comment:        &bug.Comment{Body: "Try jasmine"},
+	}}
+	if !reflect.DeepEqual(events, wantEvents) {
+		t.Fatalf("expected %+v, got %+v", wantEvents, events)
 	}
 }
