@@ -554,3 +554,31 @@ func TestPostStatusFails(t *testing.T) {
 		t.Fatalf("unchanged status: expected 409, got %d", code)
 	}
 }
+
+func TestPostStatusWithComment(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	zuko := user.User{Id: zukoId, Username: "zuko"}
+	tooLong, err := json.Marshal(PostStatusRequest{Status: bug.Status_Closed, Comment: strings.Repeat("a", bug.MaxBodyLen+1)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	h.handlePostStatus(rec, newBugWriteReq(zuko, zukoId, "1", string(tooLong)), w)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("comment too long: expected 400, got %d", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	h.handlePostStatus(rec, newBugWriteReq(zuko, zukoId, "1", `{"Status": "closed", "Comment": "Fixed with jasmine"}`), w)
+	var got PostStatusResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Events) != 2 || got.Events[0].Comment.Body != "Fixed with jasmine" ||
+		got.Events[1].StatusChange.NewStatus != bug.Status_Closed || got.Bug.CommentCount != 1 {
+		t.Fatalf("expected the comment, then the status change, got %+v", got)
+	}
+}

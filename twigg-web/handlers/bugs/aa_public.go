@@ -59,8 +59,10 @@ type PostCommentRequest struct {
 	Body string
 }
 
+// Comment is optional. When set, it's recorded before the status change.
 type PostStatusRequest struct {
-	Status bug.Status
+	Status  bug.Status
+	Comment string
 }
 
 // Events are the new ones, oldest first
