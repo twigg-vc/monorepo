@@ -372,3 +372,47 @@ func TestGetBugFails(t *testing.T) {
 		t.Fatalf("missing bug: expected 404, got %d", code)
 	}
 }
+
+func newBugWriteReq(u user.User, repoOwnerId int64, number string, body string) wrappers.UserRepoMuxRequest {
+	req := newWriteReq(u, repoOwnerId, body)
+	req.SetPathValue(routes.BugNumberParamName, number)
+	return req
+}
+
+func TestPostComment(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+
+	rec := httptest.NewRecorder()
+	shouldCommit := h.handlePostComment(rec, newBugWriteReq(user.User{Id: zukoId, Username: "zuko"},
+		zukoId, "1", `{"Body": "Try jasmine"}`), w)
+	if rec.Code != http.StatusOK || !shouldCommit {
+		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
+	}
+	var got twiggwc.FrontendBugEvent
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if got.CreatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamp: %+v", got)
+	}
+	got.CreatedOn = time.Time{}
+	want := twiggwc.FrontendBugEvent{
+		Id:             1,
+		Kind:           twiggwc.FrontendBugEventKind_Comment,
+		AuthorUsername: "zuko",
+		CreatedOn:      time.Time{},
+		Comment:        &bug.Comment{Body: "Try jasmine"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("expected %+v, got %+v", want, got)
+	}
+	events, _, err := db.GetBugEvents(w, testRepoId, 1, "", 10)
+	if err != nil || len(events) != 1 || events[0].Comment.Body != "Try jasmine" {
+		t.Fatalf("expected the comment to be stored, got %+v (err=%v)", events, err)
+	}
+}
