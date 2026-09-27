@@ -16,6 +16,7 @@ func AddHandlers(db Db, perms Permissions, readMux wrappers.UserWithReadPermissi
 	readMux.HandleFuncR("GET "+routes.BugsPattern, h.handleGetBugs)
 	readMux.HandleFuncR("GET "+routes.BugPattern, h.handleGetBug)
 	userRepoMux.HandleFuncW("POST "+routes.BugsPattern, h.handlePostBug)
+	userRepoMux.HandleFuncW("POST "+routes.BugCommentsPattern, h.handlePostComment)
 }
 
 type Db interface {
@@ -27,6 +28,8 @@ type Db interface {
 	GetBug(ctx context.Context, repoId uint64, number uint64) (b bug.Bug, isNotFoundErr bool, err error)
 	GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 		cursor string, limit int) (events []bug.Event, nextCursor string, err error)
+	AddBugComment(writeCtx context.Context, repoId uint64, number uint64,
+		authorId int64, body string) (e bug.Event, isNotFoundErr bool, err error)
 }
 
 // u is nil for anonymous users
@@ -47,4 +50,8 @@ type GetBugsResponse struct {
 type PostBugRequest struct {
 	Title string
 	Body  string
+}
+
+type PostCommentRequest struct {
+	Body string
 }

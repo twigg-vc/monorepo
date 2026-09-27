@@ -85,9 +85,8 @@ func (h handler) handleGetBug(w http.ResponseWriter,
 		http.NotFound(w, r.Request)
 		return
 	}
-	number, err := strconv.ParseUint(r.PathValue(routes.BugNumberParamName), 10, 64)
-	if err != nil {
-		http.Error(w, "invalid bug number", http.StatusBadRequest)
+	number, ok := parseBugNumber(w, r.Request)
+	if !ok {
 		return
 	}
 	b, isNotFoundErr, err := h.db.GetBug(dbRead, r.Repo.Id, number)
@@ -184,6 +183,88 @@ func (h handler) handlePostBug(w http.ResponseWriter,
 		log.Printf("failed to write the bug: %s", err)
 	}
 	return true
+}
+
+func (h handler) handlePostComment(w http.ResponseWriter,
+	r wrappers.UserRepoMuxRequest, dbWrite context.Context) (shouldCommit bool) {
+	if !r.Flags.ShowBugs {
+		http.NotFound(w, r.Request)
+		return false
+	}
+	b, ok := h.getWritableBug(w, r, dbWrite)
+	if !ok {
+		return false
+	}
+	var req PostCommentRequest
+	err := json.NewDecoder(http.MaxBytesReader(w, r.Request.Body, maxRequestBytes)).Decode(&req)
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return false
+	}
+	if strings.TrimSpace(req.Body) == "" {
+		http.Error(w, "the comment is required", http.StatusBadRequest)
+		return false
+	}
+	if len(req.Body) > bug.MaxBodyLen {
+		http.Error(w, "the comment is too long", http.StatusBadRequest)
+		return false
+	}
+	e, _, err := h.db.AddBugComment(dbWrite, r.Repo.Id, b.Number, r.UserWithWritePermission.Id, req.Body)
+	if err != nil {
+		log.Printf("failed to comment on b/%d of repo id=%d: %s", b.Number, r.Repo.Id, err)
+		http.Error(w, "failed to add the comment", http.StatusInternalServerError)
+		return false
+	}
+
+	respJson, err := json.Marshal(twiggwc.BugEventToFrontend(e, r.UserWithWritePermission.Username))
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal the comment: %s", err))
+	}
+	_, err = w.Write(respJson)
+	if err != nil {
+		log.Printf("failed to write the comment: %s", err)
+	}
+	return true
+}
+
+// Loads the bug of the request and checks the user can write it. On any
+// error, writes an error to the response and returns ok=false.
+func (h handler) getWritableBug(w http.ResponseWriter, r wrappers.UserRepoMuxRequest,
+	dbWrite context.Context) (b bug.Bug, ok bool) {
+	number, ok := parseBugNumber(w, r.Request)
+	if !ok {
+		return bug.Bug{}, false
+	}
+	b, isNotFoundErr, err := h.db.GetBug(dbWrite, r.Repo.Id, number)
+	if isNotFoundErr {
+		http.Error(w, "bug not found", http.StatusNotFound)
+		return bug.Bug{}, false
+	}
+	if err != nil {
+		log.Printf("failed to get bug b/%d of repo id=%d: %s", number, r.Repo.Id, err)
+		http.Error(w, "failed to get the bug", http.StatusInternalServerError)
+		return bug.Bug{}, false
+	}
+	canWrite, err := h.perms.CanWriteBug(dbWrite, &r.UserWithWritePermission, r.Repo, b)
+	if err != nil {
+		log.Printf("failed to check if b/%d of repo id=%d can be written: %s", number, r.Repo.Id, err)
+		http.Error(w, "failed to check the permission", http.StatusInternalServerError)
+		return bug.Bug{}, false
+	}
+	if !canWrite {
+		http.Error(w, "you can not change this bug", http.StatusForbidden)
+		return bug.Bug{}, false
+	}
+	return b, true
+}
+
+func parseBugNumber(w http.ResponseWriter, r *http.Request) (number uint64, ok bool) {
+	number, err := strconv.ParseUint(r.PathValue(routes.BugNumberParamName), 10, 64)
+	if err != nil {
+		http.Error(w, "invalid bug number", http.StatusBadRequest)
+		return 0, false
+	}
+	return number, true
 }
 
 // Returns nil for anonymous users.
