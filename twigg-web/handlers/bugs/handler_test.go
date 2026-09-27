@@ -49,8 +49,10 @@ func newTestHandler(t *testing.T) (h handler, db webdb.WebDb, w context.Context,
 func newReadReq(target string) wrappers.UserWithReadPermissionMuxRequest {
 	return wrappers.UserWithReadPermissionMuxRequest{
 		Request: httptest.NewRequest("GET", target, nil),
-		Repo:    repo.Repo{Id: testRepoId},
-		Flags:   featureflags.Flags{ShowBugs: true},
+		// What the mux passes for anonymous users
+		MaybeUserWithReadPermission: &user.User{},
+		Repo:                        repo.Repo{Id: testRepoId},
+		Flags:                       featureflags.Flags{ShowBugs: true},
 	}
 }
 
@@ -311,5 +313,62 @@ func TestGetBug(t *testing.T) {
 	}}
 	if !reflect.DeepEqual(events, wantEvents) {
 		t.Fatalf("expected %+v, got %+v", wantEvents, events)
+	}
+}
+
+func bugPageHasAttr(page, name string) bool {
+	return regexp.MustCompile(`<bug-page[^>]* ` + name + `[ =>]`).MatchString(page)
+}
+
+func TestGetBugLetsWritersWrite(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	canWrite := func(viewer *user.User) bool {
+		t.Helper()
+		req := newBugPageReq("1", viewer)
+		req.Repo.OwnerId = zukoId
+		rec := httptest.NewRecorder()
+		h.handleGetBug(rec, req, w)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body)
+		}
+		return bugPageHasAttr(rec.Body.String(), "CanWrite")
+	}
+
+	if !canWrite(&user.User{Id: zukoId}) {
+		t.Fatal("expected the owner to be able to write")
+	}
+	if canWrite(&user.User{Id: zukoId + 1}) {
+		t.Fatal("expected a stranger to not be able to write")
+	}
+	if canWrite(nil) {
+		t.Fatal("expected anonymous users to not be able to write")
+	}
+}
+
+func TestGetBugFails(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	get := func(req wrappers.UserWithReadPermissionMuxRequest) int {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		h.handleGetBug(rec, req, w)
+		return rec.Code
+	}
+
+	req := newBugPageReq("1", nil)
+	req.Flags.ShowBugs = false
+	if code := get(req); code != http.StatusNotFound {
+		t.Fatalf("flag off: expected 404, got %d", code)
+	}
+	if code := get(newBugPageReq("tea", nil)); code != http.StatusBadRequest {
+		t.Fatalf("bad number: expected 400, got %d", code)
+	}
+	if code := get(newBugPageReq("2", nil)); code != http.StatusNotFound {
+		t.Fatalf("missing bug: expected 404, got %d", code)
 	}
 }
