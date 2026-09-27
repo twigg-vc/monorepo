@@ -251,6 +251,14 @@ func (b *TestBrowser) CheckPostErrors(path string,
 	b.lastResponse = respBytes
 }
 
+// Like CheckPostErrors, but posts body as JSON.
+func (b *TestBrowser) CheckPostJsonErrors(path string, body any) {
+	b.t.Helper()
+	if code := b.PostJson(path, body); code == http.StatusOK {
+		b.t.Fatalf("post %s expected error but got %d", path, code)
+	}
+}
+
 // Sets all the env vars that srvconfig.ProdConfig reads with GetEnvOrDie.
 // Tests that build a prod config must call this first.
 func setProdConfigEnvVars(t testing.TB) {

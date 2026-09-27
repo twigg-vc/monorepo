@@ -3402,3 +3402,26 @@ func TestBugsLetCollaboratorsWrite(t *testing.T) {
 	post("/aang/BookOne/b/1/comments", bugs.PostCommentRequest{Body: "It was Appa"})
 	post("/aang/BookOne/b/1/status", bugs.PostStatusRequest{Status: bug.Status_Closed})
 }
+
+func TestBugsOfPrivateReposAreHidden(t *testing.T) {
+	srv := GetMockServer(t)
+	aang := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, aang, "aang@twigg.vc")
+	if code := aang.PostJson("/aang/BookOne/bugs", bugs.PostBugRequest{Title: "Momo ate the moon peach"}); code != http.StatusOK {
+		t.Fatalf("create bug: expected 200, got %d: %s", code, aang.lastResponse)
+	}
+	momo := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthRegistration(srv, momo, "momo@northern-temple.air", "momo")
+
+	momo.CheckGetErrors("/aang/BookOne/bugs", http.StatusForbidden)
+	momo.CheckGetErrors("/aang/BookOne/b/1", http.StatusForbidden)
+	momo.CheckPostJsonErrors("/aang/BookOne/bugs", bugs.PostBugRequest{Title: "Mine now"})
+	momo.CheckPostJsonErrors("/aang/BookOne/b/1/comments", bugs.PostCommentRequest{Body: "Mine now"})
+	momo.CheckPostJsonErrors("/aang/BookOne/b/1/status", bugs.PostStatusRequest{Status: bug.Status_Closed})
+	momo.CheckPostJsonErrors("/aang/BookOne/b/1/title", bugs.PostTitleRequest{Title: "Mine now"})
+	momo.CheckPostErrors("/aang/BookOne/b/1/description", map[string]string{"description": "Mine now"})
+
+	anonymous := NewTestBrowser(srv.C.PublicUrl, t)
+	anonymous.Get("/aang/BookOne/b/1")
+	anonymous.CheckCurrentPath(routes.LoginPage)
+}
