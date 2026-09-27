@@ -19,6 +19,7 @@ func AddHandlers(db Db, perms Permissions, readMux wrappers.UserWithReadPermissi
 	userRepoMux.HandleFuncW("POST "+routes.BugCommentsPattern, h.handlePostComment)
 	userRepoMux.HandleFuncW("POST "+routes.BugStatusPattern, h.handlePostStatus)
 	userRepoMux.HandleFuncW("POST "+routes.BugDescriptionPattern, h.handlePostDescription)
+	userRepoMux.HandleFuncW("POST "+routes.BugTitlePattern, h.handlePostTitle)
 }
 
 type Db interface {
@@ -36,6 +37,8 @@ type Db interface {
 		authorId int64, status bug.Status) (e bug.Event, isNotFoundErr bool, err error)
 	EditBugDescription(writeCtx context.Context, repoId uint64, number uint64,
 		authorId int64, newBody string) (e bug.Event, isNotFoundErr bool, err error)
+	EditBugTitle(writeCtx context.Context, repoId uint64, number uint64,
+		authorId int64, newTitle string) (e bug.Event, isNotFoundErr bool, err error)
 }
 
 // u is nil for anonymous users
@@ -77,4 +80,8 @@ type PostStatusResponse struct {
 type PostEditResponse struct {
 	Bug   twiggwc.FrontendBug
 	Event twiggwc.FrontendBugEvent
+}
+
+type PostTitleRequest struct {
+	Title string
 }

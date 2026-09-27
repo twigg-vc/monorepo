@@ -150,20 +150,15 @@ func (h handler) handlePostBug(w http.ResponseWriter,
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return false
 	}
-	req.Title = strings.TrimSpace(req.Title)
-	if req.Title == "" {
-		http.Error(w, "the title is required", http.StatusBadRequest)
-		return false
-	}
-	if utf8.RuneCountInString(req.Title) > bug.MaxTitleLen {
-		http.Error(w, "the title is too long", http.StatusBadRequest)
+	title, ok := validateTitle(w, req.Title)
+	if !ok {
 		return false
 	}
 	if len(req.Body) > bug.MaxBodyLen {
 		http.Error(w, "the body is too long", http.StatusBadRequest)
 		return false
 	}
-	b, err := h.db.CreateBug(dbWrite, r.Repo.Id, r.UserWithWritePermission.Id, req.Title, req.Body)
+	b, err := h.db.CreateBug(dbWrite, r.Repo.Id, r.UserWithWritePermission.Id, title, req.Body)
 	if err != nil {
 		log.Printf("failed to create a bug in repo id=%d: %s", r.Repo.Id, err)
 		http.Error(w, "failed to create the bug", http.StatusInternalServerError)
@@ -326,6 +321,39 @@ func (h handler) handlePostDescription(w http.ResponseWriter,
 	return h.writeEditResponse(w, r, dbWrite, b.Number, e)
 }
 
+func (h handler) handlePostTitle(w http.ResponseWriter,
+	r wrappers.UserRepoMuxRequest, dbWrite context.Context) (shouldCommit bool) {
+	if !r.Flags.ShowBugs {
+		http.NotFound(w, r.Request)
+		return false
+	}
+	b, ok := h.getWritableBug(w, r, dbWrite)
+	if !ok {
+		return false
+	}
+	var req PostTitleRequest
+	err := json.NewDecoder(http.MaxBytesReader(w, r.Request.Body, maxRequestBytes)).Decode(&req)
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return false
+	}
+	req.Title, ok = validateTitle(w, req.Title)
+	if !ok {
+		return false
+	}
+	if req.Title == b.Title {
+		http.Error(w, "the title is unchanged", http.StatusConflict)
+		return false
+	}
+	e, _, err := h.db.EditBugTitle(dbWrite, r.Repo.Id, b.Number, r.UserWithWritePermission.Id, req.Title)
+	if err != nil {
+		log.Printf("failed to edit the title of b/%d of repo id=%d: %s", b.Number, r.Repo.Id, err)
+		http.Error(w, "failed to edit the title", http.StatusInternalServerError)
+		return false
+	}
+	return h.writeEditResponse(w, r, dbWrite, b.Number, e)
+}
+
 // Writes the edited bug and its new event. Returns whether it succeeded.
 func (h handler) writeEditResponse(w http.ResponseWriter, r wrappers.UserRepoMuxRequest,
 	dbWrite context.Context, number uint64, e bug.Event) (ok bool) {
@@ -383,6 +411,21 @@ func (h handler) getWritableBug(w http.ResponseWriter, r wrappers.UserRepoMuxReq
 		return bug.Bug{}, false
 	}
 	return b, true
+}
+
+// Returns the trimmed title. On an invalid title, writes an error to the
+// response and returns ok=false.
+func validateTitle(w http.ResponseWriter, title string) (trimmed string, ok bool) {
+	trimmed = strings.TrimSpace(title)
+	if trimmed == "" {
+		http.Error(w, "the title is required", http.StatusBadRequest)
+		return "", false
+	}
+	if utf8.RuneCountInString(trimmed) > bug.MaxTitleLen {
+		http.Error(w, "the title is too long", http.StatusBadRequest)
+		return "", false
+	}
+	return trimmed, true
 }
 
 func parseBugNumber(w http.ResponseWriter, r *http.Request) (number uint64, ok bool) {
