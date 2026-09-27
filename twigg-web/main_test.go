@@ -8,7 +8,9 @@ import (
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-track/runners"
 	"monorepo/twigg-track/trackclient"
+	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/cicdqueue"
+	"monorepo/twigg-web/handlers/bugs"
 	"monorepo/twigg-web/handlers/commit"
 	"monorepo/twigg-web/handlers/jobshandler"
 	"monorepo/twigg-web/handlers/notifications"
@@ -3354,4 +3356,33 @@ func TestCommitSearch(t *testing.T) {
 	b.Post("/aang/BookOne/settings/set-public", nil)
 	other.Get("/aang/BookOne")
 	other.Get(commitSearchPath("create"))
+}
+
+func TestBugs(t *testing.T) {
+	srv := GetMockServer(t)
+	b := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, b, "aang@twigg.vc")
+	post := func(path string, body any) {
+		t.Helper()
+		if code := b.PostJson(path, body); code != http.StatusOK {
+			t.Fatalf("post %s: expected 200, got %d: %s", path, code, b.lastResponse)
+		}
+	}
+
+	post("/aang/BookOne/bugs", bugs.PostBugRequest{Title: "Momo ate the moon peach"})
+	post("/aang/BookOne/b/1/comments", bugs.PostCommentRequest{Body: "Appa did it"})
+	post("/aang/BookOne/b/1/status", bugs.PostStatusRequest{Status: bug.Status_Closed, Comment: "Found it"})
+	b.Post("/aang/BookOne/b/1/description", map[string]string{"description": "It was Appa"})
+	post("/aang/BookOne/b/1/title", bugs.PostTitleRequest{Title: "Appa ate the moon peach"})
+
+	b.Get("/aang/BookOne/bugs?status=closed")
+	var list bugs.GetBugsResponse
+	if err := json.Unmarshal(b.lastResponse, &list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Bugs) != 1 || list.Bugs[0].Title != "Appa ate the moon peach" {
+		t.Fatalf("expected the closed bug in the list, got %+v", list)
+	}
+	b.Get("/aang/BookOne/b/1")
+	b.CheckCurrentPageContains("<title>b/1</title>", "appa did it", "found it", "it was appa", "</bug-page>")
 }
