@@ -259,6 +259,37 @@ func BugToFrontend(b bug.Bug, authorUsername, assigneeUsername string) FrontendB
 	return bugToFrontend(b, authorUsername, assigneeUsername)
 }
 
+type FrontendBugEventKind string
+
+const (
+	FrontendBugEventKind_Comment         FrontendBugEventKind = "comment"
+	FrontendBugEventKind_StatusChange    FrontendBugEventKind = "status-change"
+	FrontendBugEventKind_DescriptionEdit FrontendBugEventKind = "description-edit"
+	FrontendBugEventKind_TitleEdit       FrontendBugEventKind = "title-edit"
+)
+
+// Only the details field matching Kind is set
+type FrontendBugEvent struct {
+	Id              uint64
+	Kind            FrontendBugEventKind
+	AuthorUsername  string
+	CreatedOn       time.Time
+	Comment         *bug.Comment         `json:",omitempty"`
+	StatusChange    *bug.StatusChange    `json:",omitempty"`
+	DescriptionEdit *bug.DescriptionEdit `json:",omitempty"`
+	TitleEdit       *bug.TitleEdit       `json:",omitempty"`
+}
+
+func BugEventToFrontend(e bug.Event, authorUsername string) FrontendBugEvent {
+	return bugEventToFrontend(e, authorUsername)
+}
+
+// Returns the <bug-page> component. events are ordered oldest first.
+func BugPage(repoOwnerName, repoDisplayName string, b FrontendBug,
+	events []FrontendBugEvent, canWrite bool) g.Node {
+	return bugPage(repoOwnerName, repoDisplayName, b, events, canWrite)
+}
+
 type FrontendQueueItem struct {
 	Id          int64
 	PayloadType string
