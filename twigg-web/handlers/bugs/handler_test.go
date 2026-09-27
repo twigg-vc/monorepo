@@ -641,3 +641,40 @@ func TestPostDescription(t *testing.T) {
 		t.Fatalf("expected %+v, got %+v", want, got)
 	}
 }
+
+func TestPostDescriptionFails(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", "The tea is cold"); err != nil {
+		t.Fatal(err)
+	}
+	zuko, stranger := user.User{Id: zukoId, Username: "zuko"}, user.User{Id: zukoId + 1}
+	post := func(u user.User, number string, flag bool, description string) int {
+		t.Helper()
+		req := newDescriptionReq(u, zukoId, number, description)
+		req.Flags.ShowBugs = flag
+		rec := httptest.NewRecorder()
+		if h.handlePostDescription(rec, req, w) {
+			t.Fatalf("expected no commit, got %d: %s", rec.Code, rec.Body)
+		}
+		return rec.Code
+	}
+
+	if code := post(stranger, "1", true, "The tea is hot"); code != http.StatusForbidden {
+		t.Fatalf("stranger: expected 403, got %d", code)
+	}
+	if b, _, _ := db.GetBug(w, testRepoId, 1); b.Body != "The tea is cold" {
+		t.Fatalf("expected the description to stay, got %+v", b)
+	}
+	if code := post(zuko, "1", false, "The tea is hot"); code != http.StatusNotFound {
+		t.Fatalf("flag off: expected 404, got %d", code)
+	}
+	if code := post(zuko, "2", true, "The tea is hot"); code != http.StatusNotFound {
+		t.Fatalf("missing bug: expected 404, got %d", code)
+	}
+	if code := post(zuko, "1", true, strings.Repeat("a", bug.MaxBodyLen+1)); code != http.StatusBadRequest {
+		t.Fatalf("description too long: expected 400, got %d", code)
+	}
+	if code := post(zuko, "1", true, "The tea is cold"); code != http.StatusConflict {
+		t.Fatalf("unchanged description: expected 409, got %d", code)
+	}
+}
