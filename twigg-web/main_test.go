@@ -3453,3 +3453,15 @@ func TestBugsOfPublicReposAreReadOnlyForOthers(t *testing.T) {
 	readsButCanNotWrite(momo)
 	readsButCanNotWrite(anonymous)
 }
+
+func TestBugsBelongToTheirRepo(t *testing.T) {
+	srv := GetMockServer(t)
+	aang := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, aang, "aang@twigg.vc")
+	if code := aang.PostJson("/aang/BookOne/bugs", bugs.PostBugRequest{Title: "Momo ate the moon peach"}); code != http.StatusOK {
+		t.Fatalf("create bug: expected 200, got %d: %s", code, aang.lastResponse)
+	}
+
+	aang.CheckGetErrors("/aang/BookTwo/b/1", http.StatusNotFound)
+	aang.CheckPostJsonErrors("/aang/BookTwo/b/1/comments", bugs.PostCommentRequest{Body: "Wrong repo"})
+}
