@@ -8,13 +8,16 @@ import (
 	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/user"
+	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"net/http"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
 
 const bugsPageSize = 25
+const bugEventsPageSize = 100
 
 // JSON escapes can make the body take more bytes than its text.
 const maxRequestBytes = 2*bug.MaxBodyLen + 1024
@@ -74,6 +77,56 @@ func (h handler) handleGetBugs(w http.ResponseWriter,
 	if err != nil {
 		log.Printf("failed to write the bugs: %s", err)
 	}
+}
+
+func (h handler) handleGetBug(w http.ResponseWriter,
+	r wrappers.UserWithReadPermissionMuxRequest, dbRead context.Context) {
+	if !r.Flags.ShowBugs {
+		http.NotFound(w, r.Request)
+		return
+	}
+	number, err := strconv.ParseUint(r.PathValue(routes.BugNumberParamName), 10, 64)
+	if err != nil {
+		http.Error(w, "invalid bug number", http.StatusBadRequest)
+		return
+	}
+	b, isNotFoundErr, err := h.db.GetBug(dbRead, r.Repo.Id, number)
+	if isNotFoundErr {
+		http.Error(w, "bug not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("failed to get bug b/%d of repo id=%d: %s", number, r.Repo.Id, err)
+		http.Error(w, "failed to get the bug", http.StatusInternalServerError)
+		return
+	}
+	events, _, err := h.db.GetBugEvents(dbRead, r.Repo.Id, number, "", bugEventsPageSize)
+	if err != nil {
+		log.Printf("failed to get the events of b/%d of repo id=%d: %s", number, r.Repo.Id, err)
+		http.Error(w, "failed to get the bug events", http.StatusInternalServerError)
+		return
+	}
+	canWrite, err := h.perms.CanWriteBug(dbRead, viewer(r), r.Repo, b)
+	if err != nil {
+		log.Printf("failed to check if b/%d of repo id=%d can be written: %s", number, r.Repo.Id, err)
+		http.Error(w, "failed to check the permission", http.StatusInternalServerError)
+		return
+	}
+	u := newUsernames(h.db, dbRead, w)
+	frontendBug, ok := u.getFrontendBug(b)
+	if !ok {
+		return
+	}
+	frontendEvents, ok := u.getFrontendBugEvents(events)
+	if !ok {
+		return
+	}
+	twiggwc.PageWithTitle(
+		fmt.Sprintf("b/%d", number),
+		/*hideNavBar=*/ false,
+		r.Flags,
+		twiggwc.BugPage(r.RepoOwnerUsr.Username, r.Repo.DisplayName, frontendBug, frontendEvents, canWrite),
+	).Render(w)
 }
 
 func (h handler) handlePostBug(w http.ResponseWriter,

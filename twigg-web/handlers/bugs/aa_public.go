@@ -14,6 +14,7 @@ func AddHandlers(db Db, perms Permissions, readMux wrappers.UserWithReadPermissi
 	userRepoMux wrappers.UserRepoMux) {
 	h := handler{db: db, perms: perms}
 	readMux.HandleFuncR("GET "+routes.BugsPattern, h.handleGetBugs)
+	readMux.HandleFuncR("GET "+routes.BugPattern, h.handleGetBug)
 	userRepoMux.HandleFuncW("POST "+routes.BugsPattern, h.handlePostBug)
 }
 
@@ -23,6 +24,9 @@ type Db interface {
 		cursor string, limit int) (bugs []bug.Bug, nextCursor string, err error)
 	CountRepoBugs(ctx context.Context, repoId uint64) (open, closed int64, err error)
 	CreateBug(writeCtx context.Context, repoId uint64, authorId int64, title, body string) (bug.Bug, error)
+	GetBug(ctx context.Context, repoId uint64, number uint64) (b bug.Bug, isNotFoundErr bool, err error)
+	GetBugEvents(ctx context.Context, repoId uint64, number uint64,
+		cursor string, limit int) (events []bug.Event, nextCursor string, err error)
 }
 
 // u is nil for anonymous users
