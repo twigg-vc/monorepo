@@ -258,3 +258,27 @@ export function UsernameIsValid(username: string): { isValid: boolean; errorMsg 
 
     return { isValid: true };
 }
+
+export type BugStatus = "open" | "closed"
+
+// Copy of go-code webcomponents.FrontendBug
+export interface Bug {
+    Number: number
+    Title: string
+    Body: string // empty when the bug comes from a list
+    Status: BugStatus
+    AuthorUsername: string
+    AssigneeUsername: string // empty when unassigned
+    CommentCount: number
+    CreatedOn: string
+    UpdatedOn: string
+}
+
+// Copy of go-code bugs.GetBugsResponse
+export interface GetBugsResponse {
+    Bugs: Bug[]
+    NextCursor: string // empty on the last page
+    OpenCount: number
+    ClosedCount: number
+    CanCreate: boolean
+}

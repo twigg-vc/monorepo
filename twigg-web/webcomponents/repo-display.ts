@@ -11,7 +11,7 @@ import { GetFeatureFlags } from './feature-flags';
 import { FormatRelativeTime } from './helpers';
 import { fetchGetWithRetry } from './fetch-get-with-retry'
 
-export type TabName = "commits" | "commits graph" | "CD";
+export type TabName = "commits" | "commits graph" | "CD" | "bugs";
 
 type CanSubmitByCommitId = Record<string, {
     CanSubmit: boolean
@@ -70,7 +70,20 @@ export class RepoDisplay extends LitElement {
         this.fetchMorePendingCommitsFailed = false;
         this.isLoadingMoreSubmittedCommits = false;
         this.fetchMoreSubmittedCommitsFailed = false;
-        this.TabName = "commits";
+        const tabParam = new URLSearchParams(window.location.search).get("tab")
+        switch (tabParam) {
+            case "commit-graph":
+                this.TabName = "commits graph";
+                break;
+            case "cd":
+                this.TabName = "CD";
+                break;
+            case "bugs":
+                this.TabName = "bugs";
+                break;
+            default:
+                this.TabName = "commits";
+        }
         this.pendingCommitSubmitWillConflict = []
         this.isLoadingWillConflict = false
         this.fetchWillConflictFailed = false
@@ -158,6 +171,7 @@ export class RepoDisplay extends LitElement {
                     </div>
                     `
                     : html``}
+                    ${this.renderBugsTabBtn()}
                 </div>
 
                 <div class="tabs-content">
@@ -165,6 +179,24 @@ export class RepoDisplay extends LitElement {
                 </div>
             </div>
         `;
+    }
+
+    private renderBugsTabBtn() {
+        if (!GetFeatureFlags().ShowBugs) {
+            return html``
+        }
+        var cls: string | undefined = undefined
+        if (this.TabName === "bugs") {
+            cls = "tab active"
+        } else {
+            cls = "tab"
+        }
+        return html`
+            <div class=${cls} @click=${() => (this.TabName = "bugs")}>
+                <twigg-icon class="tab-icon" icon="Bug"></twigg-icon>
+                <span class="tab-text">Bugs</span>
+            </div>
+        `
     }
 
     private renderTabContent() {
@@ -191,6 +223,11 @@ export class RepoDisplay extends LitElement {
                     .RepoName=${this.RepoName}
                     .RepoOwnerName=${this.RepoOwnerName}>
                 </repo-cd-tab>`;
+            case "bugs":
+                return html`<repo-bugs-tab
+                    .RepoName=${this.RepoName}
+                    .RepoOwnerName=${this.RepoOwnerName}>
+                </repo-bugs-tab>`;
 
             default:
                 throw "unknown tab";

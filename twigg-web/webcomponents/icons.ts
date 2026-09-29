@@ -165,6 +165,11 @@ export const BuildingOffice2 = unsafeHTML(`<svg xmlns="http://www.w3.org/2000/sv
 
 export const None = unsafeHTML(`<svg viewBox="0 0 24 24"></svg>`)
 
+export const Bug = unsafeHTML(`<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M9 7.5a3 3 0 0 1 6 0M9.75 5.25 8.25 3m6 2.25 1.5-2.25M12 10.5v9M7 11H3.75M7 15H3m4 3.25L4.5 20.5M17 11h3.25M17 15h4m-4 3.25 2.5 2.25M12 19.5a5 5 0 0 1-5-5v-2a5 5 0 0 1 10 0v2a5 5 0 0 1-5 5Z" />
+</svg>
+`)
+
 import { css, html, LitElement } from 'lit';
 
 export type IconName = (
@@ -206,7 +211,8 @@ export type IconName = (
     'RocketLaunch' |
     'Play' |
     'Refresh'|
-    'BuildingOffice2'
+    'BuildingOffice2' |
+    'Bug'
 );
 
 /**
@@ -323,6 +329,8 @@ export class TwiggIcon extends LitElement {
                 return Refresh
             case 'BuildingOffice2':
                 return BuildingOffice2
+            case 'Bug':
+                return Bug
             default:
                 throw 'invalid icon';
         }

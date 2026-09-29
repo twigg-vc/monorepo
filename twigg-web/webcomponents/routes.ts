@@ -110,6 +110,12 @@ export function GetJobsAfter(owner: string, repo: string,
 export function UrlToRepo(owner: string, repoName: string): string {
     return `/${owner}/${repoName}`
 }
+export function PathToBugs(owner: string, repoName: string): string {
+    return `${UrlToRepo(owner, repoName)}/bugs`
+}
+export function UrlToBug(owner: string, repoName: string, number: number): string {
+    return `${UrlToRepo(owner, repoName)}/b/${number}`
+}
 
 
 export function PathToMoreSubmittedCommits(owner: string, repoName: string,
