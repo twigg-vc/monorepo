@@ -5,6 +5,7 @@ import { PathToBugs, UrlToBug } from './routes';
 import { MinDurationTimer } from './min-duration-timer';
 import { fetchGetWithRetry } from './fetch-get-with-retry';
 import { FormatRelativeTime } from './helpers';
+import './bug-status-badge';
 
 /**
 * "Bugs" tab of the repo display
@@ -56,11 +57,14 @@ export class RepoBugsTab extends LitElement {
     private renderBugRow(b: Bug) {
         return html`
             <a class="bug-row" href=${UrlToBug(this.RepoOwnerName, this.RepoName, b.Number)}>
-                <span class="bug-title">${b.Title}</span>
-                <span class="bug-meta">
-                    b/${b.Number} opened ${FormatRelativeTime(b.CreatedOn)} by
-                    <username-tag username=${b.AuthorUsername}></username-tag>
-                </span>
+                <bug-status-badge .Status=${b.Status}></bug-status-badge>
+                <div class="bug-main">
+                    <span class="bug-title">${b.Title}</span>
+                    <span class="bug-meta">
+                        b/${b.Number} opened ${FormatRelativeTime(b.CreatedOn)} by
+                        <username-tag username=${b.AuthorUsername}></username-tag>
+                    </span>
+                </div>
             </a>
         `
     }
@@ -103,11 +107,16 @@ export class RepoBugsTab extends LitElement {
         }
         .bug-row {
             display: flex;
-            flex-direction: column;
-            gap: var(--space1);
+            align-items: center;
+            gap: var(--space3);
             padding: var(--space3) var(--space4);
             color: var(--color-text);
             text-decoration: none;
+        }
+        .bug-main {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space1);
         }
         .bug-row:not(:last-child) {
             border-bottom: 1px solid var(--color-border);
