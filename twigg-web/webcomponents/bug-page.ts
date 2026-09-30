@@ -1,5 +1,6 @@
 import { html, css, LitElement } from 'lit';
 import { Bug } from './interfaces';
+import { UrlToRepoBugsTab } from './routes';
 import './bug-status-badge';
 
 /**
@@ -27,6 +28,13 @@ export class BugPage extends LitElement {
             return html``
         }
         return html`
+            <div>
+                <bread-crumbs Name="Home" Link="/home"></bread-crumbs>
+                <bread-crumbs-space></bread-crumbs-space>
+                <bread-crumbs Name=${this.RepoName} Link=${UrlToRepoBugsTab(this.RepoOwnerName, this.RepoName)}></bread-crumbs>
+                <bread-crumbs-space></bread-crumbs-space>
+                <bread-crumbs Name="b/${this.Bug.Number}" Link=""></bread-crumbs>
+            </div>
             <h1 class="bug-title">
                 <bug-status-badge .Status=${this.Bug.Status}></bug-status-badge>
                 ${this.Bug.Title} <span class="bug-number">b/${this.Bug.Number}</span>
