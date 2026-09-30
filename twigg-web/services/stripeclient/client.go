@@ -275,6 +275,8 @@ func (c stripeClient_) getCheckoutSessionParams(stripeClientReferenceID string,
 		SuccessURL:          stripe.String(c.sessionSuccessRedirectUrl),
 		CancelURL:           stripe.String(c.cancelSessionUrl),
 		AllowPromotionCodes: stripe.Bool(true),
+		PaymentMethodCollection: stripe.String(
+			string(stripe.CheckoutSessionPaymentMethodCollectionIfRequired)),
 	}
 	if forceCurrency == "brl" {
 		params.Currency = stripe.String("brl")
