@@ -55,25 +55,16 @@ export class RepoBugsTab extends LitElement {
                 </div>
             `
         }
-        if (this.loadFailed) {
-            return html`<div class="bugs-tab empty-msg retry" @click=${this.fetchPage}>Failed to load bugs - click to retry</div>`
-        }
-        if (this.page === undefined) {
-            return html`<div class="bugs-tab"><simple-loader class="loader"></simple-loader></div>`
-        }
-        if (this.page.Bugs.length === 0) {
-            return html`
-                ${this.renderNewBugBtn()}
-                <div class="bugs-tab empty-msg">No bugs yet</div>
-            `
-        }
+        return html`<div class="bugs-tab">${this.renderList()}</div>`
+    }
+
+    private renderList() {
         return html`
-            ${this.renderNewBugBtn()}
-            <div class="bugs-tab">
-                <div class="bug-list card">
-                    ${this.page.Bugs.map(b => this.renderBugRow(b))}
-                </div>
+            <div class="toolbar">
+                <div class="filters"></div>
+                ${this.renderNewBugBtn()}
             </div>
+            ${this.renderListBody()}
         `
     }
 
@@ -81,7 +72,29 @@ export class RepoBugsTab extends LitElement {
         if (!this.page?.CanCreate) {
             return html``
         }
-        return html`<button class="primary new-bug-btn" @click=${() => { this.isWritingNewBug = true }}>New bug</button>`
+        return html`
+            <button class="primary-btn" @click=${() => { this.isWritingNewBug = true }}>
+                <twigg-icon icon="Bug"></twigg-icon>
+                <span>New bug</span>
+            </button>
+        `
+    }
+
+    private renderListBody() {
+        if (this.loadFailed) {
+            return html`<div class="empty-msg retry" @click=${this.fetchPage}>Failed to load bugs - click to retry</div>`
+        }
+        if (this.page === undefined) {
+            return html`<simple-loader class="loader"></simple-loader>`
+        }
+        if (this.page.Bugs.length === 0) {
+            return html`<div class="empty-msg">No bugs yet</div>`
+        }
+        return html`
+            <div class="bug-list card">
+                ${this.page.Bugs.map(b => this.renderBugRow(b))}
+            </div>
+        `
     }
 
     private async createBug() {
@@ -182,21 +195,24 @@ export class RepoBugsTab extends LitElement {
             background: var(--color-primary);
             color: var(--color-text-on-primary);
         }
-        .new-bug-btn {
-            margin: var(--space3) 0 0 auto;
-            display: block;
+        .primary-btn {
+            background: var(--color-primary);
+            color: var(--color-text-on-primary);
+            border-color: var(--color-primary);
+            gap: var(--space1);
+            font: inherit;
+            padding: var(--space1) var(--space4);
         }
-        .new-bug {
+        .primary-btn:hover {
+            box-shadow: var(--shadow-pop);
+        }
+        .toolbar {
             display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
             gap: var(--space2);
-        }
-        .new-bug input {
-            flex: 1;
-            padding: var(--space1) var(--space2);
-            background: var(--color-surface);
-            color: var(--color-text);
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius0);
+            margin-bottom: var(--space3);
         }
         .row-status {
             flex-shrink: 0;
