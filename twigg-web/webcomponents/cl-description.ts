@@ -15,6 +15,8 @@ export class ClDescription extends LitElement {
         postDescriptionUrl: { type: String },
         // Indicates this element is in a loading state
         isLoading: { type: Boolean },
+        // Shown while the description is empty
+        placeholder: { type: String },
     };
     constructor() {
         super();
@@ -22,11 +24,13 @@ export class ClDescription extends LitElement {
         this.postDescriptionUrl = "about:blank"
         this.isLoading = false;
         this.canEdit = true;
+        this.placeholder = "Enter the commit description here ...";
     }
     declare public canEdit: boolean
     declare public description: string
     declare public postDescriptionUrl: string
     declare public isLoading: boolean
+    declare public placeholder: string
     declare private isEditing: boolean
     public descriptionParameterName = "description"
 
@@ -34,7 +38,7 @@ export class ClDescription extends LitElement {
         return html`
             <md-input2
             Content=${this.description}
-            ContentPlaceholder="Enter the commit description here ..."
+            ContentPlaceholder=${this.placeholder}
             ?InputIsOpen=${this.description == ""}
             ?HasResetBtn=${this.description != ""}
             ?CloseInputBtnIsHidden=${this.description == ""}
