@@ -1,12 +1,15 @@
 import { html, css, LitElement, TemplateResult } from 'lit';
 import { TwiggCss } from './css';
-import { Bug, GetBugsResponse } from './interfaces';
+import { Bug, BugStatus, GetBugsResponse } from './interfaces';
 import { GetFeatureFlags } from './feature-flags';
-import { GetCsrfHeaders, PathToBugs, UrlToBug } from './routes';
+import { GetCsrfHeaders, PathToBugs, PathToNewBug, UrlToBug } from './routes';
 import { MinDurationTimer } from './min-duration-timer';
 import { fetchGetWithRetry } from './fetch-get-with-retry';
 import { FormatRelativeTime } from './helpers';
+import { IconName } from './icons';
 import './bug-status-badge';
+
+type Filter = BugStatus | ""
 
 /**
 * "Bugs" tab of the repo display
@@ -15,14 +18,18 @@ export class RepoBugsTab extends LitElement {
     static properties = {
         RepoOwnerName: { type: String },
         RepoName: { type: String },
+        filter: { type: String, state: true },
         page: { type: Object, state: true },
+        isLoadingPage: { type: Boolean, state: true },
         loadFailed: { type: Boolean, state: true },
         isWritingNewBug: { type: Boolean, state: true },
         newBugTitle: { type: String, state: true },
     };
     declare RepoOwnerName: string;
     declare RepoName: string;
+    declare private filter: Filter;
     declare private page: GetBugsResponse | undefined;
+    declare private isLoadingPage: boolean;
     declare private loadFailed: boolean;
     declare private isWritingNewBug: boolean;
     declare private newBugTitle: string;
@@ -31,7 +38,9 @@ export class RepoBugsTab extends LitElement {
         super();
         this.RepoOwnerName = "";
         this.RepoName = "";
+        this.filter = "open";
         this.page = undefined;
+        this.isLoadingPage = false;
         this.loadFailed = false;
         this.isWritingNewBug = false;
         this.newBugTitle = "";
@@ -61,10 +70,29 @@ export class RepoBugsTab extends LitElement {
     private renderList() {
         return html`
             <div class="toolbar">
-                <div class="filters"></div>
+                <div class="filters">
+                    ${this.renderFilterBtn("open", "Bug", "Open")}
+                    ${this.renderFilterBtn("closed", "Check", "Closed")}
+                    ${this.renderFilterBtn("", "Bars", "All")}
+                </div>
                 ${this.renderNewBugBtn()}
             </div>
             ${this.renderListBody()}
+        `
+    }
+
+    private renderFilterBtn(f: Filter, icon: IconName, label: string) {
+        var cls: string | undefined = undefined
+        if (this.filter === f) {
+            cls = "filter active"
+        } else {
+            cls = "filter"
+        }
+        return html`
+            <button class=${cls} @click=${() => this.setFilter(f)}>
+                <twigg-icon .icon=${icon}></twigg-icon>
+                <span>${label}</span>
+            </button>
         `
     }
 
@@ -84,7 +112,7 @@ export class RepoBugsTab extends LitElement {
         if (this.loadFailed) {
             return html`<div class="empty-msg retry" @click=${this.fetchPage}>Failed to load bugs - click to retry</div>`
         }
-        if (this.page === undefined) {
+        if (this.isLoadingPage || this.page === undefined) {
             return html`<simple-loader class="loader"></simple-loader>`
         }
         if (this.page.Bugs.length === 0) {
@@ -97,9 +125,17 @@ export class RepoBugsTab extends LitElement {
         `
     }
 
+    private setFilter(f: Filter) {
+        if (this.filter === f) {
+            return
+        }
+        this.filter = f
+        this.fetchPage()
+    }
+
     private async createBug() {
         try {
-            const resp = await fetch(PathToBugs(this.RepoOwnerName, this.RepoName), {
+            const resp = await fetch(PathToNewBug(this.RepoOwnerName, this.RepoName), {
                 method: 'POST',
                 body: JSON.stringify({ Title: this.newBugTitle }),
                 headers: { ...GetCsrfHeaders(), "Content-Type": "application/json" },
@@ -144,18 +180,22 @@ export class RepoBugsTab extends LitElement {
     }
 
     private async fetchPage() {
+        this.isLoadingPage = true
         this.loadFailed = false
         const tm = new MinDurationTimer()
         try {
-            const resp = await fetchGetWithRetry(PathToBugs(this.RepoOwnerName, this.RepoName), { method: 'GET' })
+            const resp = await fetchGetWithRetry(
+                PathToBugs(this.RepoOwnerName, this.RepoName, this.filter))
             await tm.Wait()
             if (!resp.ok) {
-                throw "Bad response"
+                throw `request failed with status ${resp.status}`
             }
-            this.page = await resp.json()
-        } catch (error) {
-            console.log("error getting bugs: ", error)
+            this.page = await resp.json() as GetBugsResponse
+        } catch (e) {
+            console.log("failed to load bugs: ", e)
             this.loadFailed = true
+        } finally {
+            this.isLoadingPage = false
         }
     }
 
@@ -213,6 +253,46 @@ export class RepoBugsTab extends LitElement {
             flex-wrap: wrap;
             gap: var(--space2);
             margin-bottom: var(--space3);
+        }
+        .filters {
+            display: inline-flex;
+            border: 1px solid var(--color-border);
+            border-radius: 999px;
+            overflow: hidden;
+            background: var(--color-surface);
+        }
+        .filter {
+            border: none;
+            border-radius: 0;
+            background: none;
+            color: var(--color-text-muted);
+            padding: var(--space1) var(--space3);
+            gap: var(--space1);
+            font: inherit;
+        }
+        .filter + .filter {
+            border-left: 1px solid var(--color-border);
+        }
+        .filter:hover {
+            transform: none;
+            color: var(--color-text);
+        }
+        .filter.active {
+            background: var(--color-surface-alt);
+            color: var(--color-primary-pop);
+            font-weight: var(--weight-semi-bold);
+        }
+        .new-bug {
+            display: flex;
+            gap: var(--space2);
+        }
+        .new-bug input {
+            flex: 1;
+            padding: var(--space1) var(--space2);
+            background: var(--color-surface);
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius0);
         }
         .row-status {
             flex-shrink: 0;
