@@ -3,7 +3,6 @@ import { TwiggCss } from './css';
 import { Bug } from './interfaces';
 import { UrlToRepoBugsTab } from './routes';
 import './bug-status-badge';
-import './cl-description';
 
 /**
 * Page of a single bug
@@ -30,40 +29,55 @@ export class BugPage extends LitElement {
             return html``
         }
         return html`
-            <div class="crumbs">
-                <bread-crumbs Name="Home" Link="/home"></bread-crumbs>
-                <bread-crumbs-space></bread-crumbs-space>
-                <bread-crumbs Name=${this.RepoName} Link=${UrlToRepoBugsTab(this.RepoOwnerName, this.RepoName)}></bread-crumbs>
-                <bread-crumbs-space></bread-crumbs-space>
-                <bread-crumbs id="current-crumb" Name="b/${this.Bug.Number}" Link=""></bread-crumbs>
+            <div class="main">
+                <div class="crumbs">
+                    <bread-crumbs Name="Home" Link="/home"></bread-crumbs>
+                    <bread-crumbs-space></bread-crumbs-space>
+                    <bread-crumbs Name=${this.RepoName} Link=${UrlToRepoBugsTab(this.RepoOwnerName, this.RepoName)}></bread-crumbs>
+                    <bread-crumbs-space></bread-crumbs-space>
+                    <bread-crumbs id="current-crumb" Name="b/${this.Bug.Number}" Link=""></bread-crumbs>
+                </div>
+                <div class="bug-header">
+                    <h1>${this.Bug.Title}</h1>
+                    <bug-status-badge .Status=${this.Bug.Status}></bug-status-badge>
+                </div>
+                <h2 class="section-title">Description</h2>
+                <md-display .content=${this.bodyOrPlaceholder(this.Bug.Body)}></md-display>
             </div>
-            <h1 class="bug-title">
-                <bug-status-badge .Status=${this.Bug.Status} IconOnly></bug-status-badge>
-                ${this.Bug.Title} <span class="bug-number">b/${this.Bug.Number}</span>
-            </h1>
-            <h3>Description</h3>
-            <cl-description .description=${this.displayedDescription()} .canEdit=${false}></cl-description>
         `
     }
 
-    private displayedDescription(): string {
-        if (this.Bug === undefined || this.Bug.Body === "") {
-            return "`[no description]`"
+    private bodyOrPlaceholder(body: string): string {
+        if (body === "") {
+            return "_No description provided._"
+        } else {
+            return body
         }
-        return this.Bug.Body
     }
 
     static styles = [
         TwiggCss,
         css`
-            .bug-title {
-                display: flex;
-                align-items: center;
-                gap: var(--space3);
-            }
-            .bug-number {
-                color: var(--color-text-muted);
-            }
+        .main {
+            max-width: var(--size4);
+            margin: auto;
+        }
+        .bug-header {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: var(--space3);
+            margin-top: var(--space2);
+            margin-bottom: var(--space4);
+        }
+        .bug-header h1 {
+            overflow-wrap: anywhere;
+        }
+        .section-title {
+            font-size: var(--space4);
+            color: var(--color-text-muted);
+            margin-bottom: var(--space2);
+        }
         `
     ];
 }
