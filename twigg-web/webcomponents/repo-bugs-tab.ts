@@ -186,7 +186,10 @@ export class RepoBugsTab extends LitElement {
         `
     }
 
+    private pageRequestId = 0
+
     private async fetchPage() {
+        const requestId = ++this.pageRequestId
         this.isLoadingPage = true
         this.loadFailed = false
         const tm = new MinDurationTimer()
@@ -197,12 +200,19 @@ export class RepoBugsTab extends LitElement {
             if (!resp.ok) {
                 throw `request failed with status ${resp.status}`
             }
-            this.page = await resp.json() as GetBugsResponse
+            const page = await resp.json() as GetBugsResponse
+            if (requestId === this.pageRequestId) {
+                this.page = page
+            }
         } catch (e) {
             console.log("failed to load bugs: ", e)
-            this.loadFailed = true
+            if (requestId === this.pageRequestId) {
+                this.loadFailed = true
+            }
         } finally {
-            this.isLoadingPage = false
+            if (requestId === this.pageRequestId) {
+                this.isLoadingPage = false
+            }
         }
     }
 
