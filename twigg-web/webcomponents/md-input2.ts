@@ -31,9 +31,13 @@ export interface MdInputSubmit {
  */
 export class MdInput2 extends LitElement {
     // Raw markdown text content
-    declare public Content: string; 
+    declare public Content: string;
     // Placeholder when the input is empty
     declare public ContentPlaceholder: string
+    // Owner and name of the repo this input belongs to. Used to auto-link
+    // c/x and b/x references in the markdown preview.
+    declare public RepoOwnerName: string
+    declare public RepoName: string
     // If true, puts the component in a loading state
     declare public IsLoading: boolean
     // If true, the input to edit is open
@@ -65,6 +69,8 @@ export class MdInput2 extends LitElement {
     static properties = {
         Content: { type: String },
         ContentPlaceholder: { type: String },
+        RepoOwnerName: { type: String },
+        RepoName: { type: String },
         IsLoading: { type: Boolean },
         InputIsOpen: { type: Boolean },
         InputIsDisabled: { type: Boolean },
@@ -86,6 +92,8 @@ export class MdInput2 extends LitElement {
         super();
         this.Content = ""
         this.ContentPlaceholder = "Start typing ..."
+        this.RepoOwnerName = ""
+        this.RepoName = ""
         this.InputIsOpen = false
         this.IsLoading = false
         this.InputIsDisabled = false
@@ -171,7 +179,9 @@ export class MdInput2 extends LitElement {
         }
         return html`
             <div class="md-display-container ${this.InputIsOpen ? "open" : "closed"}">
-                <md-display .content=${this.newContent}>
+                <md-display .content=${this.newContent}
+                .RepoOwnerName=${this.RepoOwnerName}
+                .RepoName=${this.RepoName}>
                 </md-display>
             </div>
         `

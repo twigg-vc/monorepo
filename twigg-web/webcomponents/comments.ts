@@ -83,6 +83,8 @@ export class CommentThreads extends LitElement {
                     btnText="Add Comment"
                     btnIsCentered
                     btnIcon="ChatBubbleLeftRight"
+                    .RepoOwnerName=${this.RepoOwnerName}
+                    .RepoName=${this.RepoName}
                 >
                 </new-comment-input>
             </div>
@@ -195,15 +197,19 @@ export class CommentThread extends LitElement {
                 <div>
                     ${this.Thread.Comments.map((cm: Comment) => {
                         return html`<comment-display
-                            .Comment=${cm}>
+                            .Comment=${cm}
+                            .RepoOwnerName=${this.RepoOwnerName}
+                            .RepoName=${this.RepoName}>
                             </comment-display>`
                     })}
                 </div>
 
                 <new-comment-input
                     .threadIsResolved=${this.Thread.IsResolved}
+                    .RepoOwnerName=${this.RepoOwnerName}
+                    .RepoName=${this.RepoName}
                     @md-input-submit=${this.onSubmit}
-                >   
+                >
                 </new-comment-input>
             </div>
         `;
@@ -362,11 +368,17 @@ declare global {
  */
 export class CommentDisplay extends LitElement {
     declare Comment: Pick<Comment, "AuthorUsername" | "Text" | "T">
+    declare RepoOwnerName: string
+    declare RepoName: string
     static properties = {
         Comment: { type: Object },
+        RepoOwnerName: { type: String },
+        RepoName: { type: String },
     };
     constructor() {
         super();
+        this.RepoOwnerName = "";
+        this.RepoName = "";
     }
 
     render() {
@@ -376,7 +388,9 @@ export class CommentDisplay extends LitElement {
                 <span class="comment-time" title=${FormatDateTime(this.Comment.T)}>${FormatRelativeTime(this.Comment.T)}</span>
             </div>
             <div class="user-comment">
-                <md-display content=${this.Comment.Text}></md-display>
+                <md-display content=${this.Comment.Text}
+                RepoOwnerName=${this.RepoOwnerName}
+                RepoName=${this.RepoName}></md-display>
             </div>
         `;
     }
@@ -433,6 +447,8 @@ export class NewCommentInput extends LitElement {
     declare isEditing: boolean
     // Text that appears on the "Save" btn (i.e. the last btn to the right)
     declare SaveBtnText: string
+    declare RepoOwnerName: string
+    declare RepoName: string
 
 	static properties = {
         postUrl: { type: String },
@@ -441,6 +457,8 @@ export class NewCommentInput extends LitElement {
         btnIcon: { type: String },
         hideResolveBtn: { type: Boolean },
         SaveBtnText: { type: String },
+        RepoOwnerName: { type: String },
+        RepoName: { type: String },
 
         isLoading: { type: Boolean },
         content: { type: String },
@@ -458,6 +476,8 @@ export class NewCommentInput extends LitElement {
         this.btnIcon = "ChatBubbleLeft"
         this.hideResolveBtn = false;
         this.SaveBtnText = "Save"
+        this.RepoOwnerName = ""
+        this.RepoName = ""
 	}
 
     render() {
@@ -472,6 +492,8 @@ export class NewCommentInput extends LitElement {
                     OpenInputBtnText=${this.btnText}
                     OpenInputBtnIcon=${this.btnIcon}
                     SubmitBtnText=${this.SaveBtnText}
+                    .RepoOwnerName=${this.RepoOwnerName}
+                    .RepoName=${this.RepoName}
                 >
                 ${this.renderResolveBtn()}
                 </md-input2>

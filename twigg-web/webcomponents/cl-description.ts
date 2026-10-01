@@ -28,6 +28,8 @@ export class ClDescription extends LitElement {
         postDescriptionUrl: { type: String },
         // Indicates this element is in a loading state
         isLoading: { type: Boolean },
+        RepoOwnerName: { type: String },
+        RepoName: { type: String },
         // Shown while the description is empty
         placeholder: { type: String },
     };
@@ -37,6 +39,8 @@ export class ClDescription extends LitElement {
         this.postDescriptionUrl = "about:blank"
         this.isLoading = false;
         this.canEdit = true;
+        this.RepoOwnerName = "";
+        this.RepoName = "";
         this.placeholder = "Enter the commit description here ...";
     }
     declare public canEdit: boolean
@@ -45,6 +49,8 @@ export class ClDescription extends LitElement {
     declare public isLoading: boolean
     declare public placeholder: string
     declare private isEditing: boolean
+    declare public RepoOwnerName: string
+    declare public RepoName: string
     public descriptionParameterName = "description"
 
     render() {
@@ -58,6 +64,8 @@ export class ClDescription extends LitElement {
             @md-input-submit=${this.onSubmit}
             SubmitBtnText="Save"
             ?OpenInputBtnIsHidden=${!this.canEdit}
+            .RepoOwnerName=${this.RepoOwnerName}
+            .RepoName=${this.RepoName}
             ?Highlighted=${this.description != ""}
             >
             </md-input2>

@@ -277,6 +277,8 @@ export class CommitDisplay extends LitElement {
                     .description=${this.getDisplayedDescription()}
                     .postDescriptionUrl=${this.PostUrl}
                     .canEdit=${!latest.IsSubmitted}
+                    .RepoOwnerName=${this.RepoOwnerName}
+                    .RepoName=${this.RepoName}
                     >
                     </cl-description>
                 </div>
