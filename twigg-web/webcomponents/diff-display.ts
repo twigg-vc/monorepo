@@ -105,11 +105,7 @@ export class DiffDisplay extends LitElement {
     };
     constructor() {
         super();
-        if (GetFeatureFlags().UseVSCodeDiff) {
-            this.DiffAlgorithm = "vscode"
-        } else {
-            this.DiffAlgorithm = "myers"
-        }
+        this.DiffAlgorithm = "vscode"
         this.unifiedDiff = "";
         this.leftFilename = ""
         this.rightFilename = ""

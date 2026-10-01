@@ -7,7 +7,6 @@ export type FeatureFlags = {
     ShowCommitSize: boolean
     EnableUserEducation: boolean
     DummyFlag: boolean
-    UseVSCodeDiff: boolean
     SearchCommitsUi: boolean
     ShowBugs: boolean
 }
