@@ -358,8 +358,7 @@ declare global {
  * Element that shows ONE comment
  */
 export class CommentDisplay extends LitElement {
-    // Raw markdown content
-    declare Comment: Comment
+    declare Comment: Pick<Comment, "AuthorUsername" | "Text" | "T">
     static properties = {
         Comment: { type: Object },
     };

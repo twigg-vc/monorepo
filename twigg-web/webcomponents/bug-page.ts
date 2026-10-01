@@ -1,9 +1,10 @@
 import { html, css, LitElement } from 'lit';
 import { TwiggCss } from './css';
-import { Bug } from './interfaces';
+import { Bug, BugEvent } from './interfaces';
 import { PathToBugDescription, UrlToRepoBugsTab } from './routes';
 import { FormatDateTime, FormatRelativeTime } from './helpers';
 import './bug-status-badge';
+import './comments';
 
 /**
 * Page of a single bug
@@ -13,11 +14,13 @@ export class BugPage extends LitElement {
         RepoOwnerName: { type: String },
         RepoName: { type: String },
         Bug: { type: Object },
+        Events: { type: Array },
         CanWrite: { type: Boolean },
     };
     declare RepoOwnerName: string;
     declare RepoName: string;
     declare Bug: Bug | undefined;
+    declare Events: BugEvent[];
     declare CanWrite: boolean;
 
     constructor() {
@@ -25,6 +28,7 @@ export class BugPage extends LitElement {
         this.RepoOwnerName = "";
         this.RepoName = "";
         this.Bug = undefined;
+        this.Events = [];
         this.CanWrite = false;
     }
 
@@ -49,6 +53,8 @@ export class BugPage extends LitElement {
                     <div class="content">
                         <h2 class="section-title">Description</h2>
                         ${this.renderDescription(this.Bug)}
+                        <h2 class="section-title activity-title">Activity</h2>
+                        ${this.renderTimeline()}
                     </div>
                     ${this.renderSidebar(this.Bug)}
                 </div>
@@ -104,6 +110,35 @@ export class BugPage extends LitElement {
         }
     }
 
+    private renderTimeline() {
+        if (this.Events.length === 0) {
+            return html`<p class="empty-activity">No activity yet.</p>`
+        }
+        return html`
+            <div class="timeline">
+                ${this.Events.map(e => this.renderEvent(e))}
+            </div>
+        `
+    }
+
+    private renderEvent(e: BugEvent) {
+        switch (e.Kind) {
+            case "comment":
+                return this.renderComment(e)
+            default:
+                return html``
+        }
+    }
+
+    private renderComment(e: BugEvent) {
+        return html`
+            <div class="post card">
+                <comment-display .Comment=${{ AuthorUsername: e.AuthorUsername, Text: e.Comment!.Body, T: e.CreatedOn }}>
+                </comment-display>
+            </div>
+        `
+    }
+
     private bodyOrPlaceholder(body: string): string {
         if (body === "") {
             return "_No description provided._"
@@ -150,6 +185,13 @@ export class BugPage extends LitElement {
             color: var(--color-text-muted);
             margin-bottom: var(--space2);
         }
+        .activity-title {
+            margin-top: var(--space5p);
+        }
+        .empty-activity {
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
         .sidebar {
             display: flex;
             flex-direction: column;
@@ -178,6 +220,14 @@ export class BugPage extends LitElement {
             font-weight: var(--weight-semi-bold);
             text-transform: uppercase;
             letter-spacing: 0.04em;
+        }
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space3);
+        }
+        .post {
+            padding: var(--space3);
         }
         @media (max-width: 760px) {
             .layout {
