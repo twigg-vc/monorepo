@@ -9,6 +9,7 @@ import { FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
 import './bug-status-badge';
 
+type View = "list" | "new"
 type Filter = BugStatus | ""
 
 /**
@@ -18,35 +19,36 @@ export class RepoBugsTab extends LitElement {
     static properties = {
         RepoOwnerName: { type: String },
         RepoName: { type: String },
+
+        view: { type: String, state: true },
         filter: { type: String, state: true },
         page: { type: Object, state: true },
         isLoadingPage: { type: Boolean, state: true },
         isLoadingMore: { type: Boolean, state: true },
         loadFailed: { type: Boolean, state: true },
-        isWritingNewBug: { type: Boolean, state: true },
-        newBugTitle: { type: String, state: true },
+        draftTitle: { type: String, state: true },
     };
     declare RepoOwnerName: string;
     declare RepoName: string;
+    declare private view: View;
     declare private filter: Filter;
     declare private page: GetBugsResponse | undefined;
     declare private isLoadingPage: boolean;
     declare private isLoadingMore: boolean;
     declare private loadFailed: boolean;
-    declare private isWritingNewBug: boolean;
-    declare private newBugTitle: string;
+    declare private draftTitle: string;
 
     constructor() {
         super();
         this.RepoOwnerName = "";
         this.RepoName = "";
+        this.view = "list";
         this.filter = "open";
         this.page = undefined;
         this.isLoadingPage = false;
         this.isLoadingMore = false;
         this.loadFailed = false;
-        this.isWritingNewBug = false;
-        this.newBugTitle = "";
+        this.draftTitle = "";
     }
 
     firstUpdated() {
@@ -57,17 +59,12 @@ export class RepoBugsTab extends LitElement {
         if (!GetFeatureFlags().ShowBugs) {
             return html``
         }
-        if (this.isWritingNewBug) {
-            return html`
-                <div class="bugs-tab new-bug">
-                    <input placeholder="Title" .value=${this.newBugTitle}
-                        @input=${(e: Event) => { this.newBugTitle = (e.target as HTMLInputElement).value }}/>
-                    <button @click=${() => { this.isWritingNewBug = false }}>Cancel</button>
-                    <button class="primary" ?disabled=${this.newBugTitle.trim() === ""} @click=${this.createBug}>Create</button>
-                </div>
-            `
+        switch (this.view) {
+            case "list":
+                return html`<div class="bugs-tab">${this.renderList()}</div>`
+            case "new":
+                return html`<div class="bugs-tab">${this.renderNewBug()}</div>`
         }
-        return html`<div class="bugs-tab">${this.renderList()}</div>`
     }
 
     private renderList() {
@@ -111,7 +108,7 @@ export class RepoBugsTab extends LitElement {
             return html``
         }
         return html`
-            <button class="primary-btn" @click=${() => { this.isWritingNewBug = true }}>
+            <button class="primary-btn" @click=${() => { this.view = "new" }}>
                 <twigg-icon icon="Bug"></twigg-icon>
                 <span>New bug</span>
             </button>
@@ -178,24 +175,39 @@ export class RepoBugsTab extends LitElement {
         this.fetchPage()
     }
 
+    private renderNewBug() {
+        return html`
+            <div class="new-bug">
+                <input placeholder="Title" .value=${this.draftTitle}
+                    @input=${(e: Event) => { this.draftTitle = (e.target as HTMLInputElement).value }}/>
+                <button @click=${this.showList}>Cancel</button>
+                <button class="primary" ?disabled=${this.draftTitle.trim() === ""} @click=${this.createBug}>Create</button>
+            </div>
+        `
+    }
+
     private async createBug() {
         try {
             const resp = await fetch(PathToNewBug(this.RepoOwnerName, this.RepoName), {
                 method: 'POST',
-                body: JSON.stringify({ Title: this.newBugTitle }),
+                body: JSON.stringify({ Title: this.draftTitle }),
                 headers: { ...GetCsrfHeaders(), "Content-Type": "application/json" },
             })
             if (!resp.ok) {
                 alert(await resp.text())
                 return
             }
-            this.newBugTitle = ""
-            this.isWritingNewBug = false
-            this.fetchPage()
+            this.draftTitle = ""
+            this.showList()
         } catch (error) {
             console.log("failed to create bug: ", error)
             alert("Failed to create the bug :(")
         }
+    }
+
+    private showList() {
+        this.view = "list"
+        this.fetchPage()
     }
 
     private renderBugRow(b: Bug) {
