@@ -128,6 +128,8 @@ export class BugPage extends LitElement {
                 return this.renderComment(e)
             case "status-change":
                 return this.renderStatusChange(e)
+            case "description-edit":
+                return this.renderDescriptionEdit(e)
             default:
                 return html``
         }
@@ -159,6 +161,19 @@ export class BugPage extends LitElement {
                 <username-tag .Username=${e.AuthorUsername}></username-tag>
                 <span title=${FormatDateTime(e.CreatedOn)}>${verb} this ${FormatRelativeTime(e.CreatedOn)}</span>
             </div>
+        `
+    }
+
+    private renderDescriptionEdit(e: BugEvent) {
+        return html`
+            <details class="event-details">
+                <summary class="event" title="Show the previous description">
+                    <span class="event-icon expand"><twigg-icon icon="ChevronRight"></twigg-icon></span>
+                    <username-tag .Username=${e.AuthorUsername}></username-tag>
+                    <span>edited the description ${FormatRelativeTime(e.CreatedOn)}</span>
+                </summary>
+                <md-display .content=${this.bodyOrPlaceholder(e.DescriptionEdit!.OldBody)}></md-display>
+            </details>
         `
     }
 
@@ -272,6 +287,23 @@ export class BugPage extends LitElement {
         .event-icon.open {
             background: var(--color-success);
             color: var(--color-status-text);
+        }
+        .event-details summary {
+            cursor: pointer;
+            list-style: none;
+        }
+        .event-details summary:hover {
+            color: var(--color-text);
+        }
+        .event-icon.expand twigg-icon {
+            transition: transform .15s;
+        }
+        .event-details[open] .event-icon.expand twigg-icon {
+            transform: rotate(90deg);
+        }
+        .event-details md-display {
+            display: block;
+            margin: var(--space2) var(--space4) 0 var(--space6);
         }
         @media (max-width: 760px) {
             .layout {
