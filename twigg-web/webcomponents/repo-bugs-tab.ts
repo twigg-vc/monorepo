@@ -1,4 +1,5 @@
-import { html, css, LitElement } from 'lit';
+import { html, css, LitElement, TemplateResult } from 'lit';
+import { TwiggCss } from './css';
 import { Bug, GetBugsResponse } from './interfaces';
 import { GetFeatureFlags } from './feature-flags';
 import { GetCsrfHeaders, PathToBugs, UrlToBug } from './routes';
@@ -58,7 +59,7 @@ export class RepoBugsTab extends LitElement {
             return html`<div class="bugs-tab empty-msg retry" @click=${this.fetchPage}>Failed to load bugs - click to retry</div>`
         }
         if (this.page === undefined) {
-            return html`<div class="bugs-tab"><simple-loader></simple-loader></div>`
+            return html`<div class="bugs-tab"><simple-loader class="loader"></simple-loader></div>`
         }
         if (this.page.Bugs.length === 0) {
             return html`
@@ -68,8 +69,10 @@ export class RepoBugsTab extends LitElement {
         }
         return html`
             ${this.renderNewBugBtn()}
-            <div class="bugs-tab bug-list">
-                ${this.page.Bugs.map(b => this.renderBugRow(b))}
+            <div class="bugs-tab">
+                <div class="bug-list card">
+                    ${this.page.Bugs.map(b => this.renderBugRow(b))}
+                </div>
             </div>
         `
     }
@@ -102,16 +105,27 @@ export class RepoBugsTab extends LitElement {
     }
 
     private renderBugRow(b: Bug) {
+        var comments: TemplateResult | undefined = undefined
+        if (b.CommentCount > 0) {
+            comments = html`
+                <span class="bug-comments" title="${b.CommentCount} comments">
+                    <twigg-icon icon="ChatBubbleLeft"></twigg-icon>${b.CommentCount}
+                </span>
+            `
+        } else {
+            comments = html``
+        }
         return html`
             <a class="bug-row" href=${UrlToBug(this.RepoOwnerName, this.RepoName, b.Number)}>
-                <bug-status-badge .Status=${b.Status} IconOnly></bug-status-badge>
+                <bug-status-badge class="row-status" .Status=${b.Status} IconOnly></bug-status-badge>
                 <div class="bug-main">
                     <span class="bug-title">${b.Title}</span>
                     <span class="bug-meta">
                         b/${b.Number} opened ${FormatRelativeTime(b.CreatedOn)} by
-                        <username-tag username=${b.AuthorUsername}></username-tag>
+                        <username-tag .Username=${b.AuthorUsername}></username-tag>
                     </span>
                 </div>
+                ${comments}
             </a>
         `
     }
@@ -132,9 +146,29 @@ export class RepoBugsTab extends LitElement {
         }
     }
 
-    static styles = css`
+    static styles = [
+        TwiggCss,
+        css`
+        .card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius1);
+            box-shadow: var(--shadow-surface);
+        }
+        .loader {
+            padding: var(--space4);
+        }
+        .empty-msg {
+            padding: var(--space4);
+            color: var(--color-text-muted);
+            font-style: italic;
+            text-align: center;
+        }
+        .empty-msg.retry {
+            cursor: pointer;
+        }
         .bugs-tab {
-            margin-top: var(--space3);
+            padding-top: var(--space4);
         }
         button {
             border: 1px solid var(--color-border);
@@ -164,49 +198,61 @@ export class RepoBugsTab extends LitElement {
             border: 1px solid var(--color-border);
             border-radius: var(--radius0);
         }
-        .empty-msg {
-            padding: var(--space4);
-            color: var(--color-text-muted);
-            font-style: italic;
-            text-align: center;
+        .row-status {
+            flex-shrink: 0;
         }
-        .retry {
-            cursor: pointer;
+        .bug-meta {
+            color: var(--color-text-muted);
+            font-size: var(--space3p);
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: var(--space1);
         }
         .bug-list {
             display: flex;
             flex-direction: column;
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius2);
+            overflow: hidden;
         }
-        .bug-row {
+        a.bug-row {
             display: flex;
             align-items: center;
             gap: var(--space3);
             padding: var(--space3) var(--space4);
             color: var(--color-text);
             text-decoration: none;
+            transition: background .15s;
+        }
+        a.bug-row + a.bug-row {
+            border-top: 1px solid var(--color-border);
+        }
+        a.bug-row:hover {
+            background: var(--color-surface-alt);
+            text-decoration: none;
+        }
+        a.bug-row:hover .bug-title {
+            color: var(--color-primary-pop);
         }
         .bug-main {
             display: flex;
             flex-direction: column;
             gap: var(--space1);
-        }
-        .bug-row:not(:last-child) {
-            border-bottom: 1px solid var(--color-border);
-        }
-        .bug-row:hover {
-            background: var(--color-surface-alt);
+            flex: 1;
+            min-width: 0;
         }
         .bug-title {
             font-weight: var(--weight-semi-bold);
+            overflow-wrap: anywhere;
         }
-        .bug-meta {
+        .bug-comments {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space1);
             color: var(--color-text-muted);
             font-size: var(--space3p);
         }
-    `;
+        `,
+    ];
 }
 customElements.define('repo-bugs-tab', RepoBugsTab);
 declare global {
