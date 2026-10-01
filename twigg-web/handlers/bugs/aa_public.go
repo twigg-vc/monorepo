@@ -20,10 +20,12 @@ func AddHandlers(db Db, perms Permissions, readMux wrappers.UserWithReadPermissi
 	userRepoMux.HandleFuncW("POST "+routes.BugStatusPattern, h.handlePostStatus)
 	userRepoMux.HandleFuncW("POST "+routes.BugDescriptionPattern, h.handlePostDescription)
 	userRepoMux.HandleFuncW("POST "+routes.BugTitlePattern, h.handlePostTitle)
+	userRepoMux.HandleFuncW("POST "+routes.BugAssigneePattern, h.handlePostAssignee)
 }
 
 type Db interface {
 	GetUsername(ctx context.Context, userId int64) (username string, isNotFoundErr bool, err error)
+	GetUserByUsername(ctx context.Context, username string) (u user.User, isNotFoundErr bool, err error)
 	GetBugsPage(ctx context.Context, repoId uint64, status bug.Status,
 		cursor string, limit int) (bugs []bug.Bug, nextCursor string, err error)
 	CountRepoBugs(ctx context.Context, repoId uint64) (open, closed int64, err error)
@@ -39,12 +41,15 @@ type Db interface {
 		authorId int64, newBody string) (e bug.Event, isNotFoundErr bool, err error)
 	EditBugTitle(writeCtx context.Context, repoId uint64, number uint64,
 		authorId int64, newTitle string) (e bug.Event, isNotFoundErr bool, err error)
+	SetBugAssignee(writeCtx context.Context, repoId uint64, number uint64,
+		authorId int64, assigneeUserId int64) (e bug.Event, isNotFoundErr bool, err error)
 }
 
 // u is nil for anonymous users
 type Permissions interface {
 	CanCreateBugs(r context.Context, u *user.User, rp repo.Repo) (bool, error)
 	CanWriteBug(r context.Context, u *user.User, rp repo.Repo, b bug.Bug) (bool, error)
+	CanBeAssignedBugs(r context.Context, u user.User, rp repo.Repo) (bool, error)
 }
 
 // NextCursor is empty on the last page. The counts are of the whole repo.
@@ -84,4 +89,9 @@ type PostEditResponse struct {
 
 type PostTitleRequest struct {
 	Title string
+}
+
+// An empty Username unassigns the bug.
+type PostAssigneeRequest struct {
+	Username string
 }

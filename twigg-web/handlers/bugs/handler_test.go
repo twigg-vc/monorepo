@@ -6,6 +6,7 @@ import (
 	"html"
 	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/featureflags"
+	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/bugpermissions"
@@ -769,5 +770,127 @@ func TestPostTitleFails(t *testing.T) {
 	}
 	if code := post(zuko, "1", true, `{"Title": " Fix Iroh's tea "}`); code != http.StatusConflict {
 		t.Fatalf("unchanged title: expected 409, got %d", code)
+	}
+}
+func TestPostAssignee(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	irohId, err := db.CreateUser(w, "iroh@twigg.vc", user.UserState_NoSubscription,
+		/*isOrganization*/ false, "iroh", "password-hash", user.Subscription_None, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.GrantPermissionIfNotExists(w, irohId, permissions.Permission_WriteRepo,
+		permissions.RepoAssetId(testRepoId)); err != nil {
+		t.Fatal(err)
+	}
+	db.SetNower(mockNow{now: time.UnixMilli(199)}, t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+
+	rec := httptest.NewRecorder()
+	shouldCommit := h.handlePostAssignee(rec, newBugWriteReq(user.User{Id: zukoId, Username: "zuko"},
+		zukoId, "1", `{"Username": " iroh "}`), w)
+	if rec.Code != http.StatusOK || !shouldCommit {
+		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
+	}
+	var got PostEditResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if got.Bug.CreatedOn.UnixMilli() != 199 || got.Bug.UpdatedOn.UnixMilli() != 200 ||
+		got.Event.CreatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamps: %+v", got)
+	}
+	got.Bug.CreatedOn, got.Bug.UpdatedOn, got.Event.CreatedOn = time.Time{}, time.Time{}, time.Time{}
+	want := PostEditResponse{
+		Bug: twiggwc.FrontendBug{
+			Number:           1,
+			Title:            "Fix Iroh's tea",
+			Body:             "",
+			Status:           bug.Status_Open,
+			AuthorUsername:   "zuko",
+			AssigneeUsername: "iroh",
+			CommentCount:     0,
+			CreatedOn:        time.Time{},
+			UpdatedOn:        time.Time{},
+		},
+		Event: twiggwc.FrontendBugEvent{
+			Id:             1,
+			Kind:           twiggwc.FrontendBugEventKind_Assignment,
+			AuthorUsername: "zuko",
+			CreatedOn:      time.Time{},
+			Assignment:     &twiggwc.FrontendAssignment{NewAssigneeUsername: "iroh"},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("expected %+v, got %+v", want, got)
+	}
+	if b, _, _ := db.GetBug(w, testRepoId, 1); b.AssigneeUserId != irohId {
+		t.Fatalf("expected iroh assigned, got %+v", b)
+	}
+
+	// Unassign
+	rec = httptest.NewRecorder()
+	shouldCommit = h.handlePostAssignee(rec, newBugWriteReq(user.User{Id: zukoId, Username: "zuko"},
+		zukoId, "1", `{"Username": ""}`), w)
+	if rec.Code != http.StatusOK || !shouldCommit {
+		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Bug.AssigneeUsername != "" || got.Event.Assignment.NewAssigneeUsername != "" {
+		t.Fatalf("expected the bug unassigned, got %+v", got)
+	}
+}
+
+func TestPostAssigneeFails(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	zuko, stranger := user.User{Id: zukoId, Username: "zuko"}, user.User{Id: zukoId + 1}
+	post := func(u user.User, number string, flag bool, body string) int {
+		t.Helper()
+		req := newBugWriteReq(u, zukoId, number, body)
+		req.Flags.ShowBugs = flag
+		rec := httptest.NewRecorder()
+		if h.handlePostAssignee(rec, req, w) {
+			t.Fatalf("expected no commit, got %d: %s", rec.Code, rec.Body)
+		}
+		return rec.Code
+	}
+	const assignZuko = `{"Username": "zuko"}`
+
+	if code := post(stranger, "1", true, assignZuko); code != http.StatusForbidden {
+		t.Fatalf("stranger: expected 403, got %d", code)
+	}
+	if code := post(zuko, "1", false, assignZuko); code != http.StatusNotFound {
+		t.Fatalf("flag off: expected 404, got %d", code)
+	}
+	if code := post(zuko, "2", true, assignZuko); code != http.StatusNotFound {
+		t.Fatalf("missing bug: expected 404, got %d", code)
+	}
+	if code := post(zuko, "1", true, `{"Username": "azula"}`); code != http.StatusBadRequest {
+		t.Fatalf("missing user: expected 400, got %d", code)
+	}
+	if _, err := db.CreateUser(w, "sokka@twigg.vc", user.UserState_NoSubscription,
+		/*isOrganization*/ false, "sokka", "password-hash", user.Subscription_None, 0); err != nil {
+		t.Fatal(err)
+	}
+	if code := post(zuko, "1", true, `{"Username": "sokka"}`); code != http.StatusBadRequest {
+		t.Fatalf("user without repo access: expected 400, got %d", code)
+	}
+	if code := post(zuko, "1", true, `{"Username": ""}`); code != http.StatusConflict {
+		t.Fatalf("already unassigned: expected 409, got %d", code)
+	}
+	if b, _, _ := db.GetBug(w, testRepoId, 1); b.AssigneeUserId != 0 {
+		t.Fatalf("expected the bug to stay unassigned, got %+v", b)
+	}
+	if events, _, _ := db.GetBugEvents(w, testRepoId, 1, "", 10); len(events) != 0 {
+		t.Fatalf("expected no events, got %+v", events)
 	}
 }

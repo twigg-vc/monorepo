@@ -354,6 +354,60 @@ func (h handler) handlePostTitle(w http.ResponseWriter,
 	return h.writeEditResponse(w, r, dbWrite, b.Number, e)
 }
 
+func (h handler) handlePostAssignee(w http.ResponseWriter,
+	r wrappers.UserRepoMuxRequest, dbWrite context.Context) (shouldCommit bool) {
+	if !r.Flags.ShowBugs {
+		http.NotFound(w, r.Request)
+		return false
+	}
+	b, ok := h.getWritableBug(w, r, dbWrite)
+	if !ok {
+		return false
+	}
+	var req PostAssigneeRequest
+	err := json.NewDecoder(http.MaxBytesReader(w, r.Request.Body, maxRequestBytes)).Decode(&req)
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return false
+	}
+	var assigneeId int64 = 0
+	username := strings.TrimSpace(req.Username)
+	if username != "" {
+		assignee, isNotFoundErr, err := h.db.GetUserByUsername(dbWrite, username)
+		if isNotFoundErr {
+			http.Error(w, "user not found", http.StatusBadRequest)
+			return false
+		}
+		if err != nil {
+			log.Printf("failed to get user %q: %s", username, err)
+			http.Error(w, "failed to get the user", http.StatusInternalServerError)
+			return false
+		}
+		canBeAssigned, err := h.perms.CanBeAssignedBugs(dbWrite, assignee, r.Repo)
+		if err != nil {
+			log.Printf("failed to check if user %q can be assigned bugs of repo id=%d: %s", username, r.Repo.Id, err)
+			http.Error(w, "failed to check the permission", http.StatusInternalServerError)
+			return false
+		}
+		if !canBeAssigned {
+			http.Error(w, "the user has no access to this repo", http.StatusBadRequest)
+			return false
+		}
+		assigneeId = assignee.Id
+	}
+	if assigneeId == b.AssigneeUserId {
+		http.Error(w, "the assignee is unchanged", http.StatusConflict)
+		return false
+	}
+	e, _, err := h.db.SetBugAssignee(dbWrite, r.Repo.Id, b.Number, r.UserWithWritePermission.Id, assigneeId)
+	if err != nil {
+		log.Printf("failed to set the assignee of b/%d of repo id=%d: %s", b.Number, r.Repo.Id, err)
+		http.Error(w, "failed to set the assignee", http.StatusInternalServerError)
+		return false
+	}
+	return h.writeEditResponse(w, r, dbWrite, b.Number, e)
+}
+
 // Writes the edited bug and its new event. Returns whether it succeeded.
 func (h handler) writeEditResponse(w http.ResponseWriter, r wrappers.UserRepoMuxRequest,
 	dbWrite context.Context, number uint64, e bug.Event) (ok bool) {
