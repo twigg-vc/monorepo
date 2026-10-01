@@ -1,6 +1,6 @@
 import { html, css, LitElement, TemplateResult } from 'lit';
 import { TwiggCss } from './css';
-import { Bug, BugStatus, GetBugsResponse } from './interfaces';
+import { Bug, BugStatus, GetBugsResponse, MaxBugTitleLen } from './interfaces';
 import { GetFeatureFlags } from './feature-flags';
 import { GetCsrfHeaders, PathToBugs, PathToNewBug, UrlToBug } from './routes';
 import { MinDurationTimer } from './min-duration-timer';
@@ -175,13 +175,32 @@ export class RepoBugsTab extends LitElement {
         this.fetchPage()
     }
 
+    private renderBackLink() {
+        return html`
+            <button class="back-link" @click=${this.showList}>
+                <twigg-icon icon="ChevronLeft"></twigg-icon>
+                <span>All bugs</span>
+            </button>
+        `
+    }
+
     private renderNewBug() {
         return html`
-            <div class="new-bug">
-                <input placeholder="Title" .value=${this.draftTitle}
-                    @input=${(e: Event) => { this.draftTitle = (e.target as HTMLInputElement).value }}/>
-                <button @click=${this.showList}>Cancel</button>
-                <button class="primary" ?disabled=${this.draftTitle.trim() === ""} @click=${this.createBug}>Create</button>
+            ${this.renderBackLink()}
+            <div class="new-bug card">
+                <input
+                    class="title-input"
+                    placeholder="Title"
+                    maxlength=${MaxBugTitleLen}
+                    .value=${this.draftTitle}
+                    @input=${(e: Event) => { this.draftTitle = (e.target as HTMLInputElement).value }}
+                />
+                <div class="form-actions">
+                    <button class="secondary-btn" @click=${this.showList}>Cancel</button>
+                    <button class="primary-btn" ?disabled=${this.draftTitle.trim() === ""} @click=${this.createBug}>
+                        Create
+                    </button>
+                </div>
             </div>
         `
     }
@@ -315,18 +334,6 @@ export class RepoBugsTab extends LitElement {
         .bugs-tab {
             padding-top: var(--space4);
         }
-        button {
-            border: 1px solid var(--color-border);
-            border-radius: 999px;
-            padding: var(--space1) var(--space3);
-            background: var(--color-surface-alt);
-            color: var(--color-text);
-            cursor: pointer;
-        }
-        .primary {
-            background: var(--color-primary);
-            color: var(--color-text-on-primary);
-        }
         .primary-btn {
             background: var(--color-primary);
             color: var(--color-text-on-primary);
@@ -337,6 +344,18 @@ export class RepoBugsTab extends LitElement {
         }
         .primary-btn:hover {
             box-shadow: var(--shadow-pop);
+        }
+        .primary-btn[disabled] {
+            opacity: var(--disable-opacity-value);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .secondary-btn {
+            background: var(--color-surface);
+            color: var(--color-text);
+            font: inherit;
+            padding: var(--space1) var(--space4);
         }
         .toolbar {
             display: flex;
@@ -384,18 +403,6 @@ export class RepoBugsTab extends LitElement {
         .filter.active .count {
             background: var(--color-primary);
             color: var(--color-text-on-primary);
-        }
-        .new-bug {
-            display: flex;
-            gap: var(--space2);
-        }
-        .new-bug input {
-            flex: 1;
-            padding: var(--space1) var(--space2);
-            background: var(--color-surface);
-            color: var(--color-text);
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius0);
         }
         .row-status {
             flex-shrink: 0;
@@ -463,6 +470,42 @@ export class RepoBugsTab extends LitElement {
         }
         .empty-icon.success {
             color: var(--color-success);
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space1);
+            color: var(--color-text-muted);
+            margin-bottom: var(--space3);
+            background: none;
+            border: none;
+            padding: 0;
+            font: inherit;
+        }
+        .new-bug {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space3);
+            padding: var(--space4);
+        }
+        .title-input {
+            font: inherit;
+            font-size: var(--space5);
+            padding: var(--space2) var(--space3);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius1);
+            background: var(--color-surface-alt);
+            color: var(--color-text);
+            outline: none;
+        }
+        .title-input:focus {
+            border-color: var(--color-primary-pop);
+            box-shadow: var(--shadow-pop);
+        }
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--space2);
         }
         .bug-comments {
             display: inline-flex;
