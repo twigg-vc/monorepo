@@ -1,7 +1,7 @@
 import { html, css, LitElement } from 'lit';
 import { TwiggCss } from './css';
 import { Bug } from './interfaces';
-import { UrlToRepoBugsTab } from './routes';
+import { PathToBugDescription, UrlToRepoBugsTab } from './routes';
 import './bug-status-badge';
 
 /**
@@ -12,16 +12,19 @@ export class BugPage extends LitElement {
         RepoOwnerName: { type: String },
         RepoName: { type: String },
         Bug: { type: Object },
+        CanWrite: { type: Boolean },
     };
     declare RepoOwnerName: string;
     declare RepoName: string;
     declare Bug: Bug | undefined;
+    declare CanWrite: boolean;
 
     constructor() {
         super();
         this.RepoOwnerName = "";
         this.RepoName = "";
         this.Bug = undefined;
+        this.CanWrite = false;
     }
 
     render() {
@@ -42,8 +45,21 @@ export class BugPage extends LitElement {
                     <bug-status-badge .Status=${this.Bug.Status}></bug-status-badge>
                 </div>
                 <h2 class="section-title">Description</h2>
-                <md-display .content=${this.bodyOrPlaceholder(this.Bug.Body)}></md-display>
+                ${this.renderDescription(this.Bug)}
             </div>
+        `
+    }
+
+    private renderDescription(b: Bug) {
+        if (!this.CanWrite) {
+            return html`<md-display .content=${this.bodyOrPlaceholder(b.Body)}></md-display>`
+        }
+        return html`
+            <cl-description
+                .description=${b.Body}
+                .postDescriptionUrl=${PathToBugDescription(this.RepoOwnerName, this.RepoName, b.Number)}
+                placeholder="Enter description (markdown supported)">
+            </cl-description>
         `
     }
 

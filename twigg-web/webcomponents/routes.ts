@@ -119,6 +119,9 @@ export function PathToBugs(owner: string, repoName: string): string {
 export function UrlToBug(owner: string, repoName: string, number: number): string {
     return `${UrlToRepo(owner, repoName)}/b/${number}`
 }
+export function PathToBugDescription(owner: string, repoName: string, number: number): string {
+    return `${UrlToBug(owner, repoName, number)}/description`
+}
 
 
 export function PathToMoreSubmittedCommits(owner: string, repoName: string,
