@@ -282,13 +282,14 @@ export interface Bug {
 // Only the details field matching Kind is set
 export interface BugEvent {
     Id: number
-    Kind: "comment" | "status-change" | "description-edit" | "title-edit"
+    Kind: "comment" | "status-change" | "description-edit" | "title-edit" | "assignment"
     AuthorUsername: string
     CreatedOn: string
     Comment?: { Body: string }
     StatusChange?: { NewStatus: BugStatus }
     DescriptionEdit?: { OldBody: string }
     TitleEdit?: { OldTitle: string }
+    Assignment?: { NewAssigneeUsername: string }
 }
 
 // Copy of go-code bugs.GetBugsResponse

@@ -266,6 +266,7 @@ const (
 	FrontendBugEventKind_StatusChange    FrontendBugEventKind = "status-change"
 	FrontendBugEventKind_DescriptionEdit FrontendBugEventKind = "description-edit"
 	FrontendBugEventKind_TitleEdit       FrontendBugEventKind = "title-edit"
+	FrontendBugEventKind_Assignment      FrontendBugEventKind = "assignment"
 )
 
 // Only the details field matching Kind is set
@@ -278,10 +279,18 @@ type FrontendBugEvent struct {
 	StatusChange    *bug.StatusChange    `json:",omitempty"`
 	DescriptionEdit *bug.DescriptionEdit `json:",omitempty"`
 	TitleEdit       *bug.TitleEdit       `json:",omitempty"`
+	Assignment      *FrontendAssignment  `json:",omitempty"`
 }
 
-func BugEventToFrontend(e bug.Event, authorUsername string) FrontendBugEvent {
-	return bugEventToFrontend(e, authorUsername)
+// NewAssigneeUsername is empty when the bug was unassigned
+type FrontendAssignment struct {
+	NewAssigneeUsername string
+}
+
+// newAssigneeUsername is only used by assignment events, and is empty when
+// the bug was unassigned.
+func BugEventToFrontend(e bug.Event, authorUsername, newAssigneeUsername string) FrontendBugEvent {
+	return bugEventToFrontend(e, authorUsername, newAssigneeUsername)
 }
 
 // Returns the <bug-page> component. events are ordered oldest first.

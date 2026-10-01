@@ -60,7 +60,14 @@ func (u *usernameResolver) getFrontendBugEvent(e bug.Event) (twiggwc.FrontendBug
 	if !ok {
 		return twiggwc.FrontendBugEvent{}, false
 	}
-	return twiggwc.BugEventToFrontend(e, author), true
+	newAssignee := ""
+	if e.Kind == bug.EventKind_Assignment && e.Assignment.NewAssigneeUserId != 0 {
+		newAssignee, ok = u.getUsername(e.Assignment.NewAssigneeUserId)
+		if !ok {
+			return twiggwc.FrontendBugEvent{}, false
+		}
+	}
+	return twiggwc.BugEventToFrontend(e, author, newAssignee), true
 }
 
 func (u *usernameResolver) getFrontendBugEvents(es []bug.Event) ([]twiggwc.FrontendBugEvent, bool) {

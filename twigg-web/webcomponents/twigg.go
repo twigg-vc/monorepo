@@ -393,7 +393,7 @@ func bugToFrontend(b bug.Bug, authorUsername, assigneeUsername string) FrontendB
 	}
 }
 
-func bugEventToFrontend(e bug.Event, authorUsername string) FrontendBugEvent {
+func bugEventToFrontend(e bug.Event, authorUsername, newAssigneeUsername string) FrontendBugEvent {
 	fe := FrontendBugEvent{
 		Id:             e.Id,
 		AuthorUsername: authorUsername,
@@ -412,6 +412,9 @@ func bugEventToFrontend(e bug.Event, authorUsername string) FrontendBugEvent {
 	case bug.EventKind_TitleEdit:
 		fe.Kind = FrontendBugEventKind_TitleEdit
 		fe.TitleEdit = &e.TitleEdit
+	case bug.EventKind_Assignment:
+		fe.Kind = FrontendBugEventKind_Assignment
+		fe.Assignment = &FrontendAssignment{NewAssigneeUsername: newAssigneeUsername}
 	default:
 		panic(fmt.Sprintf("unknown bug event kind %d", e.Kind))
 	}
