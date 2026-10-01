@@ -90,10 +90,12 @@ export class BugPage extends LitElement {
             return html`
                 <div class="bug-header">
                     <input
+                        id="title-input"
                         class="title-input"
                         maxlength=${MaxBugTitleLen}
                         .value=${this.titleDraft}
                         @input=${(e: Event) => { this.titleDraft = (e.target as HTMLInputElement).value }}
+                        @keydown=${this.onTitleKeyDown}
                     />
                     ${saveBtn}
                     <button class="secondary-btn" @click=${() => { this.isEditingTitle = false }}>Cancel</button>
@@ -119,9 +121,21 @@ export class BugPage extends LitElement {
         `
     }
 
-    private startEditingTitle() {
+    private async startEditingTitle() {
         this.titleDraft = this.Bug!.Title
         this.isEditingTitle = true
+        await this.updateComplete
+        const input = this.shadowRoot!.getElementById("title-input") as HTMLInputElement
+        input.focus()
+        input.select()
+    }
+
+    private onTitleKeyDown(e: KeyboardEvent) {
+        if (e.key === "Enter") {
+            this.saveTitle()
+        } else if (e.key === "Escape") {
+            this.isEditingTitle = false
+        }
     }
 
     private async saveTitle() {
