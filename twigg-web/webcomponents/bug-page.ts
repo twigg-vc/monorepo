@@ -1,7 +1,7 @@
 import { html, css, LitElement, TemplateResult } from 'lit';
 import { TwiggCss } from './css';
 import { Bug, BugEvent, BugStatus, MaxBugTitleLen } from './interfaces';
-import { GetCsrfHeaders, PathToBugComments, PathToBugDescription, PathToBugStatus, PathToBugTitle, UrlToRepoBugsTab } from './routes';
+import { GetCsrfHeaders, PathToBugComments, PathToBugDescription, PathToBugStatus, PathToBugTitle, UrlToBug, UrlToRepoBugsTab } from './routes';
 import { FormatDateTime, FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
 import { MdInput2, MdInputSubmit } from './md-input2';
@@ -62,7 +62,7 @@ export class BugPage extends LitElement {
                     <bread-crumbs-space></bread-crumbs-space>
                     <bread-crumbs Name=${this.RepoName} Link=${UrlToRepoBugsTab(this.RepoOwnerName, this.RepoName)}></bread-crumbs>
                     <bread-crumbs-space></bread-crumbs-space>
-                    <bread-crumbs id="current-crumb" Name="b/${this.Bug.Number}" Link=""></bread-crumbs>
+                    <bread-crumbs id="current-crumb" Name="b/${this.Bug.Number}" Link=${UrlToBug(this.RepoOwnerName, this.RepoName, this.Bug.Number)} CopyOnClick></bread-crumbs>
                 </div>
                 ${this.renderHeader(this.Bug)}
                 <div class="layout">
