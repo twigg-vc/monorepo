@@ -27,6 +27,7 @@ export class RepoBugsTab extends LitElement {
         isLoadingMore: { type: Boolean, state: true },
         loadFailed: { type: Boolean, state: true },
         draftTitle: { type: String, state: true },
+        isCreating: { type: Boolean, state: true },
     };
     declare RepoOwnerName: string;
     declare RepoName: string;
@@ -37,6 +38,7 @@ export class RepoBugsTab extends LitElement {
     declare private isLoadingMore: boolean;
     declare private loadFailed: boolean;
     declare private draftTitle: string;
+    declare private isCreating: boolean;
 
     constructor() {
         super();
@@ -49,6 +51,7 @@ export class RepoBugsTab extends LitElement {
         this.isLoadingMore = false;
         this.loadFailed = false;
         this.draftTitle = "";
+        this.isCreating = false;
     }
 
     firstUpdated() {
@@ -185,6 +188,17 @@ export class RepoBugsTab extends LitElement {
     }
 
     private renderNewBug() {
+        const canSubmit = this.draftTitle.trim() !== "" && !this.isCreating
+        var submitBtn: TemplateResult | undefined = undefined
+        if (this.isCreating) {
+            submitBtn = html`<simple-loader></simple-loader>`
+        } else {
+            submitBtn = html`
+                <button class="primary-btn" ?disabled=${!canSubmit} @click=${this.createBug}>
+                    Create
+                </button>
+            `
+        }
         return html`
             ${this.renderBackLink()}
             <div class="new-bug card">
@@ -197,15 +211,17 @@ export class RepoBugsTab extends LitElement {
                 />
                 <div class="form-actions">
                     <button class="secondary-btn" @click=${this.showList}>Cancel</button>
-                    <button class="primary-btn" ?disabled=${this.draftTitle.trim() === ""} @click=${this.createBug}>
-                        Create
-                    </button>
+                    ${submitBtn}
                 </div>
             </div>
         `
     }
 
     private async createBug() {
+        if (this.draftTitle.trim() === "" || this.isCreating) {
+            return
+        }
+        this.isCreating = true
         try {
             const resp = await fetch(PathToNewBug(this.RepoOwnerName, this.RepoName), {
                 method: 'POST',
@@ -216,11 +232,14 @@ export class RepoBugsTab extends LitElement {
                 alert(await resp.text())
                 return
             }
+            const b = await resp.json() as Bug
             this.draftTitle = ""
-            this.showList()
-        } catch (error) {
-            console.log("failed to create bug: ", error)
-            alert("Failed to create the bug :(")
+            window.location.href = UrlToBug(this.RepoOwnerName, this.RepoName, b.Number)
+        } catch (err) {
+            console.log("failed to create bug: ", err)
+            alert("Failed to create bug :(")
+        } finally {
+            this.isCreating = false
         }
     }
 
