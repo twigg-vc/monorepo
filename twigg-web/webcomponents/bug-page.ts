@@ -2,6 +2,7 @@ import { html, css, LitElement } from 'lit';
 import { TwiggCss } from './css';
 import { Bug } from './interfaces';
 import { PathToBugDescription, UrlToRepoBugsTab } from './routes';
+import { FormatDateTime, FormatRelativeTime } from './helpers';
 import './bug-status-badge';
 
 /**
@@ -78,6 +79,18 @@ export class BugPage extends LitElement {
                 <div class="meta-item">
                     <span class="meta-label">Author</span>
                     <username-tag .Username=${b.AuthorUsername}></username-tag>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Opened</span>
+                    <span title=${FormatDateTime(b.CreatedOn)}>${FormatRelativeTime(b.CreatedOn)}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Last updated</span>
+                    <span title=${FormatDateTime(b.UpdatedOn)}>${FormatRelativeTime(b.UpdatedOn)}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Comments</span>
+                    <span>${b.CommentCount}</span>
                 </div>
             </aside>
         `
