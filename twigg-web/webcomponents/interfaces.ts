@@ -24,13 +24,14 @@ export interface Commit {
 export interface ServerThread {
     // (RepoId + commitId + threadId) uniquely identify a thread
     Id: number
-    Type: "CommentsOnFileOnCommitVersion" | "CommentsOnCommitVersion" | "AddLGTM" | "RemoveLGTM"
+    Type: "CommentsOnFileOnCommitVersion" | "CommentsOnCommitVersion" | "AddLGTM" | "RemoveLGTM" | "AddReviewer" | "RemoveReviewer"
     CommitVersion: number
     IsResolved: boolean
     Filename: string
     Line: number // 1-based. 0 means the thread is anchored to the whole file
     IsLgtm: boolean
     AuthorUsername: string
+    TargetUsername: string // Set for AddReviewer/RemoveReviewer: the reviewer being added/removed
     CreatedOn: string // Go Time is serialized as a string
 }
 
@@ -45,6 +46,7 @@ export interface Thread {
     Comments: Comment[]
     IsLgtm: boolean
     AuthorUsername: string
+    TargetUsername: string // Set for AddReviewer/RemoveReviewer: the reviewer being added/removed
     CreatedOn: string // Go Time is serialized as a string
 }
 
