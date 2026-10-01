@@ -420,6 +420,9 @@ export class CommitDisplay extends LitElement {
                 throw "err"
             }
 
+            const newServerThreads: ServerThread[] = await resp.json()
+            this.appendNewThreadsFromReviewerResponse(newServerThreads)
+
             await this.getReviewers()
 
         } catch (err) {
@@ -474,6 +477,9 @@ export class CommitDisplay extends LitElement {
                 }
                 return
             }
+
+            const newServerThreads: ServerThread[] = await resp.json()
+            this.appendNewThreadsFromReviewerResponse(newServerThreads)
 
             await this.getReviewers()
 
@@ -1326,6 +1332,7 @@ private renderRenameToWipBtn(message: string): TemplateResult {
                     Comments: [],
                     IsLgtm: newServerThreads[i].IsLgtm,
                     AuthorUsername: newServerThreads[i].AuthorUsername,
+                    TargetUsername: newServerThreads[i].TargetUsername,
                     CreatedOn: newServerThreads[i].CreatedOn,
                 }
             }
@@ -1453,6 +1460,22 @@ private renderRenameToWipBtn(message: string): TemplateResult {
         }
     }
 
+    private appendNewThreadsFromReviewerResponse(newServerThreads: ServerThread[]) {
+        const newThreads: Thread[] = newServerThreads.map(st => ({
+            Type: st.Type,
+            Id: st.Id,
+            CommitVersion: st.CommitVersion,
+            Filename: st.Filename,
+            Line: st.Line,
+            IsResolved: st.IsResolved,
+            Comments: [],
+            IsLgtm: st.IsLgtm,
+            AuthorUsername: st.AuthorUsername,
+            TargetUsername: st.TargetUsername,
+            CreatedOn: st.CreatedOn,
+        }))
+        this.threads_ = [...this.threads_, ...newThreads]
+    }
     private onNewThread(event: CustomEvent<Thread>){
         const newThread = event.detail
         this.threads_ = [...this.threads_, newThread]
