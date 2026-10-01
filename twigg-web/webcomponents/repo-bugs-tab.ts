@@ -126,13 +126,37 @@ export class RepoBugsTab extends LitElement {
             return html`<simple-loader class="loader"></simple-loader>`
         }
         if (this.page.Bugs.length === 0) {
-            return html`<div class="empty-msg">No bugs yet</div>`
+            return html`<div class="empty-state card">${this.renderEmptyMsg()}</div>`
         }
         return html`
             <div class="bug-list card">
                 ${this.page.Bugs.map(b => this.renderBugRow(b))}
             </div>
             ${this.renderLoadMoreBtn()}
+        `
+    }
+
+    private renderEmptyMsg() {
+        const p = this.page!
+        const total = p.OpenCount + p.ClosedCount
+        if (total === 0) {
+            return html`
+                <twigg-icon class="empty-icon" icon="Bug"></twigg-icon>
+                <h3>No bugs yet</h3>
+                <p>A blank slate. Bug reports, feature requests and wild ideas all welcome.</p>
+            `
+        }
+        if (this.filter === "open") {
+            return html`
+                <twigg-icon class="empty-icon success" icon="Check"></twigg-icon>
+                <h3>No open bugs</h3>
+                <p>All ${p.ClosedCount} wrapped up. Enjoy the quiet while it lasts.</p>
+            `
+        }
+        return html`
+            <twigg-icon class="empty-icon" icon="Bug"></twigg-icon>
+            <h3>Nothing closed yet</h3>
+            <p>${p.OpenCount} waiting for some love.</p>
         `
     }
 
@@ -411,6 +435,22 @@ export class RepoBugsTab extends LitElement {
             margin: var(--space3) auto;
             background: var(--color-surface);
             color: var(--color-text);
+        }
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space2);
+            padding: var(--space6) var(--space4);
+            text-align: center;
+            color: var(--color-text-muted);
+        }
+        .empty-icon {
+            font-size: var(--space6);
+            color: var(--color-primary-pop);
+        }
+        .empty-icon.success {
+            color: var(--color-success);
         }
         .bug-comments {
             display: inline-flex;
