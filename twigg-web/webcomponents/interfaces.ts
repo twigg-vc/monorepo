@@ -261,6 +261,9 @@ export function UsernameIsValid(username: string): { isValid: boolean; errorMsg 
 
 export type BugStatus = "open" | "closed"
 
+// Must match bug.MaxTitleLen
+export const MaxBugTitleLen = 200
+
 // Copy of go-code webcomponents.FrontendBug
 export interface Bug {
     Number: number

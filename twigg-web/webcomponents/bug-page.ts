@@ -1,6 +1,6 @@
-import { html, css, LitElement } from 'lit';
+import { html, css, LitElement, TemplateResult } from 'lit';
 import { TwiggCss } from './css';
-import { Bug, BugEvent, BugStatus } from './interfaces';
+import { Bug, BugEvent, BugStatus, MaxBugTitleLen } from './interfaces';
 import { GetCsrfHeaders, PathToBugComments, PathToBugDescription, PathToBugStatus, UrlToRepoBugsTab } from './routes';
 import { FormatDateTime, FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
@@ -22,6 +22,8 @@ export class BugPage extends LitElement {
 
         commentDraft: { type: String, state: true },
         isChangingStatus: { type: Boolean, state: true },
+        isEditingTitle: { type: Boolean, state: true },
+        titleDraft: { type: String, state: true },
     };
     declare RepoOwnerName: string;
     declare RepoName: string;
@@ -30,6 +32,8 @@ export class BugPage extends LitElement {
     declare CanWrite: boolean;
     declare private commentDraft: string;
     declare private isChangingStatus: boolean;
+    declare private isEditingTitle: boolean;
+    declare private titleDraft: string;
 
     constructor() {
         super();
@@ -40,6 +44,8 @@ export class BugPage extends LitElement {
         this.CanWrite = false;
         this.commentDraft = "";
         this.isChangingStatus = false;
+        this.isEditingTitle = false;
+        this.titleDraft = "";
     }
 
     render() {
@@ -55,10 +61,7 @@ export class BugPage extends LitElement {
                     <bread-crumbs-space></bread-crumbs-space>
                     <bread-crumbs id="current-crumb" Name="b/${this.Bug.Number}" Link=""></bread-crumbs>
                 </div>
-                <div class="bug-header">
-                    <h1>${this.Bug.Title}</h1>
-                    <bug-status-badge .Status=${this.Bug.Status}></bug-status-badge>
-                </div>
+                ${this.renderHeader(this.Bug)}
                 <div class="layout">
                     <div class="content">
                         <h2 class="section-title">Description</h2>
@@ -71,6 +74,44 @@ export class BugPage extends LitElement {
                 </div>
             </div>
         `
+    }
+
+    private renderHeader(b: Bug) {
+        if (this.isEditingTitle) {
+            return html`
+                <div class="bug-header">
+                    <input
+                        class="title-input"
+                        maxlength=${MaxBugTitleLen}
+                        .value=${this.titleDraft}
+                        @input=${(e: Event) => { this.titleDraft = (e.target as HTMLInputElement).value }}
+                    />
+                    <button class="secondary-btn" @click=${() => { this.isEditingTitle = false }}>Cancel</button>
+                </div>
+            `
+        }
+        var editBtn: TemplateResult | undefined = undefined
+        if (this.CanWrite) {
+            editBtn = html`
+                <button class="edit-title-btn" title="Edit title" @click=${this.startEditingTitle}>
+                    <twigg-icon icon="PencilIcon"></twigg-icon>
+                </button>
+            `
+        } else {
+            editBtn = html``
+        }
+        return html`
+            <div class="bug-header">
+                <h1>${b.Title}</h1>
+                ${editBtn}
+                <bug-status-badge .Status=${b.Status}></bug-status-badge>
+            </div>
+        `
+    }
+
+    private startEditingTitle() {
+        this.titleDraft = this.Bug!.Title
+        this.isEditingTitle = true
     }
 
     private renderDescription(b: Bug) {
@@ -359,6 +400,12 @@ export class BugPage extends LitElement {
             border-radius: var(--radius1);
             box-shadow: var(--shadow-surface);
         }
+        .secondary-btn {
+            background: var(--color-surface);
+            color: var(--color-text);
+            font: inherit;
+            padding: var(--space1) var(--space4);
+        }
         .main {
             max-width: var(--size4);
             margin: auto;
@@ -373,6 +420,30 @@ export class BugPage extends LitElement {
         }
         .bug-header h1 {
             overflow-wrap: anywhere;
+        }
+        .edit-title-btn {
+            background: none;
+            border: none;
+            color: var(--color-text-muted);
+            padding: var(--space1);
+            font-size: var(--space5);
+        }
+        .edit-title-btn:hover {
+            color: var(--color-primary-pop);
+        }
+        .title-input {
+            flex: 1;
+            min-width: 0;
+            font: inherit;
+            font-size: var(--space5p);
+            font-weight: var(--weight-bold);
+            padding: var(--space1) var(--space3);
+            border: 1px solid var(--color-primary-pop);
+            border-radius: var(--radius1);
+            background: var(--color-surface-alt);
+            color: var(--color-text);
+            outline: none;
+            box-shadow: var(--shadow-pop);
         }
         .layout {
             display: grid;
