@@ -4,7 +4,7 @@ import { Comment, Commit, Thread, User } from './interfaces';
 import { CommentParameterName, GetCsrfHeaders, IsNotResolvedParamValue, IsResolvedParamValue, ResolvedParamName, UrlToPostToThread } from './routes';
 import { IconName } from './icons';
 import { MdInput2, MdInputSubmit } from './md-input2';
-import { FormatDateTime } from './helpers';
+import { FormatDateTime, FormatRelativeTime } from './helpers';
 
 // Events fired
 declare global {
@@ -370,7 +370,7 @@ export class CommentDisplay extends LitElement {
         return html`
             <div class="user-name-tag">
                 <username-tag username=${this.Comment.AuthorUsername}></username-tag>
-                <span class="comment-time">${FormatDateTime(this.Comment.T)}</span>
+                <span class="comment-time" title=${FormatDateTime(this.Comment.T)}>${FormatRelativeTime(this.Comment.T)}</span>
             </div>
             <div class="user-comment">
                 <md-display content=${this.Comment.Text}></md-display>
