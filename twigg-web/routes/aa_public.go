@@ -174,6 +174,7 @@ const (
 	BugStatusPattern         = BugPattern + "/status"
 	BugDescriptionPattern    = BugPattern + "/description"
 	BugTitlePattern          = BugPattern + "/title"
+	BugAssigneePattern       = BugPattern + "/assignee"
 	BugsStatusQueryParamName = "status" // "open", "closed" or empty for all
 	BugsCursorQueryParamName = "cursor" // reads the bugs after a page
 )

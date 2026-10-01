@@ -142,6 +142,9 @@ export function PathToBugStatus(owner: string, repoName: string, number: number)
 export function PathToBugTitle(owner: string, repoName: string, number: number): string {
     return `${UrlToBug(owner, repoName, number)}/title`
 }
+export function PathToBugAssignee(owner: string, repoName: string, number: number): string {
+    return `${UrlToBug(owner, repoName, number)}/assignee`
+}
 
 
 export function PathToMoreSubmittedCommits(owner: string, repoName: string,
