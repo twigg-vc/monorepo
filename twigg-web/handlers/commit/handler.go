@@ -1770,17 +1770,22 @@ func (hl handler) handlePostAddReviewers(w http.ResponseWriter,
 		return
 	}
 
+	frontendThreads := []FrontendThread{}
 	for _, username := range addReviewersBody.Usernames {
 		addedUser, isNotFound, err := hl.userS.GetByUsername(dbWrite, username)
 		if isNotFound || err != nil {
 			http.Error(w, fmt.Sprintf("invalid username: %s", username), http.StatusBadRequest)
 			return
 		}
-		_, err = hl.revSrv.AddReviewer(dbWrite, quotaOwner(r.Repo.OwnerId), r.Repo.Id, cI, addedUser.Id, r.UserWithWritePermission.Id)
+		newThread, err := hl.revSrv.AddReviewer(dbWrite, quotaOwner(r.Repo.OwnerId), r.Repo.Id, cI, addedUser.Id, r.UserWithWritePermission.Id)
 		if err != nil {
 			log.Printf("failed to AddReviewer: %s", err)
 			http.Error(w, "failed to add reviewer", http.StatusInternalServerError)
 			return
+		}
+		if newThread.Id != 0 {
+			frontendThreads = append(frontendThreads, newFrontendThread(newThread,
+				r.UserWithWritePermission.Username, addedUser.Username))
 		}
 		assetPath := hl.rt.Commit(
 			r.RepoOwnerUsr.Username,
@@ -1818,9 +1823,10 @@ func (hl handler) handlePostAddReviewers(w http.ResponseWriter,
 		}
 	}
 
-	_, err = w.Write([]byte("ok"))
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(frontendThreads)
 	if err != nil {
-		log.Printf("failed to write ok response in handlePostAddReviewers: %s", err)
+		log.Printf("failed to write thread response in handlePostAddReviewers: %s", err)
 	}
 	shouldCommit = true
 	return
