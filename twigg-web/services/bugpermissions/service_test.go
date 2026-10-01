@@ -53,3 +53,42 @@ func TestOnlyRepoWritersCanCreateAndWriteBugs(t *testing.T) {
 	check("stranger", &stranger, false)
 	check("anonymous", nil, false)
 }
+
+func TestOwnerReadersAndWritersCanBeAssignedBugs(t *testing.T) {
+	db, cl, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl()
+	w, closeW, _, err := db.BeginWrite()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeW()
+	owner, writer, reader, stranger := user.User{Id: 1}, user.User{Id: 2}, user.User{Id: 3}, user.User{Id: 4}
+	rp := repo.Repo{Id: 10, OwnerId: owner.Id}
+	for u, p := range map[int64]permissions.Permission{
+		writer.Id: permissions.Permission_WriteRepo,
+		reader.Id: permissions.Permission_ReadRepo,
+	} {
+		if _, err := db.GrantPermissionIfNotExists(w, u, p, permissions.RepoAssetId(rp.Id)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s := bugpermissions.NewService(db)
+	check := func(name string, u user.User, want bool) {
+		t.Helper()
+		got, err := s.CanBeAssignedBugs(w, u, rp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != want {
+			t.Fatalf("%s: expected %v, got %v", name, want, got)
+		}
+	}
+
+	check("owner", owner, true)
+	check("writer", writer, true)
+	check("reader", reader, false)
+	check("stranger", stranger, false)
+}

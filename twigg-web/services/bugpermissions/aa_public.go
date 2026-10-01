@@ -28,6 +28,12 @@ func (s Service) CanWriteBug(r context.Context, u *user.User, rp repo.Repo, b bu
 	return s.s.canWriteBug(r, u, rp, b)
 }
 
+// Whether u can be the assignee of the bugs of rp: the owner and the users
+// with write permission.
+func (s Service) CanBeAssignedBugs(r context.Context, u user.User, rp repo.Repo) (bool, error) {
+	return s.s.canBeAssignedBugs(r, u, rp)
+}
+
 type Db interface {
 	HasPermission(r context.Context, userId int64, p permissions.Permission, assetId string) (bool, error)
 }

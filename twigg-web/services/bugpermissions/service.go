@@ -21,6 +21,10 @@ func (s service) canWriteBug(r context.Context, u *user.User, rp repo.Repo, b bu
 	return s.canWriteRepo(r, u, rp)
 }
 
+func (s service) canBeAssignedBugs(r context.Context, u user.User, rp repo.Repo) (bool, error) {
+	return s.canWriteRepo(r, &u, rp)
+}
+
 func (s service) canWriteRepo(r context.Context, u *user.User, rp repo.Repo) (bool, error) {
 	if u == nil {
 		return false, nil
