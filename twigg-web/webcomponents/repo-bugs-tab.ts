@@ -71,9 +71,9 @@ export class RepoBugsTab extends LitElement {
         return html`
             <div class="toolbar">
                 <div class="filters">
-                    ${this.renderFilterBtn("open", "Bug", "Open")}
-                    ${this.renderFilterBtn("closed", "Check", "Closed")}
-                    ${this.renderFilterBtn("", "Bars", "All")}
+                    ${this.renderFilterBtn("open", "Bug", "Open", this.page?.OpenCount)}
+                    ${this.renderFilterBtn("closed", "Check", "Closed", this.page?.ClosedCount)}
+                    ${this.renderFilterBtn("", "Bars", "All", undefined)}
                 </div>
                 ${this.renderNewBugBtn()}
             </div>
@@ -81,17 +81,24 @@ export class RepoBugsTab extends LitElement {
         `
     }
 
-    private renderFilterBtn(f: Filter, icon: IconName, label: string) {
+    private renderFilterBtn(f: Filter, icon: IconName, label: string, count: number | undefined) {
         var cls: string | undefined = undefined
         if (this.filter === f) {
             cls = "filter active"
         } else {
             cls = "filter"
         }
+        var countTemplate: TemplateResult | undefined = undefined
+        if (count !== undefined) {
+            countTemplate = html`<span class="count">${count}</span>`
+        } else {
+            countTemplate = html``
+        }
         return html`
             <button class=${cls} @click=${() => this.setFilter(f)}>
                 <twigg-icon .icon=${icon}></twigg-icon>
                 <span>${label}</span>
+                ${countTemplate}
             </button>
         `
     }
@@ -281,6 +288,17 @@ export class RepoBugsTab extends LitElement {
             background: var(--color-surface-alt);
             color: var(--color-primary-pop);
             font-weight: var(--weight-semi-bold);
+        }
+        .count {
+            background: var(--color-surface-alt);
+            border-radius: 999px;
+            padding: 0 var(--space2);
+            font-size: var(--space3);
+            color: var(--color-text);
+        }
+        .filter.active .count {
+            background: var(--color-primary);
+            color: var(--color-text-on-primary);
         }
         .new-bug {
             display: flex;
