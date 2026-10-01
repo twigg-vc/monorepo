@@ -2,13 +2,18 @@ import { LitElement, html, css } from 'lit';
 import { TwiggCss } from './css';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { LinkifyCommitsAndBugs } from './md-anchors';
 
 class MarkdownDisplay extends LitElement {
     static properties = {
-        content: { type: String }
+        content: { type: String },
+        RepoOwnerName: { type: String },
+        RepoName: { type: String },
     };
     declare content: string;
     declare renderedHtml: string;
+    declare RepoOwnerName: string;
+    declare RepoName: string;
 
     static styles = [
         TwiggCss,
@@ -45,11 +50,17 @@ class MarkdownDisplay extends LitElement {
     constructor() {
         super();
         this.content = '';
+        this.RepoOwnerName = '';
+        this.RepoName = '';
     }
 
     render() {
+        var content = this.content;
+        if (this.RepoOwnerName != '' && this.RepoName != '') {
+            content = LinkifyCommitsAndBugs(content, this.RepoOwnerName, this.RepoName);
+        }
         return html`<div
-        class="main" .innerHTML=${DOMPurify.sanitize(marked.parse(this.content, { async: false }))}></div>`;
+        class="main" .innerHTML=${DOMPurify.sanitize(marked.parse(content, { async: false }))}></div>`;
     }
 }
 
