@@ -27,6 +27,7 @@ export class RepoBugsTab extends LitElement {
         isLoadingMore: { type: Boolean, state: true },
         loadFailed: { type: Boolean, state: true },
         draftTitle: { type: String, state: true },
+        draftBody: { type: String, state: true },
         isCreating: { type: Boolean, state: true },
     };
     declare RepoOwnerName: string;
@@ -38,6 +39,7 @@ export class RepoBugsTab extends LitElement {
     declare private isLoadingMore: boolean;
     declare private loadFailed: boolean;
     declare private draftTitle: string;
+    declare private draftBody: string;
     declare private isCreating: boolean;
 
     constructor() {
@@ -51,6 +53,7 @@ export class RepoBugsTab extends LitElement {
         this.isLoadingMore = false;
         this.loadFailed = false;
         this.draftTitle = "";
+        this.draftBody = "";
         this.isCreating = false;
     }
 
@@ -209,6 +212,15 @@ export class RepoBugsTab extends LitElement {
                     .value=${this.draftTitle}
                     @input=${(e: Event) => { this.draftTitle = (e.target as HTMLInputElement).value }}
                 />
+                <md-input2
+                    .Content=${this.draftBody}
+                    .InputIsOpen=${true}
+                    .CloseInputBtnIsHidden=${true}
+                    .OpenInputBtnIsHidden=${true}
+                    .HasSubmitBtn=${false}
+                    ContentPlaceholder="Enter description (markdown supported)"
+                    @md-input-changed=${(e: CustomEvent) => { this.draftBody = e.detail.NewContent }}>
+                </md-input2>
                 <div class="form-actions">
                     <button class="secondary-btn" @click=${this.showList}>Cancel</button>
                     ${submitBtn}
@@ -225,7 +237,7 @@ export class RepoBugsTab extends LitElement {
         try {
             const resp = await fetch(PathToNewBug(this.RepoOwnerName, this.RepoName), {
                 method: 'POST',
-                body: JSON.stringify({ Title: this.draftTitle }),
+                body: JSON.stringify({ Title: this.draftTitle, Body: this.draftBody }),
                 headers: { ...GetCsrfHeaders(), "Content-Type": "application/json" },
             })
             if (!resp.ok) {
@@ -234,6 +246,7 @@ export class RepoBugsTab extends LitElement {
             }
             const b = await resp.json() as Bug
             this.draftTitle = ""
+            this.draftBody = ""
             window.location.href = UrlToBug(this.RepoOwnerName, this.RepoName, b.Number)
         } catch (err) {
             console.log("failed to create bug: ", err)
