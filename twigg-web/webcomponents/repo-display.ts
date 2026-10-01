@@ -147,6 +147,7 @@ export class RepoDisplay extends LitElement {
                 <div class="tabs">
                     <div
                     class="tab ${this.TabName === "commits" ? "active" : ""}"
+                    title="Commits"
                     @click=${() => (this.TabName = "commits")}
                     >
                         <twigg-icon class="tab-icon" icon="Bars"></twigg-icon>
@@ -154,6 +155,7 @@ export class RepoDisplay extends LitElement {
                     </div>
                         <div
                             class="tab ${this.TabName === "commits graph" ? "active" : ""}"
+                            title="Commit graph"
                             @click=${() => (this.TabName = "commits graph")}
                         >
                             <twigg-icon class="tab-icon" icon="Tree"></twigg-icon>
@@ -164,6 +166,7 @@ export class RepoDisplay extends LitElement {
                     </div>
                         <div
                             class="tab ${this.TabName === "CD" ? "active" : ""}"
+                            title="CD"
                             @click=${() => (this.TabName = "CD")}
                         >
                             <twigg-icon class="tab-icon" icon="RocketLaunch"></twigg-icon>
@@ -192,7 +195,7 @@ export class RepoDisplay extends LitElement {
             cls = "tab"
         }
         return html`
-            <div class=${cls} @click=${() => (this.TabName = "bugs")}>
+            <div class=${cls} title="Bugs" @click=${() => (this.TabName = "bugs")}>
                 <twigg-icon class="tab-icon" icon="Bug"></twigg-icon>
                 <span class="tab-text">Bugs</span>
             </div>
@@ -873,6 +876,11 @@ export class RepoDisplay extends LitElement {
         }
         .tab-icon{
             font-size: var(--space4);
+        }
+        @media (max-width: 600px) {
+            .tab-text {
+                display: none;
+            }
         }
 
         .tab {
