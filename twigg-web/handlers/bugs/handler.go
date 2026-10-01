@@ -363,15 +363,17 @@ func (h handler) writeEditResponse(w http.ResponseWriter, r wrappers.UserRepoMux
 		http.Error(w, "failed to get the bug", http.StatusInternalServerError)
 		return false
 	}
-	frontendBug, ok := newUsernames(h.db, dbWrite, w).getFrontendBug(b)
+	u := newUsernames(h.db, dbWrite, w)
+	frontendBug, ok := u.getFrontendBug(b)
+	if !ok {
+		return false
+	}
+	frontendEvent, ok := u.getFrontendBugEvent(e)
 	if !ok {
 		return false
 	}
 
-	respJson, err := json.Marshal(PostEditResponse{
-		Bug:   frontendBug,
-		Event: twiggwc.BugEventToFrontend(e, r.UserWithWritePermission.Username),
-	})
+	respJson, err := json.Marshal(PostEditResponse{Bug: frontendBug, Event: frontendEvent})
 	if err != nil {
 		panic(fmt.Sprintf("failed to marshal the edit: %s", err))
 	}
