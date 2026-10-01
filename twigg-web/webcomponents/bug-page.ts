@@ -55,7 +55,7 @@ export class BugPage extends LitElement {
                         <h2 class="section-title">Description</h2>
                         ${this.renderDescription(this.Bug)}
                         <h2 class="section-title activity-title">Activity</h2>
-                        ${this.renderTimeline()}
+                        ${this.renderTimeline(this.Bug)}
                     </div>
                     ${this.renderSidebar(this.Bug)}
                 </div>
@@ -111,18 +111,19 @@ export class BugPage extends LitElement {
         }
     }
 
-    private renderTimeline() {
+    private renderTimeline(b: Bug) {
         if (this.Events.length === 0) {
             return html`<p class="empty-activity">No activity yet.</p>`
         }
+        const titlesAfterEdits = this.titlesAfterEdits(b.Title)
         return html`
             <div class="timeline">
-                ${this.Events.map(e => this.renderEvent(e))}
+                ${this.Events.map((e, i) => this.renderEvent(e, titlesAfterEdits[i]))}
             </div>
         `
     }
 
-    private renderEvent(e: BugEvent) {
+    private renderEvent(e: BugEvent, titleAfterEdit: string) {
         switch (e.Kind) {
             case "comment":
                 return this.renderComment(e)
@@ -130,9 +131,37 @@ export class BugPage extends LitElement {
                 return this.renderStatusChange(e)
             case "description-edit":
                 return this.renderDescriptionEdit(e)
-            default:
-                return html``
+            case "title-edit":
+                return this.renderTitleEdit(e, titleAfterEdit)
         }
+    }
+
+    // Returns the bug title right after each event
+    private titlesAfterEdits(currentTitle: string): string[] {
+        const titles: string[] = new Array(this.Events.length)
+        var title = currentTitle
+        for (let i = this.Events.length - 1; i >= 0; i--) {
+            titles[i] = title
+            const e = this.Events[i]
+            if (e.Kind === "title-edit") {
+                title = e.TitleEdit!.OldTitle
+            }
+        }
+        return titles
+    }
+
+    private renderTitleEdit(e: BugEvent, newTitle: string) {
+        return html`
+            <div class="event">
+                <span class="event-icon"><twigg-icon icon="None"></twigg-icon></span>
+                <username-tag .Username=${e.AuthorUsername}></username-tag>
+                <span title=${FormatDateTime(e.CreatedOn)}>
+                    changed the title <s class="old-title">${e.TitleEdit!.OldTitle}</s>
+                    <span class="new-title">${newTitle}</span>
+                    ${FormatRelativeTime(e.CreatedOn)}
+                </span>
+            </div>
+        `
     }
 
     private renderComment(e: BugEvent) {
@@ -287,6 +316,13 @@ export class BugPage extends LitElement {
         .event-icon.open {
             background: var(--color-success);
             color: var(--color-status-text);
+        }
+        .old-title {
+            color: var(--color-text-muted);
+        }
+        .new-title {
+            color: var(--color-text);
+            font-weight: var(--weight-semi-bold);
         }
         .event-details summary {
             cursor: pointer;
