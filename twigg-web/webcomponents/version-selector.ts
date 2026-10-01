@@ -159,7 +159,8 @@ export class VersionSelector extends LitElement {
             if (!t.IsResolved) {
                 hasUnresolvedComments = true
             }
-            if (t.Type != "AddLGTM" && t.Type != "RemoveLGTM"){
+            if (t.Type != "AddLGTM" && t.Type != "RemoveLGTM" &&
+                t.Type != "AddReviewer" && t.Type != "RemoveReviewer"){
                 textualThreadsCount += 1
             }
         }

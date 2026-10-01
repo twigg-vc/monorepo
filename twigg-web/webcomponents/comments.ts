@@ -179,9 +179,12 @@ export class CommentThread extends LitElement {
                 </lgtm-thread>
             `;
         }
-        if (this.Thread.Type == "AddReviewer" || this.Thread.Type == "RemoveReviewer") {
-            // TODO: not implemented
-            return html``;
+        if (this.Thread.Type == "AddReviewer" || this.Thread.Type == "RemoveReviewer"){
+            return html`
+                <reviewer-thread .Thread=${this.Thread}>
+                    <slot name="go-to" slot="go-to"></slot>
+                </reviewer-thread>
+            `;
         }
 
         return html`
