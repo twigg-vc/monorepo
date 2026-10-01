@@ -3,7 +3,20 @@ import { TwiggCss } from './css';
 import { MdInput2, MdInputSubmit } from './md-input2';
 import { GetCsrfHeaders } from './routes';
 
+declare global {
+    interface HTMLElementEventMap {
+        "description-saved": CustomEvent<DescriptionSaved>;
+    }
+}
+export interface DescriptionSaved {
+    NewDescription: string
+    Response: Response
+}
 
+/**
+ * @fires description-saved CustomEvent<DescriptionSaved>
+ * @description Emitted after the new description was posted successfully
+ */
 export class ClDescription extends LitElement {
     static properties = {
         canEdit: { type: Boolean },
@@ -77,6 +90,11 @@ export class ClDescription extends LitElement {
                 throw new Error(`request failed with status ${resp.status}`)
             }
             this.description = event.detail.NewContent
+            this.dispatchEvent(new CustomEvent<DescriptionSaved>('description-saved', {
+                detail: { NewDescription: this.description, Response: resp },
+                bubbles: true,
+                composed: true,
+            }));
         } catch (error) {
             console.log("error submitting new desc:", error)
             target.StopLoading()
