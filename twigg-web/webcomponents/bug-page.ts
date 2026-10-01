@@ -38,7 +38,7 @@ export class BugPage extends LitElement {
                 <bread-crumbs id="current-crumb" Name="b/${this.Bug.Number}" Link=""></bread-crumbs>
             </div>
             <h1 class="bug-title">
-                <bug-status-badge .Status=${this.Bug.Status}></bug-status-badge>
+                <bug-status-badge .Status=${this.Bug.Status} IconOnly></bug-status-badge>
                 ${this.Bug.Title} <span class="bug-number">b/${this.Bug.Number}</span>
             </h1>
             <h3>Description</h3>

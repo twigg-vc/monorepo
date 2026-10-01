@@ -104,7 +104,7 @@ export class RepoBugsTab extends LitElement {
     private renderBugRow(b: Bug) {
         return html`
             <a class="bug-row" href=${UrlToBug(this.RepoOwnerName, this.RepoName, b.Number)}>
-                <bug-status-badge .Status=${b.Status}></bug-status-badge>
+                <bug-status-badge .Status=${b.Status} IconOnly></bug-status-badge>
                 <div class="bug-main">
                     <span class="bug-title">${b.Title}</span>
                     <span class="bug-meta">
