@@ -55,14 +55,22 @@ func (u *usernameResolver) getFrontendBug(b bug.Bug) (twiggwc.FrontendBug, bool)
 	return twiggwc.BugToFrontend(b, author, assignee), true
 }
 
+func (u *usernameResolver) getFrontendBugEvent(e bug.Event) (twiggwc.FrontendBugEvent, bool) {
+	author, ok := u.getUsername(e.AuthorUserId)
+	if !ok {
+		return twiggwc.FrontendBugEvent{}, false
+	}
+	return twiggwc.BugEventToFrontend(e, author), true
+}
+
 func (u *usernameResolver) getFrontendBugEvents(es []bug.Event) ([]twiggwc.FrontendBugEvent, bool) {
 	fes := make([]twiggwc.FrontendBugEvent, 0, len(es))
 	for _, e := range es {
-		username, ok := u.getUsername(e.AuthorUserId)
+		fe, ok := u.getFrontendBugEvent(e)
 		if !ok {
 			return nil, false
 		}
-		fes = append(fes, twiggwc.BugEventToFrontend(e, username))
+		fes = append(fes, fe)
 	}
 	return fes, true
 }
