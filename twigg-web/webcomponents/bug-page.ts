@@ -2,6 +2,7 @@ import { html, css, LitElement } from 'lit';
 import { Bug } from './interfaces';
 import { UrlToRepoBugsTab } from './routes';
 import './bug-status-badge';
+import './cl-description';
 
 /**
 * Page of a single bug
@@ -39,7 +40,16 @@ export class BugPage extends LitElement {
                 <bug-status-badge .Status=${this.Bug.Status}></bug-status-badge>
                 ${this.Bug.Title} <span class="bug-number">b/${this.Bug.Number}</span>
             </h1>
+            <h3>Description</h3>
+            <cl-description .description=${this.displayedDescription()} .canEdit=${false}></cl-description>
         `
+    }
+
+    private displayedDescription(): string {
+        if (this.Bug === undefined || this.Bug.Body === "") {
+            return "`[no description]`"
+        }
+        return this.Bug.Body
     }
 
     static styles = css`
