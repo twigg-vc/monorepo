@@ -1,9 +1,10 @@
 import { html, css, LitElement } from 'lit';
 import { TwiggCss } from './css';
 import { Bug, BugEvent } from './interfaces';
-import { PathToBugDescription, UrlToRepoBugsTab } from './routes';
+import { GetCsrfHeaders, PathToBugComments, PathToBugDescription, UrlToRepoBugsTab } from './routes';
 import { FormatDateTime, FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
+import { MdInput2, MdInputSubmit } from './md-input2';
 import './bug-status-badge';
 import './comments';
 
@@ -56,6 +57,7 @@ export class BugPage extends LitElement {
                         ${this.renderDescription(this.Bug)}
                         <h2 class="section-title activity-title">Activity</h2>
                         ${this.renderTimeline(this.Bug)}
+                        ${this.renderComposer()}
                     </div>
                     ${this.renderSidebar(this.Bug)}
                 </div>
@@ -206,6 +208,59 @@ export class BugPage extends LitElement {
         `
     }
 
+    private renderComposer() {
+        if (!this.CanWrite) {
+            return html``
+        }
+        return html`
+            <div class="composer">
+                <md-input2
+                    id="composer"
+                    .InputIsOpen=${true}
+                    .CloseInputBtnIsHidden=${true}
+                    ContentPlaceholder="Leave a comment (markdown supported)"
+                    SubmitBtnText="Comment"
+                    SubmitBtnIcon="ChatBubbleLeft"
+                    @md-input-submit=${this.postComment}>
+                </md-input2>
+            </div>
+        `
+    }
+
+    private composer(): MdInput2 {
+        return this.shadowRoot!.getElementById("composer") as MdInput2
+    }
+
+    private resetComposer() {
+        const c = this.composer()
+        c.UpdateContent("")
+        c.InputIsOpen = true
+    }
+
+    private async postComment(e: CustomEvent<MdInputSubmit>) {
+        const b = this.Bug!
+        try {
+            const resp = await fetch(PathToBugComments(this.RepoOwnerName, this.RepoName, b.Number), {
+                method: 'POST',
+                body: JSON.stringify({ Body: e.detail.NewContent }),
+                headers: { ...GetCsrfHeaders(), "Content-Type": "application/json" },
+            })
+            if (!resp.ok) {
+                alert(await resp.text())
+                this.composer().StopLoading()
+                return
+            }
+            const event = await resp.json() as BugEvent
+            this.Bug = { ...b, CommentCount: b.CommentCount + 1, UpdatedOn: event.CreatedOn }
+            this.Events = [...this.Events, event]
+            this.resetComposer()
+        } catch (err) {
+            console.log("failed to post comment: ", err)
+            alert("Failed to post comment :(")
+            this.composer().StopLoading()
+        }
+    }
+
     private bodyOrPlaceholder(body: string): string {
         if (body === "") {
             return "_No description provided._"
@@ -340,6 +395,9 @@ export class BugPage extends LitElement {
         .event-details md-display {
             display: block;
             margin: var(--space2) var(--space4) 0 var(--space6);
+        }
+        .composer {
+            margin-top: var(--space4);
         }
         @media (max-width: 760px) {
             .layout {
