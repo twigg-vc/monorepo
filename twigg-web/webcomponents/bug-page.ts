@@ -1,4 +1,5 @@
 import { html, css, LitElement } from 'lit';
+import { TwiggCss } from './css';
 import { Bug } from './interfaces';
 import { UrlToRepoBugsTab } from './routes';
 import './bug-status-badge';
@@ -29,12 +30,12 @@ export class BugPage extends LitElement {
             return html``
         }
         return html`
-            <div>
+            <div class="crumbs">
                 <bread-crumbs Name="Home" Link="/home"></bread-crumbs>
                 <bread-crumbs-space></bread-crumbs-space>
                 <bread-crumbs Name=${this.RepoName} Link=${UrlToRepoBugsTab(this.RepoOwnerName, this.RepoName)}></bread-crumbs>
                 <bread-crumbs-space></bread-crumbs-space>
-                <bread-crumbs Name="b/${this.Bug.Number}" Link=""></bread-crumbs>
+                <bread-crumbs id="current-crumb" Name="b/${this.Bug.Number}" Link=""></bread-crumbs>
             </div>
             <h1 class="bug-title">
                 <bug-status-badge .Status=${this.Bug.Status}></bug-status-badge>
@@ -52,16 +53,19 @@ export class BugPage extends LitElement {
         return this.Bug.Body
     }
 
-    static styles = css`
-        .bug-title {
-            display: flex;
-            align-items: center;
-            gap: var(--space3);
-        }
-        .bug-number {
-            color: var(--color-text-muted);
-        }
-    `;
+    static styles = [
+        TwiggCss,
+        css`
+            .bug-title {
+                display: flex;
+                align-items: center;
+                gap: var(--space3);
+            }
+            .bug-number {
+                color: var(--color-text-muted);
+            }
+        `
+    ];
 }
 customElements.define('bug-page', BugPage);
 declare global {
