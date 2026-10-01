@@ -21,6 +21,7 @@ export class RepoBugsTab extends LitElement {
         filter: { type: String, state: true },
         page: { type: Object, state: true },
         isLoadingPage: { type: Boolean, state: true },
+        isLoadingMore: { type: Boolean, state: true },
         loadFailed: { type: Boolean, state: true },
         isWritingNewBug: { type: Boolean, state: true },
         newBugTitle: { type: String, state: true },
@@ -30,6 +31,7 @@ export class RepoBugsTab extends LitElement {
     declare private filter: Filter;
     declare private page: GetBugsResponse | undefined;
     declare private isLoadingPage: boolean;
+    declare private isLoadingMore: boolean;
     declare private loadFailed: boolean;
     declare private isWritingNewBug: boolean;
     declare private newBugTitle: string;
@@ -41,6 +43,7 @@ export class RepoBugsTab extends LitElement {
         this.filter = "open";
         this.page = undefined;
         this.isLoadingPage = false;
+        this.isLoadingMore = false;
         this.loadFailed = false;
         this.isWritingNewBug = false;
         this.newBugTitle = "";
@@ -129,7 +132,18 @@ export class RepoBugsTab extends LitElement {
             <div class="bug-list card">
                 ${this.page.Bugs.map(b => this.renderBugRow(b))}
             </div>
+            ${this.renderLoadMoreBtn()}
         `
+    }
+
+    private renderLoadMoreBtn() {
+        if (this.page?.NextCursor === "") {
+            return html``
+        }
+        if (this.isLoadingMore) {
+            return html`<simple-loader></simple-loader>`
+        }
+        return html`<button class="load-more-btn" @click=${this.fetchMore}>Load more</button>`
     }
 
     private setFilter(f: Filter) {
@@ -195,7 +209,7 @@ export class RepoBugsTab extends LitElement {
         const tm = new MinDurationTimer()
         try {
             const resp = await fetchGetWithRetry(
-                PathToBugs(this.RepoOwnerName, this.RepoName, this.filter))
+                PathToBugs(this.RepoOwnerName, this.RepoName, this.filter, ""))
             await tm.Wait()
             if (!resp.ok) {
                 throw `request failed with status ${resp.status}`
@@ -213,6 +227,31 @@ export class RepoBugsTab extends LitElement {
             if (requestId === this.pageRequestId) {
                 this.isLoadingPage = false
             }
+        }
+    }
+
+    private async fetchMore() {
+        if (this.isLoadingMore || this.page === undefined) {
+            return
+        }
+        this.isLoadingMore = true
+        const requestId = this.pageRequestId
+        try {
+            const resp = await fetchGetWithRetry(
+                PathToBugs(this.RepoOwnerName, this.RepoName, this.filter, this.page.NextCursor))
+            if (!resp.ok) {
+                throw `request failed with status ${resp.status}`
+            }
+            const more = await resp.json() as GetBugsResponse
+            if (requestId !== this.pageRequestId) {
+                return
+            }
+            this.page = { ...more, Bugs: [...this.page!.Bugs, ...more.Bugs] }
+        } catch (e) {
+            console.log("failed to load more bugs: ", e)
+            alert("Failed to load more bugs :(")
+        } finally {
+            this.isLoadingMore = false
         }
     }
 
@@ -367,6 +406,11 @@ export class RepoBugsTab extends LitElement {
         .bug-title {
             font-weight: var(--weight-semi-bold);
             overflow-wrap: anywhere;
+        }
+        .load-more-btn {
+            margin: var(--space3) auto;
+            background: var(--color-surface);
+            color: var(--color-text);
         }
         .bug-comments {
             display: inline-flex;

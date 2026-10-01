@@ -113,11 +113,14 @@ export function UrlToRepo(owner: string, repoName: string): string {
 export function UrlToRepoBugsTab(owner: string, repoName: string): string {
     return `${UrlToRepo(owner, repoName)}?tab=bugs`
 }
-// status="" lists bugs of any status
-export function PathToBugs(owner: string, repoName: string, status: string): string {
+// status="" lists bugs of any status. cursor="" starts at the newest.
+export function PathToBugs(owner: string, repoName: string, status: string, cursor: string): string {
     const params = new URLSearchParams()
     if (status !== "") {
         params.set("status", status)
+    }
+    if (cursor !== "") {
+        params.set("cursor", cursor)
     }
     return `${UrlToRepo(owner, repoName)}/bugs?${params}`
 }
