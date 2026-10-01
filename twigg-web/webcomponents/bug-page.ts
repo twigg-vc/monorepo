@@ -3,6 +3,7 @@ import { TwiggCss } from './css';
 import { Bug, BugEvent } from './interfaces';
 import { PathToBugDescription, UrlToRepoBugsTab } from './routes';
 import { FormatDateTime, FormatRelativeTime } from './helpers';
+import { IconName } from './icons';
 import './bug-status-badge';
 import './comments';
 
@@ -125,6 +126,8 @@ export class BugPage extends LitElement {
         switch (e.Kind) {
             case "comment":
                 return this.renderComment(e)
+            case "status-change":
+                return this.renderStatusChange(e)
             default:
                 return html``
         }
@@ -135,6 +138,26 @@ export class BugPage extends LitElement {
             <div class="post card">
                 <comment-display .Comment=${{ AuthorUsername: e.AuthorUsername, Text: e.Comment!.Body, T: e.CreatedOn }}>
                 </comment-display>
+            </div>
+        `
+    }
+
+    private renderStatusChange(e: BugEvent) {
+        const newStatus = e.StatusChange!.NewStatus
+        var verb: string | undefined = undefined
+        var icon: IconName | undefined = undefined
+        if (newStatus === "open") {
+            verb = "reopened"
+            icon = "Refresh"
+        } else {
+            verb = "closed"
+            icon = "Check"
+        }
+        return html`
+            <div class="event">
+                <span class="event-icon ${newStatus}"><twigg-icon .icon=${icon}></twigg-icon></span>
+                <username-tag .Username=${e.AuthorUsername}></username-tag>
+                <span title=${FormatDateTime(e.CreatedOn)}>${verb} this ${FormatRelativeTime(e.CreatedOn)}</span>
             </div>
         `
     }
@@ -228,6 +251,27 @@ export class BugPage extends LitElement {
         }
         .post {
             padding: var(--space3);
+        }
+        .event {
+            display: flex;
+            align-items: center;
+            gap: var(--space2);
+            padding: 0 var(--space4);
+            color: var(--color-text-muted);
+            font-size: var(--space3p);
+        }
+        .event-icon {
+            display: inline-flex;
+            border-radius: 50%;
+            padding: var(--space1);
+        }
+        .event-icon.closed {
+            background: var(--color-primary);
+            color: var(--color-text-on-primary);
+        }
+        .event-icon.open {
+            background: var(--color-success);
+            color: var(--color-status-text);
         }
         @media (max-width: 760px) {
             .layout {
