@@ -776,6 +776,7 @@ export class RepoDisplay extends LitElement {
             position: absolute;
             top: calc(100% + var(--space1));
             right: 0;
+            z-index: 100;
             min-width: 220px;
             background: var(--color-surface);
             border: 1px solid var(--color-border);
