@@ -1076,6 +1076,13 @@ func (db WebDb) EditBugTitle(writeCtx context.Context, repoId uint64, number uin
 	return db.db.EditBugTitle(writeCtx, repoId, number, authorId, newTitle)
 }
 
+// Sets the assignee (0 unassigns) and records it in the bug's timeline.
+// Returns ErrNotFound if the repo has no bug with the number.
+func (db WebDb) SetBugAssignee(writeCtx context.Context, repoId uint64, number uint64,
+	authorId int64, assigneeUserId int64) (e bug.Event, isNotFoundErr bool, err error) {
+	return db.db.SetBugAssignee(writeCtx, repoId, number, authorId, assigneeUserId)
+}
+
 // Returns up to limit of the newest events of the bug's timeline, ordered
 // oldest first, and the cursor of the older events before them. An empty
 // cursor reads the newest ones, and the page with the oldest returns an empty one.

@@ -55,6 +55,7 @@ const (
 	EventKind_StatusChange    EventKind = 2
 	EventKind_DescriptionEdit EventKind = 3
 	EventKind_TitleEdit       EventKind = 4
+	EventKind_Assignment      EventKind = 5
 )
 
 // Something that happened to a bug, shown in its timeline. Only the details
@@ -68,6 +69,7 @@ type Event struct {
 	StatusChange    StatusChange
 	DescriptionEdit DescriptionEdit
 	TitleEdit       TitleEdit
+	Assignment      Assignment
 }
 
 func NewEvent(id uint64, kind EventKind, authorUserId int64, createdOn time.Time) Event {
@@ -113,4 +115,13 @@ type TitleEdit struct {
 
 func NewTitleEdit(oldTitle string) TitleEdit {
 	return TitleEdit{OldTitle: oldTitle}
+}
+
+type Assignment struct {
+	// NewAssigneeUserId is 0 when the bug was unassigned.
+	NewAssigneeUserId int64
+}
+
+func NewAssignment(newAssigneeUserId int64) Assignment {
+	return Assignment{NewAssigneeUserId: newAssigneeUserId}
 }

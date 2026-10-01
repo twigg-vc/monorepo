@@ -270,6 +270,29 @@ func (db webDb) EditBugTitle(writeCtx context.Context, repoId uint64, number uin
 	return e, false, nil
 }
 
+func (db webDb) SetBugAssignee(writeCtx context.Context, repoId uint64, number uint64,
+	authorId int64, assigneeUserId int64) (e bug.Event, isNotFoundErr bool, err error) {
+	e, isNotFoundErr, err = db.insertBugEvent(writeCtx, repoId, number,
+		bug.EventKind_Assignment, authorId)
+	if err != nil {
+		return bug.Event{}, isNotFoundErr, err
+	}
+	_, err = db.s.Exec(writeCtx, `
+		INSERT INTO bug_assignments (eventId, newAssigneeUserId) VALUES (?, ?)
+	`, e.Id, assigneeUserId)
+	if err != nil {
+		return bug.Event{}, false, fmt.Errorf("failed inserting bug assignment: %w", err)
+	}
+	_, err = db.s.Exec(writeCtx, `
+		UPDATE bugs SET assigneeUserId = ? WHERE repoId = ? AND number = ?
+	`, assigneeUserId, repoId, number)
+	if err != nil {
+		return bug.Event{}, false, fmt.Errorf("failed setting bug assignee (repoId=%v number=%v): %w", repoId, number, err)
+	}
+	e.Assignment = bug.NewAssignment(assigneeUserId)
+	return e, false, nil
+}
+
 // Also bumps the bug's updatedOn and its count of the kind. The caller must
 // insert the kind's details.
 func (db webDb) insertBugEvent(writeCtx context.Context, repoId uint64, number uint64,
@@ -325,12 +348,14 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 			COALESCE(c.body, ''),
 			COALESCE(s.newStatus, ''),
 			COALESCE(d.oldBody, ''),
-			COALESCE(t.oldTitle, '')
+			COALESCE(t.oldTitle, ''),
+			COALESCE(a.newAssigneeUserId, 0)
 		FROM bug_events e
 		LEFT JOIN bug_comments c ON c.eventId = e.eventId
 		LEFT JOIN bug_status_changes s ON s.eventId = e.eventId
 		LEFT JOIN bug_description_edits d ON d.eventId = e.eventId
 		LEFT JOIN bug_title_edits t ON t.eventId = e.eventId
+		LEFT JOIN bug_assignments a ON a.eventId = e.eventId
 		WHERE e.bugId = (SELECT bugId FROM bugs WHERE repoId = ? AND number = ?)
 			AND e.eventId < ?
 		ORDER BY e.eventId DESC
@@ -347,8 +372,9 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 		var commentBody string
 		var newStatus bug.Status
 		var oldBody, oldTitle string
+		var newAssigneeUserId int64
 		err := rows.Scan(&e.Id, &e.Kind, &e.AuthorUserId, &createdOn, &commentBody,
-			&newStatus, &oldBody, &oldTitle)
+			&newStatus, &oldBody, &oldTitle, &newAssigneeUserId)
 		if err != nil {
 			return nil, "", fmt.Errorf("failed scanning bug event: %w", err)
 		}
@@ -362,6 +388,8 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 			e.DescriptionEdit = bug.NewDescriptionEdit(oldBody)
 		case bug.EventKind_TitleEdit:
 			e.TitleEdit = bug.NewTitleEdit(oldTitle)
+		case bug.EventKind_Assignment:
+			e.Assignment = bug.NewAssignment(newAssigneeUserId)
 		default:
 			return nil, "", fmt.Errorf("unknown bug event kind %d (eventId=%d)", e.Kind, e.Id)
 		}

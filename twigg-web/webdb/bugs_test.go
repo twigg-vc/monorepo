@@ -628,3 +628,70 @@ func TestEditBugTitleFails(t *testing.T) {
 		t.Fatalf("expected no events, got %+v (err=%v)", events, err)
 	}
 }
+
+func TestSetBugAssignee(t *testing.T) {
+	b, w := newBugsDb(t)
+	b.SetNower(mockNow{now: time.UnixMilli(199)}, t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const assigneeId = bugsAuthorId + 1
+
+	b.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+	e, isNotFoundErr, err := b.SetBugAssignee(w, bugsRepoId, created.Number, bugsAuthorId, assigneeId)
+	if err != nil || isNotFoundErr {
+		t.Fatalf("SetBugAssignee: isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if e.CreatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamp: event %+v", e)
+	}
+	e.CreatedOn = time.Time{}
+	want := bug.Event{
+		Id:           1,
+		Kind:         bug.EventKind_Assignment,
+		AuthorUserId: bugsAuthorId,
+		CreatedOn:    time.Time{},
+		Assignment:   bug.Assignment{NewAssigneeUserId: assigneeId},
+	}
+	if !reflect.DeepEqual(e, want) {
+		t.Fatalf("SetBugAssignee: expected %+v, got %+v", want, e)
+	}
+	got, _, err := b.GetBug(w, bugsRepoId, created.Number)
+	if err != nil || got.AssigneeUserId != assigneeId || got.UpdatedOn.UnixMilli() != 200 {
+		t.Fatalf("expected the assignee updated at 200, got %+v (err=%v)", got, err)
+	}
+
+	b.SetNower(mockNow{now: time.UnixMilli(201)}, t)
+	if _, _, err := b.SetBugAssignee(w, bugsRepoId, created.Number, bugsAuthorId, 0); err != nil {
+		t.Fatal(err)
+	}
+	got, _, err = b.GetBug(w, bugsRepoId, created.Number)
+	if err != nil || got.AssigneeUserId != 0 || got.UpdatedOn.UnixMilli() != 201 {
+		t.Fatalf("expected the bug unassigned at 201, got %+v (err=%v)", got, err)
+	}
+	events, _, err := b.GetBugEvents(w, bugsRepoId, created.Number, "", 10)
+	if err != nil || len(events) != 2 ||
+		events[0].Assignment.NewAssigneeUserId != assigneeId ||
+		events[1].Assignment.NewAssigneeUserId != 0 {
+		t.Fatalf("expected the assignments in order, got %+v (err=%v)", events, err)
+	}
+}
+
+func TestSetBugAssigneeFails(t *testing.T) {
+	b, w := newBugsDb(t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, isNotFoundErr, err := b.SetBugAssignee(w, bugsRepoId, created.Number+1, bugsAuthorId, bugsAuthorId)
+	if !isNotFoundErr || !errors.Is(err, webdb.ErrNotFound) {
+		t.Fatalf("expected not found, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	events, _, err := b.GetBugEvents(w, bugsRepoId, created.Number, "", 10)
+	if err != nil || len(events) != 0 {
+		t.Fatalf("expected no events, got %+v (err=%v)", events, err)
+	}
+}
