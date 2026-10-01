@@ -1,7 +1,7 @@
 import { html, css, LitElement, TemplateResult } from 'lit';
 import { TwiggCss } from './css';
 import { Bug, BugEvent, BugStatus, MaxBugTitleLen } from './interfaces';
-import { GetCsrfHeaders, PathToBugComments, PathToBugDescription, PathToBugStatus, UrlToRepoBugsTab } from './routes';
+import { GetCsrfHeaders, PathToBugComments, PathToBugDescription, PathToBugStatus, PathToBugTitle, UrlToRepoBugsTab } from './routes';
 import { FormatDateTime, FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
 import { MdInput2, MdInputSubmit } from './md-input2';
@@ -24,6 +24,7 @@ export class BugPage extends LitElement {
         isChangingStatus: { type: Boolean, state: true },
         isEditingTitle: { type: Boolean, state: true },
         titleDraft: { type: String, state: true },
+        isSavingTitle: { type: Boolean, state: true },
     };
     declare RepoOwnerName: string;
     declare RepoName: string;
@@ -34,6 +35,7 @@ export class BugPage extends LitElement {
     declare private isChangingStatus: boolean;
     declare private isEditingTitle: boolean;
     declare private titleDraft: string;
+    declare private isSavingTitle: boolean;
 
     constructor() {
         super();
@@ -46,6 +48,7 @@ export class BugPage extends LitElement {
         this.isChangingStatus = false;
         this.isEditingTitle = false;
         this.titleDraft = "";
+        this.isSavingTitle = false;
     }
 
     render() {
@@ -78,6 +81,12 @@ export class BugPage extends LitElement {
 
     private renderHeader(b: Bug) {
         if (this.isEditingTitle) {
+            var saveBtn: TemplateResult | undefined = undefined
+            if (this.isSavingTitle) {
+                saveBtn = html`<simple-loader></simple-loader>`
+            } else {
+                saveBtn = html`<button class="primary-btn" ?disabled=${this.titleDraft.trim() === ""} @click=${this.saveTitle}>Save</button>`
+            }
             return html`
                 <div class="bug-header">
                     <input
@@ -86,6 +95,7 @@ export class BugPage extends LitElement {
                         .value=${this.titleDraft}
                         @input=${(e: Event) => { this.titleDraft = (e.target as HTMLInputElement).value }}
                     />
+                    ${saveBtn}
                     <button class="secondary-btn" @click=${() => { this.isEditingTitle = false }}>Cancel</button>
                 </div>
             `
@@ -112,6 +122,39 @@ export class BugPage extends LitElement {
     private startEditingTitle() {
         this.titleDraft = this.Bug!.Title
         this.isEditingTitle = true
+    }
+
+    private async saveTitle() {
+        const b = this.Bug!
+        const title = this.titleDraft.trim()
+        if (title === "" || this.isSavingTitle) {
+            return
+        }
+        if (title === b.Title) {
+            this.isEditingTitle = false
+            return
+        }
+        this.isSavingTitle = true
+        try {
+            const resp = await fetch(PathToBugTitle(this.RepoOwnerName, this.RepoName, b.Number), {
+                method: 'POST',
+                body: JSON.stringify({ Title: title }),
+                headers: { ...GetCsrfHeaders(), "Content-Type": "application/json" },
+            })
+            if (!resp.ok) {
+                alert(await resp.text())
+                return
+            }
+            const data = await resp.json() as { Bug: Bug, Event: BugEvent }
+            this.Bug = data.Bug
+            this.Events = [...this.Events, data.Event]
+            this.isEditingTitle = false
+        } catch (err) {
+            console.log("failed to save title: ", err)
+            alert("Failed to save the title :(")
+        } finally {
+            this.isSavingTitle = false
+        }
     }
 
     private renderDescription(b: Bug) {
@@ -399,6 +442,22 @@ export class BugPage extends LitElement {
             border: 1px solid var(--color-border);
             border-radius: var(--radius1);
             box-shadow: var(--shadow-surface);
+        }
+        .primary-btn {
+            background: var(--color-primary);
+            color: var(--color-text-on-primary);
+            border-color: var(--color-primary);
+            font: inherit;
+            padding: var(--space1) var(--space4);
+        }
+        .primary-btn:hover {
+            box-shadow: var(--shadow-pop);
+        }
+        .primary-btn[disabled] {
+            opacity: var(--disable-opacity-value);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
         .secondary-btn {
             background: var(--color-surface);
