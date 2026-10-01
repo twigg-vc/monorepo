@@ -5,6 +5,7 @@ import { GetCsrfHeaders, PathToBugComments, PathToBugDescription, PathToBugStatu
 import { FormatDateTime, FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
 import { MdInput2, MdInputSubmit } from './md-input2';
+import { DescriptionSaved } from './cl-description';
 import './bug-status-badge';
 import './comments';
 
@@ -80,7 +81,8 @@ export class BugPage extends LitElement {
             <cl-description
                 .description=${b.Body}
                 .postDescriptionUrl=${PathToBugDescription(this.RepoOwnerName, this.RepoName, b.Number)}
-                placeholder="Enter description (markdown supported)">
+                placeholder="Enter description (markdown supported)"
+                @description-saved=${this.onDescriptionSaved}>
             </cl-description>
         `
     }
@@ -272,6 +274,17 @@ export class BugPage extends LitElement {
         c.UpdateContent("")
         c.InputIsOpen = true
         this.commentDraft = ""
+    }
+
+    private async onDescriptionSaved(e: CustomEvent<DescriptionSaved>) {
+        try {
+            const data = await e.detail.Response.json() as { Bug: Bug, Event: BugEvent }
+            this.Bug = data.Bug
+            this.Events = [...this.Events, data.Event]
+        } catch (err) {
+            console.log("failed to read the saved description: ", err)
+            location.reload()
+        }
     }
 
     private async postComment(e: CustomEvent<MdInputSubmit>) {
