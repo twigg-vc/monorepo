@@ -1,7 +1,7 @@
 import { html, css, LitElement } from 'lit';
 import { TwiggCss } from './css';
-import { Bug, BugEvent } from './interfaces';
-import { GetCsrfHeaders, PathToBugComments, PathToBugDescription, UrlToRepoBugsTab } from './routes';
+import { Bug, BugEvent, BugStatus } from './interfaces';
+import { GetCsrfHeaders, PathToBugComments, PathToBugDescription, PathToBugStatus, UrlToRepoBugsTab } from './routes';
 import { FormatDateTime, FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
 import { MdInput2, MdInputSubmit } from './md-input2';
@@ -18,12 +18,17 @@ export class BugPage extends LitElement {
         Bug: { type: Object },
         Events: { type: Array },
         CanWrite: { type: Boolean },
+
+        commentDraft: { type: String, state: true },
+        isChangingStatus: { type: Boolean, state: true },
     };
     declare RepoOwnerName: string;
     declare RepoName: string;
     declare Bug: Bug | undefined;
     declare Events: BugEvent[];
     declare CanWrite: boolean;
+    declare private commentDraft: string;
+    declare private isChangingStatus: boolean;
 
     constructor() {
         super();
@@ -32,6 +37,8 @@ export class BugPage extends LitElement {
         this.Bug = undefined;
         this.Events = [];
         this.CanWrite = false;
+        this.commentDraft = "";
+        this.isChangingStatus = false;
     }
 
     render() {
@@ -57,7 +64,7 @@ export class BugPage extends LitElement {
                         ${this.renderDescription(this.Bug)}
                         <h2 class="section-title activity-title">Activity</h2>
                         ${this.renderTimeline(this.Bug)}
-                        ${this.renderComposer()}
+                        ${this.renderComposer(this.Bug)}
                     </div>
                     ${this.renderSidebar(this.Bug)}
                 </div>
@@ -208,7 +215,7 @@ export class BugPage extends LitElement {
         `
     }
 
-    private renderComposer() {
+    private renderComposer(b: Bug) {
         if (!this.CanWrite) {
             return html``
         }
@@ -221,9 +228,38 @@ export class BugPage extends LitElement {
                     ContentPlaceholder="Leave a comment (markdown supported)"
                     SubmitBtnText="Comment"
                     SubmitBtnIcon="ChatBubbleLeft"
+                    @md-input-changed=${(e: CustomEvent) => { this.commentDraft = e.detail.NewContent }}
                     @md-input-submit=${this.postComment}>
+                    ${this.renderStatusBtn(b)}
                 </md-input2>
             </div>
+        `
+    }
+
+    private renderStatusBtn(b: Bug) {
+        const hasComment = this.commentDraft.trim() !== ""
+        var label: string | undefined = undefined
+        var icon: IconName | undefined = undefined
+        if (b.Status === "open") {
+            icon = "Check"
+            if (hasComment) {
+                label = "Close with comment"
+            } else {
+                label = "Close bug"
+            }
+        } else {
+            icon = "Refresh"
+            if (hasComment) {
+                label = "Reopen with comment"
+            } else {
+                label = "Reopen bug"
+            }
+        }
+        return html`
+            <button slot="extra-btn" class="status-btn" ?disabled=${this.isChangingStatus}
+                @click=${this.toggleStatus}>
+                <twigg-icon .icon=${icon}>${label}</twigg-icon>
+            </button>
         `
     }
 
@@ -235,6 +271,7 @@ export class BugPage extends LitElement {
         const c = this.composer()
         c.UpdateContent("")
         c.InputIsOpen = true
+        this.commentDraft = ""
     }
 
     private async postComment(e: CustomEvent<MdInputSubmit>) {
@@ -258,6 +295,37 @@ export class BugPage extends LitElement {
             console.log("failed to post comment: ", err)
             alert("Failed to post comment :(")
             this.composer().StopLoading()
+        }
+    }
+
+    private async toggleStatus() {
+        const b = this.Bug!
+        var newStatus: BugStatus | undefined = undefined
+        if (b.Status === "open") {
+            newStatus = "closed"
+        } else {
+            newStatus = "open"
+        }
+        this.isChangingStatus = true
+        try {
+            const resp = await fetch(PathToBugStatus(this.RepoOwnerName, this.RepoName, b.Number), {
+                method: 'POST',
+                body: JSON.stringify({ Status: newStatus, Comment: this.commentDraft }),
+                headers: { ...GetCsrfHeaders(), "Content-Type": "application/json" },
+            })
+            if (!resp.ok) {
+                alert(await resp.text())
+                return
+            }
+            const data = await resp.json() as { Bug: Bug, Events: BugEvent[] }
+            this.Bug = data.Bug
+            this.Events = [...this.Events, ...data.Events]
+            this.resetComposer()
+        } catch (err) {
+            console.log("failed to change status: ", err)
+            alert("Failed to change the bug status :(")
+        } finally {
+            this.isChangingStatus = false
         }
     }
 
@@ -398,6 +466,15 @@ export class BugPage extends LitElement {
         }
         .composer {
             margin-top: var(--space4);
+        }
+        .status-btn {
+            background: var(--color-surface);
+            color: var(--color-text);
+            font-size: var(--space5);
+        }
+        .status-btn[disabled] {
+            opacity: var(--disable-opacity-value);
+            cursor: not-allowed;
         }
         @media (max-width: 760px) {
             .layout {

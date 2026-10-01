@@ -125,6 +125,9 @@ export function PathToBugDescription(owner: string, repoName: string, number: nu
 export function PathToBugComments(owner: string, repoName: string, number: number): string {
     return `${UrlToBug(owner, repoName, number)}/comments`
 }
+export function PathToBugStatus(owner: string, repoName: string, number: number): string {
+    return `${UrlToBug(owner, repoName, number)}/status`
+}
 
 
 export function PathToMoreSubmittedCommits(owner: string, repoName: string,
