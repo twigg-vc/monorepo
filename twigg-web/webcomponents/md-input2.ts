@@ -50,6 +50,8 @@ export class MdInput2 extends LitElement {
     declare public OpenInputBtnIsCentered: boolean
     // If true, hides the open-input-btn.
     declare public OpenInputBtnIsHidden: boolean
+    // If true, the open input has a highlighted border
+    declare public Highlighted: boolean
 
     // Text used in the submit btn text (if the submit btn is not provided)
     declare public SubmitBtnText: string
@@ -71,6 +73,7 @@ export class MdInput2 extends LitElement {
         HasResetBtn: { type: Boolean },
         OpenInputBtnIsCentered: { type: Boolean },
         OpenInputBtnIsHidden: { type: Boolean },
+        Highlighted: { type: Boolean },
         SubmitBtnText: { type: String },
         SubmitBtnIcon: { type: String },
         OpenInputBtnText: { type: String },
@@ -91,6 +94,7 @@ export class MdInput2 extends LitElement {
         this.HasResetBtn = false
         this.OpenInputBtnIsCentered = false
         this.OpenInputBtnIsHidden = false
+        this.Highlighted = false
         this.SubmitBtnText = "Submit"
         this.SubmitBtnIcon = "Check"
         this.OpenInputBtnText = "Edit"
@@ -144,8 +148,14 @@ export class MdInput2 extends LitElement {
         if (this.IsLoading){
             return html`<simple-loader></simple-loader>`
         }
+        var highlightCls: string | undefined = undefined
+        if (this.Highlighted) {
+            highlightCls = "highlighted"
+        } else {
+            highlightCls = ""
+        }
         return html`
-        <div class="main ${this.InputIsOpen ? "open" : "closed"}">
+        <div class="main ${this.InputIsOpen ? "open" : "closed"} ${highlightCls}">
             ${this.renderCloseIconContainer()}
             <div id="content-div">
                 ${this.renderMarkdownDisplay()}
@@ -323,13 +333,14 @@ export class MdInput2 extends LitElement {
             transition: transform 0.15s, box-shadow 0.15s;
         }
         .main.open{
-            border: 1px solid var(--color-primary-pop);
-            box-shadow: var(--shadow-pop);
-        }
-        /* .main.closed{
             border: 1px solid var(--color-border);
             box-shadow: var(--shadow-surface);
-        } */
+        }
+        .main.open.highlighted,
+        .main.open:focus-within{
+            border-color: var(--color-primary-pop);
+            box-shadow: var(--shadow-pop);
+        }
         #close-icon-container{
             display: flex;
             justify-content: flex-end;

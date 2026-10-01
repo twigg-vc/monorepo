@@ -58,6 +58,7 @@ export class ClDescription extends LitElement {
             @md-input-submit=${this.onSubmit}
             SubmitBtnText="Save"
             ?OpenInputBtnIsHidden=${!this.canEdit}
+            ?Highlighted=${this.description != ""}
             >
             </md-input2>
         `;

@@ -464,6 +464,7 @@ export class NewCommentInput extends LitElement {
                     id=${this.mdInputId}
                     Content=""
                     ContentPlaceholder="Type your comment here..."
+                    Highlighted
                     ?OpenInputBtnIsCentered=${this.btnIsCentered}
                     OpenInputBtnText=${this.btnText}
                     OpenInputBtnIcon=${this.btnIcon}
