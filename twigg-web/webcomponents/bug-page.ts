@@ -223,6 +223,11 @@ export class BugPage extends LitElement {
         }
     }
 
+    // An empty username unassigns the bug
+    private async saveAssignee(username: string) {
+        alert("WIP: assign " + username)
+    }
+
     private renderTimeline(b: Bug) {
         if (this.Events.length === 0) {
             return html`<p class="empty-activity">No activity yet.</p>`
