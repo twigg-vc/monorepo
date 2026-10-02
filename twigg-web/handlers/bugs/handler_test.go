@@ -58,11 +58,12 @@ func newReadReq(target string) wrappers.UserWithReadPermissionMuxRequest {
 	}
 }
 
-func newWriteReq(u user.User, repoOwnerId int64, body string) wrappers.UserRepoMuxRequest {
+func newWriteReq(u user.User, repoOwner user.User, repoDisplayName string, body string) wrappers.UserRepoMuxRequest {
 	return wrappers.UserRepoMuxRequest{
 		Request:                 httptest.NewRequest("POST", "/zuko/tea/bugs", strings.NewReader(body)),
 		UserWithWritePermission: u,
-		Repo:                    repo.Repo{Id: testRepoId, OwnerId: repoOwnerId},
+		RepoOwnerUsr:            repoOwner,
+		Repo:                    repo.Repo{Id: testRepoId, OwnerId: repoOwner.Id, DisplayName: repoDisplayName},
 		Flags:                   featureflags.Flags{ShowBugs: true},
 	}
 }
@@ -72,8 +73,12 @@ func TestPostBug(t *testing.T) {
 	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
 
 	rec := httptest.NewRecorder()
-	shouldCommit := h.handlePostBug(rec, newWriteReq(user.User{Id: zukoId}, zukoId,
-		`{"Title": "  Fix Iroh's tea  ", "Body": "The tea is cold"}`), w)
+	shouldCommit := h.handlePostBug(rec, newWriteReq(
+		user.User{Id: zukoId},
+		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+		/*repoDisplayName*/ "tea",
+		`{"Title": "  Fix Iroh's tea  ", "Body": "The tea is cold"}`,
+	), w)
 	if rec.Code != http.StatusOK || !shouldCommit {
 		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
 	}
@@ -187,7 +192,12 @@ func TestPostBugFails(t *testing.T) {
 	h, db, w, zukoId := newTestHandler(t)
 	post := func(u user.User, flag bool, body string) int {
 		t.Helper()
-		req := newWriteReq(u, zukoId, body)
+		req := newWriteReq(
+			u,
+			/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+			/*repoDisplayName*/ "tea",
+			body,
+		)
 		req.Flags.ShowBugs = flag
 		rec := httptest.NewRecorder()
 		if h.handlePostBug(rec, req, w) {
@@ -222,7 +232,12 @@ func TestPostBugLimitsItsSize(t *testing.T) {
 			t.Fatal(err)
 		}
 		rec := httptest.NewRecorder()
-		h.handlePostBug(rec, newWriteReq(user.User{Id: zukoId}, zukoId, string(reqBody)), w)
+		h.handlePostBug(rec, newWriteReq(
+			user.User{Id: zukoId},
+			/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+			/*repoDisplayName*/ "tea",
+			string(reqBody),
+		), w)
 		return rec.Code
 	}
 
@@ -375,8 +390,13 @@ func TestGetBugFails(t *testing.T) {
 	}
 }
 
-func newBugWriteReq(u user.User, repoOwnerId int64, number string, body string) wrappers.UserRepoMuxRequest {
-	req := newWriteReq(u, repoOwnerId, body)
+func newBugWriteReq(u user.User, repoOwner user.User, repoDisplayName string, number string, body string) wrappers.UserRepoMuxRequest {
+	req := newWriteReq(
+		u,
+		/*repoOwner*/ repoOwner,
+		/*repoDisplayName*/ repoDisplayName,
+		body,
+	)
 	req.SetPathValue(routes.BugNumberParamName, number)
 	return req
 }
@@ -389,8 +409,13 @@ func TestPostComment(t *testing.T) {
 	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
 
 	rec := httptest.NewRecorder()
-	shouldCommit := h.handlePostComment(rec, newBugWriteReq(user.User{Id: zukoId, Username: "zuko"},
-		zukoId, "1", `{"Body": "Try jasmine"}`), w)
+	shouldCommit := h.handlePostComment(rec, newBugWriteReq(
+		user.User{Id: zukoId, Username: "zuko"},
+		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+		/*repoDisplayName*/ "tea",
+		/*number*/ "1",
+		`{"Body": "Try jasmine"}`,
+	), w)
 	if rec.Code != http.StatusOK || !shouldCommit {
 		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
 	}
@@ -427,7 +452,13 @@ func TestPostCommentFails(t *testing.T) {
 	zuko, stranger := user.User{Id: zukoId, Username: "zuko"}, user.User{Id: zukoId + 1}
 	post := func(u user.User, number string, flag bool, body string) int {
 		t.Helper()
-		req := newBugWriteReq(u, zukoId, number, body)
+		req := newBugWriteReq(
+			u,
+			/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+			/*repoDisplayName*/ "tea",
+			/*number*/ number,
+			body,
+		)
 		req.Flags.ShowBugs = flag
 		rec := httptest.NewRecorder()
 		if h.handlePostComment(rec, req, w) {
@@ -473,8 +504,13 @@ func TestPostStatus(t *testing.T) {
 	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
 
 	rec := httptest.NewRecorder()
-	shouldCommit := h.handlePostStatus(rec, newBugWriteReq(user.User{Id: zukoId, Username: "zuko"},
-		zukoId, "1", `{"Status": "closed"}`), w)
+	shouldCommit := h.handlePostStatus(rec, newBugWriteReq(
+		user.User{Id: zukoId, Username: "zuko"},
+		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+		/*repoDisplayName*/ "tea",
+		/*number*/ "1",
+		`{"Status": "closed"}`,
+	), w)
 	if rec.Code != http.StatusOK || !shouldCommit {
 		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
 	}
@@ -524,7 +560,13 @@ func TestPostStatusFails(t *testing.T) {
 	zuko, stranger := user.User{Id: zukoId, Username: "zuko"}, user.User{Id: zukoId + 1}
 	post := func(u user.User, number string, flag bool, body string) int {
 		t.Helper()
-		req := newBugWriteReq(u, zukoId, number, body)
+		req := newBugWriteReq(
+			u,
+			/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+			/*repoDisplayName*/ "tea",
+			/*number*/ number,
+			body,
+		)
 		req.Flags.ShowBugs = flag
 		rec := httptest.NewRecorder()
 		if h.handlePostStatus(rec, req, w) {
@@ -568,13 +610,25 @@ func TestPostStatusWithComment(t *testing.T) {
 		t.Fatal(err)
 	}
 	rec := httptest.NewRecorder()
-	h.handlePostStatus(rec, newBugWriteReq(zuko, zukoId, "1", string(tooLong)), w)
+	h.handlePostStatus(rec, newBugWriteReq(
+		zuko,
+		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+		/*repoDisplayName*/ "tea",
+		/*number*/ "1",
+		string(tooLong),
+	), w)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("comment too long: expected 400, got %d", rec.Code)
 	}
 
 	rec = httptest.NewRecorder()
-	h.handlePostStatus(rec, newBugWriteReq(zuko, zukoId, "1", `{"Status": "closed", "Comment": "Fixed with jasmine"}`), w)
+	h.handlePostStatus(rec, newBugWriteReq(
+		zuko,
+		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+		/*repoDisplayName*/ "tea",
+		/*number*/ "1",
+		`{"Status": "closed", "Comment": "Fixed with jasmine"}`,
+	), w)
 	var got PostStatusResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
@@ -585,8 +639,14 @@ func TestPostStatusWithComment(t *testing.T) {
 	}
 }
 
-func newDescriptionReq(u user.User, repoOwnerId int64, number string, description string) wrappers.UserRepoMuxRequest {
-	req := newBugWriteReq(u, repoOwnerId, number, url.Values{"description": {description}}.Encode())
+func newDescriptionReq(u user.User, repoOwner user.User, repoDisplayName string, number string, description string) wrappers.UserRepoMuxRequest {
+	req := newBugWriteReq(
+		u,
+		/*repoOwner*/ repoOwner,
+		/*repoDisplayName*/ repoDisplayName,
+		/*number*/ number,
+		url.Values{"description": {description}}.Encode(),
+	)
 	req.Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	return req
 }
@@ -600,8 +660,13 @@ func TestPostDescription(t *testing.T) {
 	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
 
 	rec := httptest.NewRecorder()
-	shouldCommit := h.handlePostDescription(rec, newDescriptionReq(user.User{Id: zukoId, Username: "zuko"},
-		zukoId, "1", "The tea is lukewarm"), w)
+	shouldCommit := h.handlePostDescription(rec, newDescriptionReq(
+		user.User{Id: zukoId, Username: "zuko"},
+		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+		/*repoDisplayName*/ "tea",
+		/*number*/ "1",
+		"The tea is lukewarm",
+	), w)
 	if rec.Code != http.StatusOK || !shouldCommit {
 		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
 	}
@@ -651,7 +716,13 @@ func TestPostDescriptionFails(t *testing.T) {
 	zuko, stranger := user.User{Id: zukoId, Username: "zuko"}, user.User{Id: zukoId + 1}
 	post := func(u user.User, number string, flag bool, description string) int {
 		t.Helper()
-		req := newDescriptionReq(u, zukoId, number, description)
+		req := newDescriptionReq(
+			u,
+			/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+			/*repoDisplayName*/ "tea",
+			/*number*/ number,
+			description,
+		)
 		req.Flags.ShowBugs = flag
 		rec := httptest.NewRecorder()
 		if h.handlePostDescription(rec, req, w) {
@@ -689,8 +760,13 @@ func TestPostTitle(t *testing.T) {
 	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
 
 	rec := httptest.NewRecorder()
-	shouldCommit := h.handlePostTitle(rec, newBugWriteReq(user.User{Id: zukoId, Username: "zuko"},
-		zukoId, "1", `{"Title": "  Fix Iroh's tea  "}`), w)
+	shouldCommit := h.handlePostTitle(rec, newBugWriteReq(
+		user.User{Id: zukoId, Username: "zuko"},
+		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+		/*repoDisplayName*/ "tea",
+		/*number*/ "1",
+		`{"Title": "  Fix Iroh's tea  "}`,
+	), w)
 	if rec.Code != http.StatusOK || !shouldCommit {
 		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
 	}
@@ -740,7 +816,13 @@ func TestPostTitleFails(t *testing.T) {
 	zuko, stranger := user.User{Id: zukoId, Username: "zuko"}, user.User{Id: zukoId + 1}
 	post := func(u user.User, number string, flag bool, body string) int {
 		t.Helper()
-		req := newBugWriteReq(u, zukoId, number, body)
+		req := newBugWriteReq(
+			u,
+			/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+			/*repoDisplayName*/ "tea",
+			/*number*/ number,
+			body,
+		)
 		req.Flags.ShowBugs = flag
 		rec := httptest.NewRecorder()
 		if h.handlePostTitle(rec, req, w) {
@@ -790,8 +872,13 @@ func TestPostAssignee(t *testing.T) {
 	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
 
 	rec := httptest.NewRecorder()
-	shouldCommit := h.handlePostAssignee(rec, newBugWriteReq(user.User{Id: zukoId, Username: "zuko"},
-		zukoId, "1", `{"Username": " iroh "}`), w)
+	shouldCommit := h.handlePostAssignee(rec, newBugWriteReq(
+		user.User{Id: zukoId, Username: "zuko"},
+		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+		/*repoDisplayName*/ "tea",
+		/*number*/ "1",
+		`{"Username": " iroh "}`,
+	), w)
 	if rec.Code != http.StatusOK || !shouldCommit {
 		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
 	}
@@ -834,8 +921,13 @@ func TestPostAssignee(t *testing.T) {
 
 	// Unassign
 	rec = httptest.NewRecorder()
-	shouldCommit = h.handlePostAssignee(rec, newBugWriteReq(user.User{Id: zukoId, Username: "zuko"},
-		zukoId, "1", `{"Username": ""}`), w)
+	shouldCommit = h.handlePostAssignee(rec, newBugWriteReq(
+		user.User{Id: zukoId, Username: "zuko"},
+		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+		/*repoDisplayName*/ "tea",
+		/*number*/ "1",
+		`{"Username": ""}`,
+	), w)
 	if rec.Code != http.StatusOK || !shouldCommit {
 		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
 	}
@@ -855,7 +947,13 @@ func TestPostAssigneeFails(t *testing.T) {
 	zuko, stranger := user.User{Id: zukoId, Username: "zuko"}, user.User{Id: zukoId + 1}
 	post := func(u user.User, number string, flag bool, body string) int {
 		t.Helper()
-		req := newBugWriteReq(u, zukoId, number, body)
+		req := newBugWriteReq(
+			u,
+			/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+			/*repoDisplayName*/ "tea",
+			/*number*/ number,
+			body,
+		)
 		req.Flags.ShowBugs = flag
 		rec := httptest.NewRecorder()
 		if h.handlePostAssignee(rec, req, w) {
