@@ -1,7 +1,7 @@
 import { html, css, LitElement, TemplateResult } from 'lit';
 import { TwiggCss } from './css';
 import { Bug, BugEvent, BugStatus, MaxBugTitleLen } from './interfaces';
-import { GetCsrfHeaders, PathToBugAssignee, PathToBugComments, PathToBugDescription, PathToBugStatus, PathToBugTitle, UrlToBug, UrlToRepoBugsTab } from './routes';
+import { GetCsrfHeaders, PathToBugAssignee, PathToBugComments, PathToBugDescription, PathToBugStatus, PathToBugTitle, UrlToBug, UrlToCommit, UrlToRepoBugsTab } from './routes';
 import { FormatDateTime, FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
 import { MdInput2, MdInputSubmit } from './md-input2';
@@ -305,6 +305,8 @@ export class BugPage extends LitElement {
                 return this.renderDescriptionEdit(e)
             case "title-edit":
                 return this.renderTitleEdit(e, titleAfterEdit)
+            case "submitted-commit":
+                return this.renderSubmittedCommit(e)
             case "assignment":
                 return this.renderAssignment(e)
         }
@@ -332,6 +334,21 @@ export class BugPage extends LitElement {
                 <span title=${FormatDateTime(e.CreatedOn)}>
                     changed the title <s class="old-title">${e.TitleEdit!.OldTitle}</s>
                     <span class="new-title">${newTitle}</span>
+                    ${FormatRelativeTime(e.CreatedOn)}
+                </span>
+            </div>
+        `
+    }
+
+    private renderSubmittedCommit(e: BugEvent) {
+        const commitL = e.SubmittedCommit!.CommitL
+        const commitUrl = UrlToCommit(this.RepoOwnerName, this.RepoName, commitL, "feed")
+        return html`
+            <div class="event">
+                <span class="event-icon"><twigg-icon icon="None"></twigg-icon></span>
+                <username-tag .Username=${e.AuthorUsername}></username-tag>
+                <span title=${FormatDateTime(e.CreatedOn)}>
+                    submitted <a href=${commitUrl}>c/${commitL}</a>
                     ${FormatRelativeTime(e.CreatedOn)}
                 </span>
             </div>
