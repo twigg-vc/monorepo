@@ -305,6 +305,8 @@ export class BugPage extends LitElement {
                 return this.renderDescriptionEdit(e)
             case "title-edit":
                 return this.renderTitleEdit(e, titleAfterEdit)
+            case "assignment":
+                return this.renderAssignment(e)
         }
     }
 
@@ -332,6 +334,25 @@ export class BugPage extends LitElement {
                     <span class="new-title">${newTitle}</span>
                     ${FormatRelativeTime(e.CreatedOn)}
                 </span>
+            </div>
+        `
+    }
+
+    private renderAssignment(e: BugEvent) {
+        const newAssignee = e.Assignment!.NewAssigneeUsername
+        var text: TemplateResult = html``
+        if (newAssignee === "") {
+            text = html`removed the assignee`
+        } else if (newAssignee === e.AuthorUsername) {
+            text = html`self-assigned this`
+        } else {
+            text = html`assigned <username-tag .Username=${newAssignee}></username-tag>`
+        }
+        return html`
+            <div class="event">
+                <span class="event-icon"><twigg-icon icon="User"></twigg-icon></span>
+                <username-tag .Username=${e.AuthorUsername}></username-tag>
+                <span class="event-text" title=${FormatDateTime(e.CreatedOn)}>${text} ${FormatRelativeTime(e.CreatedOn)}</span>
             </div>
         `
     }
@@ -679,6 +700,11 @@ export class BugPage extends LitElement {
         .event-icon.open {
             background: var(--color-success);
             color: var(--color-status-text);
+        }
+        .event-text {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space1);
         }
         .old-title {
             color: var(--color-text-muted);
