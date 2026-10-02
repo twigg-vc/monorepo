@@ -10,6 +10,7 @@ import (
 	"log"
 	"monorepo/base/iterator"
 	"monorepo/twigg-runner/runnerlib"
+	"monorepo/twigg-web/commitparser"
 	"monorepo/twigg-web/handlers/reposettings"
 	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/review"
@@ -1359,6 +1360,13 @@ func (hl handler) handlePostSubmit(w http.ResponseWriter,
 		return
 	}
 
+	err = hl.linkSubmittedCommitToBugs(dbWrite, r.Repo.Id, c, d.Description)
+	if err != nil {
+		log.Printf("failed to link submitted commit to bugs: %s", err)
+		http.Error(w, "internal err linking the commit to bugs", http.StatusInternalServerError)
+		return
+	}
+
 	_, err = hl.ciq.EnqueueCiCdRun(r.Repo.Id, c.L, c.Version+1, runnerlib.OnSumit, dbWrite)
 	if err != nil {
 		log.Printf("failed to enqueue cicd run: %s", err)
@@ -1415,6 +1423,21 @@ func (hl handler) handlePostSubmit(w http.ResponseWriter,
 
 	shouldCommit = true
 	return
+}
+
+// Adds a "commit submitted" event to every bug referenced by a bug tag (see
+// commitparser) in description. Errors marked as not-found are ignored.
+func (hl handler) linkSubmittedCommitToBugs(w context.Context, repoId uint64, c commit.Commit, description string) error {
+	for _, bugNumber := range commitparser.ParseCommitDescription(description).Bugs {
+		if bugNumber <= 0 {
+			continue
+		}
+		_, isNotFoundErr, err := hl.db.AddBugSubmittedCommit(w, repoId, uint64(bugNumber), c.AuthorUserId, c.L)
+		if err != nil && !isNotFoundErr {
+			return fmt.Errorf("failed adding submitted commit event (bug=%d): %w", bugNumber, err)
+		}
+	}
+	return nil
 }
 
 func (hl handler) handlePostRollback(w http.ResponseWriter,

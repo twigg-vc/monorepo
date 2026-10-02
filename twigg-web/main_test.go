@@ -1241,6 +1241,67 @@ func TestRemoveLgtmFailsAfterSubmit(t *testing.T) {
 	b.CheckPostErrors("/aang/BookOne/c/1/r-lgtm", map[string]string{})
 }
 
+func TestSubmitCommitWithBugTagAddsSubmittedCommitEvent(t *testing.T) {
+	srv := GetMockServer(t)
+	b := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, b, "aang@twigg.vc")
+	b.Post(routes.GenerateCLIKey, nil)
+
+	createBugInBookOne(t, b, "Fix the tea kettle")
+	createBugInBookOne(t, b, "Unrelated bug")
+
+	tw := cli.NewTestHelper(t)
+	tw.SetServerRootUrl(srv.C.PublicUrl)
+	tw.Run("init")
+	tw.Run("server", "aang/BookOne")
+	tw.Run("key", srv.KeysMock.GetLastRandomCliKey())
+	tw.WriteFile("a.txt", "aaa")
+	tw.Run("commit", "fix the kettle")
+	tw.Run("push")
+	tw.CheckOutContains("push succeeded")
+
+	// The b/<number> tag lives in the commit's (editable) description, not
+	// its message, and can only be set before submit.
+	b.Post("/aang/BookOne/c/1", map[string]string{"description": "fix the kettle\n\nb/1"})
+	b.Post("/aang/BookOne/c/1/lgtm", map[string]string{"version": "0"})
+	b.Post("/aang/BookOne/c/1/submit", map[string]string{"version": "0"})
+
+	// The tagged bug gets the event, the unrelated one doesn't.
+	b.Get("/aang/BookOne/b/1")
+	b.CheckCurrentPageContains("submitted-commit", "commitl")
+	b.Get("/aang/BookOne/b/2")
+	b.CheckCurrentPageNotContains("submitted-commit")
+}
+
+func TestSubmitCommitWithMultipleBugTagsAddsEventToEachBug(t *testing.T) {
+	srv := GetMockServer(t)
+	b := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, b, "aang@twigg.vc")
+	b.Post(routes.GenerateCLIKey, nil)
+
+	createBugInBookOne(t, b, "Fix the tea kettle")
+	createBugInBookOne(t, b, "Fix the teapot")
+
+	tw := cli.NewTestHelper(t)
+	tw.SetServerRootUrl(srv.C.PublicUrl)
+	tw.Run("init")
+	tw.Run("server", "aang/BookOne")
+	tw.Run("key", srv.KeysMock.GetLastRandomCliKey())
+	tw.WriteFile("a.txt", "aaa")
+	tw.Run("commit", "fix the tea set")
+	tw.Run("push")
+	tw.CheckOutContains("push succeeded")
+
+	b.Post("/aang/BookOne/c/1", map[string]string{"description": "fix the tea set\n\nb/1\nb/2"})
+	b.Post("/aang/BookOne/c/1/lgtm", map[string]string{"version": "0"})
+	b.Post("/aang/BookOne/c/1/submit", map[string]string{"version": "0"})
+
+	b.Get("/aang/BookOne/b/1")
+	b.CheckCurrentPageContains("submitted-commit", "commitl")
+	b.Get("/aang/BookOne/b/2")
+	b.CheckCurrentPageContains("submitted-commit", "commitl")
+}
+
 func TestSetNextServerId(t *testing.T) {
 	srv := GetMockServer(t)
 	b := NewTestBrowser(srv.C.PublicUrl, t)

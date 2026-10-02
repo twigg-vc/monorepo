@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"monorepo/twigg-runner/runnerlib"
+	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/cicdqueue"
 	"monorepo/twigg-web/routes"
 	jobsservice "monorepo/twigg-web/services/jobs"
@@ -109,6 +110,8 @@ type HandleGetCanSubmitCommitsResponse = map[string]CanSubmitResult
 
 type Db interface {
 	CreateNotification(writeCtx context.Context, userId int64, message string, assetPath string) error
+	AddBugSubmittedCommit(writeCtx context.Context, repoId uint64, number uint64,
+		authorId int64, commitL uint64) (e bug.Event, isNotFoundErr bool, err error)
 }
 
 type TrackClient interface {
