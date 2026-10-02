@@ -56,6 +56,7 @@ const (
 	EventKind_DescriptionEdit EventKind = 3
 	EventKind_TitleEdit       EventKind = 4
 	EventKind_Assignment      EventKind = 5
+	EventKind_SubmittedCommit EventKind = 6
 )
 
 // Something that happened to a bug, shown in its timeline. Only the details
@@ -70,6 +71,7 @@ type Event struct {
 	DescriptionEdit DescriptionEdit
 	TitleEdit       TitleEdit
 	Assignment      Assignment
+	SubmittedCommit SubmittedCommit
 }
 
 func NewEvent(id uint64, kind EventKind, authorUserId int64, createdOn time.Time) Event {
@@ -124,4 +126,12 @@ type Assignment struct {
 
 func NewAssignment(newAssigneeUserId int64) Assignment {
 	return Assignment{NewAssigneeUserId: newAssigneeUserId}
+}
+
+type SubmittedCommit struct {
+	CommitL uint64
+}
+
+func NewSubmittedCommit(commitL uint64) SubmittedCommit {
+	return SubmittedCommit{CommitL: commitL}
 }

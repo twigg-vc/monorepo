@@ -695,3 +695,66 @@ func TestSetBugAssigneeFails(t *testing.T) {
 		t.Fatalf("expected no events, got %+v (err=%v)", events, err)
 	}
 }
+
+func TestAddBugSubmittedCommit(t *testing.T) {
+	b, w := newBugsDb(t)
+	b.SetNower(mockNow{now: time.UnixMilli(199)}, t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const commitAuthorId = bugsAuthorId + 1
+
+	b.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+	e, isNotFoundErr, err := b.AddBugSubmittedCommit(w, bugsRepoId, created.Number, commitAuthorId, 7)
+	if err != nil || isNotFoundErr {
+		t.Fatalf("AddBugSubmittedCommit: isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if e.CreatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamp: event %+v", e)
+	}
+	e.CreatedOn = time.Time{}
+	want := bug.Event{
+		Id:              1,
+		Kind:            bug.EventKind_SubmittedCommit,
+		AuthorUserId:    commitAuthorId,
+		CreatedOn:       time.Time{},
+		SubmittedCommit: bug.SubmittedCommit{CommitL: 7},
+	}
+	if !reflect.DeepEqual(e, want) {
+		t.Fatalf("AddBugSubmittedCommit: expected %+v, got %+v", want, e)
+	}
+	got, _, err := b.GetBug(w, bugsRepoId, created.Number)
+	if err != nil || got.UpdatedOn.UnixMilli() != 200 {
+		t.Fatalf("expected UpdatedOn bumped to 200, got %+v (err=%v)", got, err)
+	}
+
+	b.SetNower(mockNow{now: time.UnixMilli(201)}, t)
+	if _, _, err := b.AddBugSubmittedCommit(w, bugsRepoId, created.Number, commitAuthorId, 8); err != nil {
+		t.Fatal(err)
+	}
+	events, _, err := b.GetBugEvents(w, bugsRepoId, created.Number, "", 10)
+	if err != nil || len(events) != 2 ||
+		events[0].SubmittedCommit.CommitL != 7 ||
+		events[1].SubmittedCommit.CommitL != 8 {
+		t.Fatalf("expected the submitted commits in order, got %+v (err=%v)", events, err)
+	}
+}
+
+func TestAddBugSubmittedCommitFails(t *testing.T) {
+	b, w := newBugsDb(t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, isNotFoundErr, err := b.AddBugSubmittedCommit(w, bugsRepoId, created.Number+1, bugsAuthorId, 7)
+	if !isNotFoundErr || !errors.Is(err, webdb.ErrNotFound) {
+		t.Fatalf("expected not found, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	events, _, err := b.GetBugEvents(w, bugsRepoId, created.Number, "", 10)
+	if err != nil || len(events) != 0 {
+		t.Fatalf("expected no events, got %+v (err=%v)", events, err)
+	}
+}

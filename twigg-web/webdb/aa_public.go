@@ -1083,6 +1083,13 @@ func (db WebDb) SetBugAssignee(writeCtx context.Context, repoId uint64, number u
 	return db.db.SetBugAssignee(writeCtx, repoId, number, authorId, assigneeUserId)
 }
 
+// Records that a submitted commit referenced this bug and adds a "commit
+// submitted" event. Returns ErrNotFound if the repo has no bug with the number.
+func (db WebDb) AddBugSubmittedCommit(writeCtx context.Context, repoId uint64, number uint64,
+	authorId int64, commitL uint64) (e bug.Event, isNotFoundErr bool, err error) {
+	return db.db.AddBugSubmittedCommit(writeCtx, repoId, number, authorId, commitL)
+}
+
 // Returns up to limit of the newest events of the bug's timeline, ordered
 // oldest first, and the cursor of the older events before them. An empty
 // cursor reads the newest ones, and the page with the oldest returns an empty one.
