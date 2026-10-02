@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"html"
+	"monorepo/base/iterator"
 	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/featureflags"
+	"monorepo/twigg-web/notification"
 	"monorepo/twigg-web/permissions"
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
@@ -918,6 +920,12 @@ func TestPostAssignee(t *testing.T) {
 	if b, _, _ := db.GetBug(w, testRepoId, 1); b.AssigneeUserId != irohId {
 		t.Fatalf("expected iroh assigned, got %+v", b)
 	}
+	n := getNotifications(t, db, w, irohId)
+	if len(n) != 1 ||
+		n[0].Message != "zuko assigned you to b/1" ||
+		n[0].AssetPath != "/zuko/tea/b/1" {
+		t.Fatalf("expected iroh to be notified, got %+v", n)
+	}
 
 	// Unassign
 	rec = httptest.NewRecorder()
@@ -937,6 +945,41 @@ func TestPostAssignee(t *testing.T) {
 	if got.Bug.AssigneeUsername != "" || got.Event.Assignment.NewAssigneeUsername != "" {
 		t.Fatalf("expected the bug unassigned, got %+v", got)
 	}
+}
+
+func TestPostAssigneeSelfDoesNotNotify(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+	shouldCommit := h.handlePostAssignee(rec, newBugWriteReq(
+		user.User{Id: zukoId, Username: "zuko"},
+		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+		/*repoDisplayName*/ "tea",
+		/*number*/ "1",
+		`{"Username": "zuko"}`,
+	), w)
+	if rec.Code != http.StatusOK || !shouldCommit {
+		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
+	}
+	if n := getNotifications(t, db, w, zukoId); len(n) != 0 {
+		t.Fatalf("expected no self notification, got %+v", n)
+	}
+}
+
+func getNotifications(t *testing.T, db webdb.WebDb, r context.Context, userId int64) []notification.Notification {
+	t.Helper()
+	it, err := db.GetUserNotifications(r, userId, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ns, err := iterator.GetFirstN(10_000, it)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ns
 }
 
 func TestPostAssigneeFails(t *testing.T) {

@@ -43,6 +43,7 @@ type Db interface {
 		authorId int64, newTitle string) (e bug.Event, isNotFoundErr bool, err error)
 	SetBugAssignee(writeCtx context.Context, repoId uint64, number uint64,
 		authorId int64, assigneeUserId int64) (e bug.Event, isNotFoundErr bool, err error)
+	CreateNotification(writeCtx context.Context, userId int64, message string, assetPath string) error
 }
 
 // u is nil for anonymous users
