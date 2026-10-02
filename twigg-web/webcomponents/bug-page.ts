@@ -1,7 +1,7 @@
 import { html, css, LitElement, TemplateResult } from 'lit';
 import { TwiggCss } from './css';
 import { Bug, BugEvent, BugStatus, MaxBugTitleLen } from './interfaces';
-import { GetCsrfHeaders, PathToBugComments, PathToBugDescription, PathToBugStatus, PathToBugTitle, UrlToBug, UrlToRepoBugsTab } from './routes';
+import { GetCsrfHeaders, PathToBugAssignee, PathToBugComments, PathToBugDescription, PathToBugStatus, PathToBugTitle, UrlToBug, UrlToRepoBugsTab } from './routes';
 import { FormatDateTime, FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
 import { MdInput2, MdInputSubmit } from './md-input2';
@@ -256,7 +256,31 @@ export class BugPage extends LitElement {
 
     // An empty username unassigns the bug
     private async saveAssignee(username: string) {
-        alert("WIP: assign " + username)
+        const b = this.Bug!
+        username = username.trim()
+        if (this.isSavingAssignee || username === b.AssigneeUsername) {
+            return
+        }
+        this.isSavingAssignee = true
+        try {
+            const resp = await fetch(PathToBugAssignee(this.RepoOwnerName, this.RepoName, b.Number), {
+                method: 'POST',
+                body: JSON.stringify({ Username: username }),
+                headers: { ...GetCsrfHeaders(), "Content-Type": "application/json" },
+            })
+            if (!resp.ok) {
+                alert(await resp.text())
+                return
+            }
+            const data = await resp.json() as { Bug: Bug, Event: BugEvent }
+            this.Bug = data.Bug
+            this.Events = [...this.Events, data.Event]
+        } catch (err) {
+            console.log("failed to save assignee: ", err)
+            alert("Failed to save the assignee :(")
+        } finally {
+            this.isSavingAssignee = false
+        }
     }
 
     private renderTimeline(b: Bug) {
