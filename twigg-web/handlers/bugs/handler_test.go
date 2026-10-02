@@ -945,6 +945,12 @@ func TestPostAssignee(t *testing.T) {
 	if got.Bug.AssigneeUsername != "" || got.Event.Assignment.NewAssigneeUsername != "" {
 		t.Fatalf("expected the bug unassigned, got %+v", got)
 	}
+
+	n = getNotifications(t, db, w, irohId)
+	if len(n) != 2 ||
+		n[0].Message != "zuko unassigned you from b/1" {
+		t.Fatalf("expected iroh to be notified of the unassignment, got %+v", n)
+	}
 }
 
 func TestPostAssigneeSelfDoesNotNotify(t *testing.T) {

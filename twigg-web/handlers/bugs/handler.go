@@ -405,14 +405,24 @@ func (h handler) handlePostAssignee(w http.ResponseWriter,
 		http.Error(w, "failed to set the assignee", http.StatusInternalServerError)
 		return false
 	}
+	assetPath := routes.PathToBug(r.RepoOwnerUsr.Username, r.Repo.DisplayName, b.Number)
 	// Notify the new assignee (no self-notify)
 	if assigneeId != 0 && assigneeId != r.UserWithWritePermission.Id {
 		msg := fmt.Sprintf("%s assigned you to b/%d", r.UserWithWritePermission.Username, b.Number)
-		assetPath := routes.PathToBug(r.RepoOwnerUsr.Username, r.Repo.DisplayName, b.Number)
 		err = h.db.CreateNotification(dbWrite, assigneeId, msg, assetPath)
 		if err != nil {
 			log.Printf("failed to notify the assignee of b/%d of repo id=%d: %s", b.Number, r.Repo.Id, err)
 			http.Error(w, "failed to notify the assignee", http.StatusInternalServerError)
+			return false
+		}
+	}
+	// Notify the previous assignee (no self-notify)
+	if b.AssigneeUserId != 0 && b.AssigneeUserId != r.UserWithWritePermission.Id {
+		msg := fmt.Sprintf("%s unassigned you from b/%d", r.UserWithWritePermission.Username, b.Number)
+		err = h.db.CreateNotification(dbWrite, b.AssigneeUserId, msg, assetPath)
+		if err != nil {
+			log.Printf("failed to notify the previous assignee of b/%d of repo id=%d: %s", b.Number, r.Repo.Id, err)
+			http.Error(w, "failed to notify the previous assignee", http.StatusInternalServerError)
 			return false
 		}
 	}
