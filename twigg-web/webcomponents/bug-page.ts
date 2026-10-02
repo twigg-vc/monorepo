@@ -25,6 +25,7 @@ export class BugPage extends LitElement {
         isEditingTitle: { type: Boolean, state: true },
         titleDraft: { type: String, state: true },
         isSavingTitle: { type: Boolean, state: true },
+        isSavingAssignee: { type: Boolean, state: true },
     };
     declare RepoOwnerName: string;
     declare RepoName: string;
@@ -36,6 +37,7 @@ export class BugPage extends LitElement {
     declare private isEditingTitle: boolean;
     declare private titleDraft: string;
     declare private isSavingTitle: boolean;
+    declare private isSavingAssignee: boolean;
 
     constructor() {
         super();
@@ -49,6 +51,7 @@ export class BugPage extends LitElement {
         this.isEditingTitle = false;
         this.titleDraft = "";
         this.isSavingTitle = false;
+        this.isSavingAssignee = false;
     }
 
     render() {
