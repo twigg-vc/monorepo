@@ -10,6 +10,7 @@ import (
 	"monorepo/twigg-runner/runnerlib"
 	"monorepo/twigg-track/trackclient"
 	"monorepo/twigg-track/trackserver"
+	"monorepo/twigg-web/handlers/bugs"
 	"monorepo/twigg-web/job"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/server"
@@ -734,4 +735,14 @@ func (b *TestBrowser) PostJson(path string, body any) int {
 	}
 	b.currentUrl = resp.Request.URL.String()
 	return resp.StatusCode
+}
+
+// Creates a bug in aang/BookOne, failing the test if the request doesn't
+// succeed.
+func createBugInBookOne(t *testing.T, b *TestBrowser, title string) {
+	t.Helper()
+	code := b.PostJson("/aang/BookOne/bugs", bugs.PostBugRequest{Title: title})
+	if code != http.StatusOK {
+		t.Fatalf("failed creating bug %q: %d: %s", title, code, b.lastResponse)
+	}
 }
