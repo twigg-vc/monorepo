@@ -214,6 +214,10 @@ func PathToOrganization(orgName string) string {
 	return fmt.Sprintf("/orgs/v1/org/%s", orgName)
 }
 
+func PathToBug(repoOwnerName, repoDisplayName string, number uint64) string {
+	return fmt.Sprintf("/%s/%s/b/%d", repoOwnerName, repoDisplayName, number)
+}
+
 var _ = func() int {
 	if !strings.Contains(RepoPattern, RepoNameParamName) {
 		panic("RepoPattern should contain RepoNameParamName")
