@@ -6,8 +6,10 @@ import { FormatDateTime, FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
 import { MdInput2, MdInputSubmit } from './md-input2';
 import { DescriptionSaved } from './cl-description';
+import { UserSelected } from './username-input';
 import './bug-status-badge';
 import './comments';
+import './username-input';
 
 /**
 * Page of a single bug
@@ -216,6 +218,35 @@ export class BugPage extends LitElement {
     }
 
     private renderAssignee(b: Bug) {
+        var controls: TemplateResult = html``
+        if (this.CanWrite) {
+            if (b.AssigneeUsername === "") {
+                controls = html`
+                    <username-input
+                        ButtonText="Assign"
+                        ?Disabled=${this.isSavingAssignee}
+                        @user-selected=${(e: CustomEvent<UserSelected>) => this.saveAssignee(e.detail.Username)}>
+                    </username-input>
+                `
+            } else {
+                controls = html`
+                    <button class="remove-assignee-btn" title="Remove assignee" ?disabled=${this.isSavingAssignee}
+                        @click=${() => this.saveAssignee("")}>
+                        <twigg-icon icon="XMark"></twigg-icon>
+                    </button>
+                `
+            }
+        }
+        return html`
+            <div class="assignee-row">
+                ${this.renderAssigneeName(b)}
+                ${controls}
+            </div>
+        `
+    }
+
+    // "No assignee" or the assignee's username
+    private renderAssigneeName(b: Bug) {
         if (b.AssigneeUsername === "") {
             return html`<span class="no-assignee">No assignee</span>`
         } else {
@@ -568,6 +599,26 @@ export class BugPage extends LitElement {
         .no-assignee {
             color: var(--color-text-muted);
             font-style: italic;
+        }
+        .assignee-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: var(--space1);
+            width: 100%;
+        }
+        .remove-assignee-btn {
+            background: none;
+            border: none;
+            color: var(--color-text-muted);
+            padding: var(--space1);
+            font-size: var(--space4);
+        }
+        .remove-assignee-btn:hover {
+            color: var(--color-primary-pop);
+        }
+        username-input {
+            width: 100%;
         }
         .meta-label {
             color: var(--color-text-muted);
