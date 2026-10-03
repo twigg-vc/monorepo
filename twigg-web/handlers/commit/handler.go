@@ -1401,10 +1401,7 @@ func (hl handler) handlePostSubmit(w http.ResponseWriter,
 		c.L,
 		/*hasLeft*/ false /*left*/, 0,
 		/*hasRight*/ false /*right*/, 0)
-	msg := fmt.Sprintf("c/%d was submitted by %s",
-		c.L,
-		r.UserWithWritePermission.Username,
-	)
+	msg := fmt.Sprintf("c/%d was submitted", c.L)
 	err = hl.notifyCommitAuthor(
 		dbWrite,
 		r.Repo.Id,
