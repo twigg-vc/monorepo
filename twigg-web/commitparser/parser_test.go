@@ -44,8 +44,28 @@ func TestParseCommitDescription(t *testing.T) {
 			want: commitparser.Tags{},
 		},
 		{
-			name: "bug= prefix is not (yet) recognized",
-			desc: "BUG=42",
+			name: "bug=<number>",
+			desc: "fix the tea kettle\n\nbug=42",
+			want: commitparser.Tags{Bugs: []int64{42}},
+		},
+		{
+			name: "BUG=<number> uppercase",
+			desc: "fix the tea kettle\n\nBUG=42",
+			want: commitparser.Tags{Bugs: []int64{42}},
+		},
+		{
+			name: "b/ and BUG= tags for the same bug are deduplicated",
+			desc: "fix the tea kettle\n\nb/42\nBUG=42\nBUG=17",
+			want: commitparser.Tags{Bugs: []int64{42, 17}},
+		},
+		{
+			name: "BUG= embedded mid-line does not match",
+			desc: "see BUG=42 for context",
+			want: commitparser.Tags{},
+		},
+		{
+			name: "malformed BUG= with no number does not match",
+			desc: "BUG=",
 			want: commitparser.Tags{},
 		},
 		{
