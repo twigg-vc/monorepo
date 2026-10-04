@@ -54,6 +54,11 @@ func TestParseCommitDescription(t *testing.T) {
 			want: commitparser.Tags{Bugs: []int64{42}},
 		},
 		{
+			name: "bug= <number> with a space",
+			desc: "fix the tea kettle\n\nbug= 42",
+			want: commitparser.Tags{Bugs: []int64{42}},
+		},
+		{
 			name: "b/ and BUG= tags for the same bug are deduplicated",
 			desc: "fix the tea kettle\n\nb/42\nBUG=42\nBUG=17",
 			want: commitparser.Tags{Bugs: []int64{42, 17}},

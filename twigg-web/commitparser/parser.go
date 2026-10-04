@@ -8,8 +8,8 @@ import (
 
 const maxDescriptionLenToParse = 10_000
 
-// Matches a whole line (after trimming) like "b/1234" or "BUG=1234"
-var bugTagRe = regexp.MustCompile(`(?i)^(?:b/|bug=)(\d+)$`)
+// Matches a whole line (after trimming) like "b/1234", "BUG=1234" or "bug= 1234"
+var bugTagRe = regexp.MustCompile(`(?i)^(?:b/|bug=\s*)(\d+)$`)
 
 func parseCommitDescription(desc string) Tags {
 	if len(desc) > maxDescriptionLenToParse {
