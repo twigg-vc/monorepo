@@ -73,9 +73,10 @@ export class ReviewerThread extends LitElement {
             display: flex;
             justify-content: center;
             align-items: center;
+            gap: var(--space4);
         }
         .first-column {
-            flex: 1;
+            flex: auto;
             display: flex;
             align-items: center;
             gap: var(--space2);
@@ -85,7 +86,7 @@ export class ReviewerThread extends LitElement {
             font-size: var(--space3);
         }
         .second-column {
-            flex: 1;
+            flex: 0 1 auto;
             font-weight: var(--weight-semi-bold);
         }
 
