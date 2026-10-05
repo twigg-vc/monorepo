@@ -975,6 +975,38 @@ func TestPostAssigneeSelfDoesNotNotify(t *testing.T) {
 	}
 }
 
+func TestPostCommentNotifiesAssignee(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	irohId, err := db.CreateUser(w, "iroh@twigg.vc", user.UserState_NoSubscription,
+		/*isOrganization*/ false, "iroh", "password-hash", user.Subscription_None, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := db.SetBugAssignee(w, testRepoId, 1, zukoId, irohId); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+	shouldCommit := h.handlePostComment(rec, newBugWriteReq(
+		user.User{Id: zukoId, Username: "zuko"},
+		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+		/*repoDisplayName*/ "tea",
+		/*number*/ "1",
+		`{"Body": "Try jasmine"}`,
+	), w)
+	if rec.Code != http.StatusOK || !shouldCommit {
+		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
+	}
+	if n := getNotifications(t, db, w, irohId); len(n) != 1 ||
+		n[0].Message != "zuko commented on b/1" ||
+		n[0].AssetPath != "/zuko/tea/b/1" {
+		t.Fatalf("expected iroh to be notified of the comment, got %+v", n)
+	}
+}
+
 func getNotifications(t *testing.T, db webdb.WebDb, r context.Context, userId int64) []notification.Notification {
 	t.Helper()
 	it, err := db.GetUserNotifications(r, userId, 0)

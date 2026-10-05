@@ -210,6 +210,17 @@ func (h handler) handlePostComment(w http.ResponseWriter,
 		http.Error(w, "failed to add the comment", http.StatusInternalServerError)
 		return false
 	}
+	// Notify the assignee (no self-notify)
+	if b.AssigneeUserId != 0 && b.AssigneeUserId != r.UserWithWritePermission.Id {
+		msg := fmt.Sprintf("%s commented on b/%d", r.UserWithWritePermission.Username, b.Number)
+		assetPath := routes.PathToBug(r.RepoOwnerUsr.Username, r.Repo.DisplayName, b.Number)
+		err = h.db.CreateNotification(dbWrite, b.AssigneeUserId, msg, assetPath)
+		if err != nil {
+			log.Printf("failed to notify the assignee of b/%d of repo id=%d: %s", b.Number, r.Repo.Id, err)
+			http.Error(w, "failed to notify the assignee", http.StatusInternalServerError)
+			return false
+		}
+	}
 
 	respJson, err := json.Marshal(twiggwc.BugEventToFrontend(e, r.UserWithWritePermission.Username, ""))
 	if err != nil {
