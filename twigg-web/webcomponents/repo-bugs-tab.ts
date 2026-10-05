@@ -278,7 +278,7 @@ export class RepoBugsTab extends LitElement {
                 <div class="bug-main">
                     <span class="bug-title">${b.Title}</span>
                     <span class="bug-meta">
-                        b/${b.Number} opened ${FormatRelativeTime(b.CreatedOn)}, ${this.renderAssignee(b)}
+                        b/${b.Number} ${this.renderAssignee(b)} opened ${FormatRelativeTime(b.CreatedOn)} by @${b.AuthorUsername}
                     </span>
                 </div>
                 ${comments}
@@ -290,7 +290,7 @@ export class RepoBugsTab extends LitElement {
         if (b.AssigneeUsername !== "") {
             return html`assigned to <username-tag .Username=${b.AssigneeUsername}></username-tag>`
         } else {
-            return html`<span class="no-assignee">unassigned</span>`
+            return html`<strong class="no-assignee">unassigned</strong>`
         }
     }
 
@@ -447,6 +447,8 @@ export class RepoBugsTab extends LitElement {
             flex-shrink: 0;
         }
         .no-assignee {
+            color: var(--color-text-muted);
+            font-weight: var(--weight-bold);
             font-style: italic;
         }
         .bug-meta {
