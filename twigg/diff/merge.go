@@ -33,7 +33,7 @@ func merge(
 		v1Label,
 		v2Label)
 	if err != nil {
-		panic(fmt.Sprintf("failed to merge %s and %s", v1Label, v2Label))
+		panic(fmt.Sprintf("failed to merge %q and %q: %s", v1Label, v2Label, err))
 	}
 
 	b := bytes.NewBuffer(nil)
