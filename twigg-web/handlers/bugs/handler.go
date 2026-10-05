@@ -277,6 +277,21 @@ func (h handler) handlePostStatus(w http.ResponseWriter,
 		http.Error(w, "failed to set the status", http.StatusInternalServerError)
 		return false
 	}
+	// Notify the assignee (no self-notify)
+	if b.AssigneeUserId != 0 && b.AssigneeUserId != r.UserWithWritePermission.Id {
+		verb := "reopened"
+		if req.Status == bug.Status_Closed {
+			verb = "closed"
+		}
+		msg := fmt.Sprintf("%s %s b/%d", r.UserWithWritePermission.Username, verb, b.Number)
+		assetPath := routes.PathToBug(r.RepoOwnerUsr.Username, r.Repo.DisplayName, b.Number)
+		err = h.db.CreateNotification(dbWrite, b.AssigneeUserId, msg, assetPath)
+		if err != nil {
+			log.Printf("failed to notify the assignee of b/%d of repo id=%d: %s", b.Number, r.Repo.Id, err)
+			http.Error(w, "failed to notify the assignee", http.StatusInternalServerError)
+			return false
+		}
+	}
 	number := b.Number
 	b, _, err = h.db.GetBug(dbWrite, r.Repo.Id, number)
 	if err != nil {

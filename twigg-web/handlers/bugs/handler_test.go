@@ -1007,6 +1007,51 @@ func TestPostCommentNotifiesAssignee(t *testing.T) {
 	}
 }
 
+func TestPostStatusNotifiesAssignee(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	irohId, err := db.CreateUser(w, "iroh@twigg.vc", user.UserState_NoSubscription,
+		/*isOrganization*/ false, "iroh", "password-hash", user.Subscription_None, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := db.SetBugAssignee(w, testRepoId, 1, zukoId, irohId); err != nil {
+		t.Fatal(err)
+	}
+	post := func(body string) {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		shouldCommit := h.handlePostStatus(rec, newBugWriteReq(
+			user.User{Id: zukoId, Username: "zuko"},
+			/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+			/*repoDisplayName*/ "tea",
+			/*number*/ "1",
+			body,
+		), w)
+		if rec.Code != http.StatusOK || !shouldCommit {
+			t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
+		}
+	}
+
+	// Closing with a comment sends a single notification
+	post(`{"Status": "closed", "Comment": "Fixed with jasmine"}`)
+	n := getNotifications(t, db, w, irohId)
+	if len(n) != 1 ||
+		n[0].Message != "zuko closed b/1" ||
+		n[0].AssetPath != "/zuko/tea/b/1" {
+		t.Fatalf("expected iroh to be notified of the close, got %+v", n)
+	}
+	// Reopening a bug sends "reopen" message
+	post(`{"Status": "open"}`)
+	n = getNotifications(t, db, w, irohId)
+	if len(n) != 2 ||
+		n[0].Message != "zuko reopened b/1" {
+		t.Fatalf("expected iroh to be notified of the reopen, got %+v", n)
+	}
+}
+
 func getNotifications(t *testing.T, db webdb.WebDb, r context.Context, userId int64) []notification.Notification {
 	t.Helper()
 	it, err := db.GetUserNotifications(r, userId, 0)
