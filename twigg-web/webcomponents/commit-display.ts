@@ -218,7 +218,7 @@ export class CommitDisplay extends LitElement {
                 <bread-crumbs-space></bread-crumbs-space>
                 <bread-crumbs Name=${this.RepoName} Link="${UrlToRepo(this.RepoOwnerName,this.RepoName)}"></bread-crumbs>
                 <bread-crumbs-space></bread-crumbs-space>
-                <bread-crumbs id="current-crumb" Name="c/${latest.L}" Link=${UrlToCommit(this.RepoOwnerName, this.RepoName, latest.L, "feed")} CopyOnClick></bread-crumbs>
+                <bread-crumbs id="current-crumb" Name="c/${latest.L}" Link=${UrlToCommit(this.RepoOwnerName, this.RepoName, latest.L, "feed")} CopyOnClick ReloadPageOnClick></bread-crumbs>
             </div>
             <div class="title">
                 <div class="title-start">

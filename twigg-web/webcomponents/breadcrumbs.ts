@@ -5,14 +5,21 @@ import { IconName } from './icons';
 const copiedFeedbackMs = 1500
 
 /**
- * Link in a breadcrumb trail. With CopyOnClick, clicking copies the Link's
- * full url instead of navigating to it.
+ * Link in a breadcrumb trail. By default, clicking the name just navigates
+ * to Link, like a normal link.
+ *
+ * With CopyOnClick, a copy icon is shown next to the name. Clicking it (icon)
+ * copies the Link's.
+ *
+ * With ReloadPageOnClick, clicking the name forces a full page reload
+ * instead of navigating normally (useful when Link is the current page).
  */
 export class BreadCrumbs extends LitElement {
     static properties = {
         Name: { type: String },
         Link: { type: String },
         CopyOnClick: { type: Boolean },
+        ReloadPageOnClick: { type: Boolean },
 
         copied: { type: Boolean, state: true },
     };
@@ -21,11 +28,13 @@ export class BreadCrumbs extends LitElement {
         this.Name = ""
         this.Link = ""
         this.CopyOnClick = false
+        this.ReloadPageOnClick = false
         this.copied = false
     }
     declare Name: string
     declare Link: string
     declare CopyOnClick: boolean
+    declare ReloadPageOnClick: boolean
     declare private copied: boolean
 
     render() {
@@ -48,15 +57,27 @@ export class BreadCrumbs extends LitElement {
             copiedLabel = html``
         }
         return html`
-            <a part="link" class="copy" href=${this.Link} title=${title} @click=${this.copyLink}>
+            <a part="link" class="copy" href=${this.Link} @click=${this.reloadPage}>
                 ${this.Name}
-                <twigg-icon class=${iconCls} .icon=${icon}></twigg-icon>
+                <twigg-icon class=${iconCls} .icon=${icon} title=${title} @click=${this.copyLink}></twigg-icon>
             </a>
             ${copiedLabel}
         `
     }
 
+    private reloadPage(e: MouseEvent) {
+        if (!this.ReloadPageOnClick) {
+            return
+        }
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) {
+            return
+        }
+        e.preventDefault()
+        window.location.reload()
+    }
+
     private async copyLink(e: MouseEvent) {
+        e.stopPropagation()
         if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) {
             return
         }
@@ -84,11 +105,11 @@ export class BreadCrumbs extends LitElement {
             display: inline-flex;
             align-items: center;
             gap: var(--space1);
-            cursor: copy;
         }
         .copy-icon {
             opacity: 0;
             transition: opacity .15s;
+            cursor: copy;
         }
         .copy:hover .copy-icon,
         .copy:focus-visible .copy-icon,
