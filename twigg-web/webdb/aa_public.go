@@ -6,6 +6,7 @@ import (
 	"monorepo/base/iterator"
 	"monorepo/data/blobdb"
 	"monorepo/twigg-web/bug"
+	"monorepo/twigg-web/bugsearch"
 	"monorepo/twigg-web/commitsearch"
 	"monorepo/twigg-web/education"
 	"monorepo/twigg-web/job"
@@ -1096,4 +1097,12 @@ func (db WebDb) AddBugSubmittedCommit(writeCtx context.Context, repoId uint64, n
 func (db WebDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 	cursor string, limit int) (events []bug.Event, nextCursor string, err error) {
 	return db.db.GetBugEvents(ctx, repoId, number, cursor, limit)
+}
+
+// Returns up to limit of the bugs matching the filter, newest first, and the
+// cursor of the bugs after them. An empty cursor reads the first ones, and
+// the last page returns an empty one.
+func (db WebDb) SearchBugs(ctx context.Context, f bugsearch.Filter, cursor string, limit int) (
+	[]bug.Bug, string, error) {
+	return db.db.searchBugs(ctx, f, cursor, limit)
 }
