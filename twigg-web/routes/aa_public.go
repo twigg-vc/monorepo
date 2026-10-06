@@ -177,6 +177,10 @@ const (
 	BugAssigneePattern       = BugPattern + "/assignee"
 	BugsStatusQueryParamName = "status" // "open", "closed" or empty for all
 	BugsCursorQueryParamName = "cursor" // reads the bugs after a page
+
+	BugSearchPattern         = RepoPattern + "/bug-search"
+	BugSearchQueryParamName  = "q"      // what was typed in the search bar
+	BugSearchCursorParamName = "cursor" // reads the bugs after a page
 )
 
 // Used to setup server routes (with the *Patters methods) and get the
