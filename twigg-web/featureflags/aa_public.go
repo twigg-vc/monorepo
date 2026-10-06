@@ -12,6 +12,7 @@ type Flags struct {
 	DummyFlag                    bool // Example flag just to serve as an example
 	SearchCommitsUi              bool // If set, the repo page searches its commits
 	ShowBugs                     bool // If set, repos have a bug tracker
+	SearchBugsUi                 bool // If set, the bugs tab searches its bugs
 }
 
 func GetFlags(configName string, repoOwnerUsername string, currentUsername string) Flags {
@@ -27,6 +28,7 @@ func GetFlags(configName string, repoOwnerUsername string, currentUsername strin
 			EnabledForReposOfFriends(repoOwnerUsername),
 		SearchCommitsUi: true,
 		ShowBugs:        true,
+		SearchBugsUi:    EnabledForReposOfTwiggers(repoOwnerUsername),
 	}
 }
 
