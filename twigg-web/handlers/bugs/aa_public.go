@@ -3,6 +3,7 @@ package bugs
 import (
 	"context"
 	"monorepo/twigg-web/bug"
+	"monorepo/twigg-web/bugsearch"
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/user"
@@ -28,6 +29,8 @@ type Db interface {
 	GetUserByUsername(ctx context.Context, username string) (u user.User, isNotFoundErr bool, err error)
 	GetBugsPage(ctx context.Context, repoId uint64, status bug.Status,
 		cursor string, limit int) (bugs []bug.Bug, nextCursor string, err error)
+	SearchBugs(ctx context.Context, f bugsearch.Filter, cursor string,
+		limit int) (bugs []bug.Bug, nextCursor string, err error)
 	CountRepoBugs(ctx context.Context, repoId uint64) (open, closed int64, err error)
 	CreateBug(writeCtx context.Context, repoId uint64, authorId int64, title, body string) (bug.Bug, error)
 	GetBug(ctx context.Context, repoId uint64, number uint64) (b bug.Bug, isNotFoundErr bool, err error)
