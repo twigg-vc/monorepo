@@ -21,3 +21,14 @@ func applyIsFilter(f *Filter, value string) error {
 	}
 	return fmt.Errorf("%q is not something a bug can be", value)
 }
+
+func applyAssigneeFilter(f *Filter, value string) {
+	switch strings.ToLower(value) {
+	case "unassigned", "none":
+		f.AssigneeUnassigned = true
+		f.AssigneeUsername = ""
+	default:
+		f.AssigneeUnassigned = false
+		f.AssigneeUsername = value
+	}
+}
