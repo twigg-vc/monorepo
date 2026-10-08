@@ -21,6 +21,20 @@ func TestMerge(t *testing.T) {
 
 }
 
+func TestMergeKeepsTrailingEmptyLine(t *testing.T) {
+	base := []byte("Line 1\nLine 2\nLine 3\n")
+	v1 := []byte("LINE 1\nLine 2\nLine 3\n")
+	v2 := []byte("Line 1\nLine 2\nLINE 3\n")
+
+	merged, conflict := Merge(base, v1, "v1", v2, "v2")
+	if conflict {
+		t.Error("got conflict")
+	}
+	if string(merged) != "LINE 1\nLine 2\nLINE 3\n" {
+		t.Errorf("wrong merged: %q", string(merged))
+	}
+}
+
 func TestConflict(t *testing.T) {
 
 	v1 := []byte("ABCDE\nLine 2")

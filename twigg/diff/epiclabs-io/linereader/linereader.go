@@ -1,7 +1,6 @@
 package linereader
 
 import (
-	"bufio"
 	"errors"
 	"io"
 	"net/http"
@@ -16,12 +15,6 @@ type LineReader struct {
 // ErrBinaryContent is returned when attempting to read lines
 // out of a stream that does not look like text
 var ErrBinaryContent = errors.New("cannot read binary content")
-
-// Longest line GetLines accepts. bufio.Scanner defaults to 64 KiB, which
-// made merges of files with a very long line (e.g. an inlined base64 blob)
-// fail with "token too long". Files above 1 MiB are never merged, so a
-// 1 MiB line can't be exceeded in practice.
-const maxLineSize = 1024 * 1024
 
 func NewLineReader(reader io.Reader) *LineReader {
 	return &LineReader{
@@ -45,14 +38,11 @@ func (lr *LineReader) Read(p []byte) (int, error) {
 }
 
 func (lr *LineReader) GetLines() ([]string, error) {
-	var lines []string
-	scanner := bufio.NewScanner(lr)
-	scanner.Buffer(nil, maxLineSize)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+	content, err := io.ReadAll(lr)
+	if err != nil {
+		return nil, err
 	}
-	return lines, scanner.Err()
-
+	return strings.Split(string(content), "\n"), nil
 }
 
 func isText(b []byte) bool {

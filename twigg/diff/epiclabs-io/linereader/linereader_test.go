@@ -53,7 +53,6 @@ dél no se salga un punto de la verdad.`
 }
 
 func TestLineReaderLongLine(t *testing.T) {
-	// bufio.Scanner's default limit is 64 KiB; go well past it.
 	longLine := strings.Repeat("A", 200*1024)
 	text := "first\n" + longLine + "\nlast\n"
 
@@ -61,7 +60,7 @@ func TestLineReaderLongLine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	expected := []string{"first", longLine, "last"}
+	expected := []string{"first", longLine, "last", ""}
 	if !reflect.DeepEqual(lines, expected) {
 		t.Fatalf("expected 3 lines with the long line intact, got %d lines", len(lines))
 	}

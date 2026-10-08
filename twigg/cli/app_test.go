@@ -4863,3 +4863,36 @@ func TestPullRenamedCommit(t *testing.T) {
 	h.CheckOutContains("renamed message")
 	h.CheckFile("a.txt", "aaa")
 }
+
+func TestRebaseKeepsTrailingEmptyLine(t *testing.T) {
+	h1 := NewTestHelper(t)
+	h1.Run("init")
+
+	// c0: a.txt with a trailing empty line
+	h1.WriteFile("a.txt", "line1\nline2\nline3\n")
+	h1.Run("commit", "create a.txt")
+	c0 := h1.ActiveCommit()
+
+	// c1: change the first line, keep the trailing empty line
+	h1.WriteFile("a.txt", "LINE1\nline2\nline3\n")
+	h1.Run("commit", "change first line")
+	c1 := h1.ActiveCommit()
+
+	// c2 (sibling of c1): change the last line, keep the trailing empty line
+	h1.Run("goto", c0.IdString)
+	h1.WriteFile("a.txt", "line1\nline2\nLINE3\n")
+	h1.Run("commit", "change last line")
+	c2 := h1.ActiveCommit()
+
+	// Tree:
+	// c1   c2
+	// |   /
+	// c0
+	// |
+	// root
+
+	// Rebase c2 into c1: the merge must keep the trailing empty line
+	h1.Run("rebase", c2.IdString, c1.IdString)
+	h1.CheckOutContains(rebaseOk)
+	h1.CheckFile("a.txt", "LINE1\nline2\nLINE3\n")
+}
