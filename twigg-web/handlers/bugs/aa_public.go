@@ -65,6 +65,12 @@ type GetBugsResponse struct {
 	CanCreate   bool
 }
 
+// NextCursor is empty on the last page.
+type BugSearchResponse struct {
+	Bugs       []twiggwc.FrontendBug
+	NextCursor string
+}
+
 type PostBugRequest struct {
 	Title string
 	Body  string
