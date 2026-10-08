@@ -15,6 +15,7 @@ func AddHandlers(db Db, perms Permissions, readMux wrappers.UserWithReadPermissi
 	userRepoMux wrappers.UserRepoMux) {
 	h := handler{db: db, perms: perms}
 	readMux.HandleFuncR("GET "+routes.BugsPattern, h.handleGetBugs)
+	readMux.HandleFuncR("GET "+routes.BugSearchPattern, h.handleSearchBugs)
 	readMux.HandleFuncR("GET "+routes.BugPattern, h.handleGetBug)
 	userRepoMux.HandleFuncW("POST "+routes.BugsPattern, h.handlePostBug)
 	userRepoMux.HandleFuncW("POST "+routes.BugCommentsPattern, h.handlePostComment)
