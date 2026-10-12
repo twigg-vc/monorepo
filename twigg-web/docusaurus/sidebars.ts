@@ -63,6 +63,7 @@ const sidebars: SidebarsConfig = {
       items: [
         'commands/commit-syntax',
         'commands/log',
+        'commands/status',
         'commands/commit',
         'commands/push',
         'commands/pull',
@@ -73,6 +74,7 @@ const sidebars: SidebarsConfig = {
         'commands/load',
         'commands/key',
         'commands/server',
+        'commands/diff',
         'commands/ci-list',
       ],
     },
