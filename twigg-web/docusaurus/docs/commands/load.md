@@ -33,3 +33,13 @@ current commit tree:
 | [Initialize] 
 ```
 Your working directory now contains all files from `#1v0`, but no new commit was created.
+
+## Dirty working directory
+`load` refuses to run if you have uncommitted changes, because it would overwrite them:
+```
+workdir is dirty. Create a commit or use -f to discard
+```
+Either [commit](./commit.md) or [amend](./amend.md) your changes first, or pass `--force` (short form: `-f`) to discard them:
+```
+tw load 1v0 --force
+```
