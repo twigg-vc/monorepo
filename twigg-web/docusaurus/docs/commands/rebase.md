@@ -58,6 +58,20 @@ If you run `tw -a` to view all versions, you can see their history and how paren
 ```
 Commit `#3` shows as `auto rebase` since its parent (`#2`) was rebased.
 
+## Dry run
+Use `--dry-run` (short form: `-d`) to find out whether a rebase would conflict, without changing anything:
+```
+tw rebase 2 1 --dry-run
+```
+You'll see one of:
+```
+rebase will have no conflicts :)
+```
+```
+rebase will cause conflicts
+```
+No new commit versions are created and your current commit stays the same.
+
 ## Got conflict rebasing
 When you rebase - whether directly or through automatic child rebases - conflicts can occur.
 
