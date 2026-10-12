@@ -71,6 +71,8 @@ const sidebars: SidebarsConfig = {
         'commands/rebase',
         'commands/amend',
         'commands/restore',
+        'commands/goto',
+        'commands/up-down',
         'commands/load',
         'commands/warp',
         'commands/key',
