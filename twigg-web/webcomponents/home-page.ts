@@ -84,7 +84,8 @@ export class HomePage extends LitElement {
     }
 
     private getNewRepoBtnHref(){
-        if (this.User.PaymentPlan == "Free" && this.MyRepos.length >=1){
+        // redirect to plans page if user has 2 or more repos
+        if (this.User.PaymentPlan == "Free" && this.MyRepos.length >=2){
             return PlansPagePath
         }
         return NewRepoUrl
