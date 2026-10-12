@@ -72,6 +72,7 @@ const sidebars: SidebarsConfig = {
         'commands/amend',
         'commands/restore',
         'commands/load',
+        'commands/warp',
         'commands/key',
         'commands/key-dump',
         'commands/server',
