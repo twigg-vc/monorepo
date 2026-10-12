@@ -14,7 +14,7 @@ Output:
 ```
 switched to commit #2v0
 ```
-To move one step at a time, see [up and down](./up-down.md). To jump to the last submitted commit, use `top`.
+To move one step at a time, see [up and down](./up-down.md). To jump to the last submitted commit, see [top](./top.md).
 
 ## Dirty working directory
 `goto` refuses to run if you have uncommitted changes, because loading another commit would overwrite them:
