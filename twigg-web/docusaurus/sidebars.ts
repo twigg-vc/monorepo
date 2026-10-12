@@ -73,6 +73,7 @@ const sidebars: SidebarsConfig = {
         'commands/restore',
         'commands/load',
         'commands/key',
+        'commands/key-dump',
         'commands/server',
         'commands/diff',
         'commands/ci-list',
