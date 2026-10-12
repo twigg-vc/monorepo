@@ -38,6 +38,16 @@ Example:
 tw amend --filter "a.txt, docs/"
 ```
 
+## Amending with unresolved conflicts
+If the current commit has [conflicts](../resolving-conflicts.md) that you haven't resolved yet, `amend` refuses to run:
+```
+can't amend with unresolved conflicts
+```
+Use `--force` (short form: `-f`) to amend anyway. The new version keeps the conflict markers so that you, or someone else, can resolve them later:
+```
+tw amend --force
+```
+
 ### I accidentally amended in a commit
 Don’t worry - with Twigg you never lose your work. Let’s just go back to where you were. Let's say you wanted to create a new commit on top of the current one, but you accidentally amended the current one resulting in:
 ```
