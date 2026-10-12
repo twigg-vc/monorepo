@@ -28,6 +28,16 @@ You can see (`tw -a`) how `amend` just added a new commit version and you can st
 ```
 Keep in mind that all descendants commits are automatically rebased to the new version as well.
 
+## Amend only some paths
+Like [commit](./commit.md#commit-only-some-paths), `amend` accepts `--filter` (short form: `-fi`) to amend only the paths you list. Other changes stay in the working directory.
+```
+tw amend --filter=<path>[, <path>...]
+```
+Example:
+```
+tw amend --filter "a.txt, docs/"
+```
+
 ### I accidentally amended in a commit
 Don’t worry - with Twigg you never lose your work. Let’s just go back to where you were. Let's say you wanted to create a new commit on top of the current one, but you accidentally amended the current one resulting in:
 ```
