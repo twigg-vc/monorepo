@@ -95,21 +95,24 @@ func (h handler) handleNonPipelineWebhook(w http.ResponseWriter, incomingJobStat
 		return
 	}
 
-	// There are 2 kinds of expected updates:
+	// There are 3 kinds of expected updates:
 	// from posted -> running
+	// from posted -> canceled (canceled before it started running)
 	// from running -> success/fail/etc (i.e. some finished state)
 	isPostedToRunning := false
+	isPostedToCanceled := false
 	isRunningToFinished := false
 	switch localJob.Status {
 	// Locally the job has `posted` status
 	case job.JobStatusPosted:
 		isPostedToRunning = incomingJobStatus == job.JobStatusRunning
+		isPostedToCanceled = incomingJobStatus == job.JobStatusCanceled
 	// Locally the job has `running` status
 	case job.JobStatusRunning:
 		isRunningToFinished = slices.Contains(finishedStatuses, incomingJobStatus)
 	default:
 	}
-	if !isPostedToRunning && !isRunningToFinished {
+	if !isPostedToRunning && !isPostedToCanceled && !isRunningToFinished {
 		log.Printf("[track webhook] got unexpected job.Status=%q. jobId=%v", incomingJobStatus, jobId)
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
@@ -121,7 +124,7 @@ func (h handler) handleNonPipelineWebhook(w http.ResponseWriter, incomingJobStat
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	if isRunningToFinished {
+	if isPostedToCanceled || isRunningToFinished {
 		err = h.tq.PutJobFinished(jobId, wl)
 		if err != nil {
 			log.Printf("[track webhook] could not PutJobFinished(). jobId=%v, err=%s", jobId, err)
@@ -191,19 +194,25 @@ func (h handler) handlePipelineStageWebhook(w http.ResponseWriter, incomingStage
 
 	// Webhooks should only update stages "from->to":
 	// posted -> running
+	// posted -> cancel (canceled before it started running)
 	// running -> success/fail/timeout/cancel
 	isPostedToRunning := false
+	isPostedToCanceled := false
 	isRunningToFinished := false
 	if localStage.Status == job.JobStatusPosted &&
 		incomingStageStatus == job.JobStatusRunning {
 		isPostedToRunning = true
+	}
+	if localStage.Status == job.JobStatusPosted &&
+		incomingStageStatus == job.JobStatusCanceled {
+		isPostedToCanceled = true
 	}
 	if (localStage.Status == job.JobStatusRunning) &&
 		slices.Contains(
 			finishedStatuses, incomingStageStatus) {
 		isRunningToFinished = true
 	}
-	if !isPostedToRunning && !isRunningToFinished {
+	if !isPostedToRunning && !isPostedToCanceled && !isRunningToFinished {
 		log.Printf("unexpected event. stage=%q is %q and got %q ",
 			stageId, localStage.Status, incomingStageStatus)
 		http.Error(w, "unexpected event", http.StatusBadRequest)

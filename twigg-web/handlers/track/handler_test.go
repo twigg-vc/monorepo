@@ -461,6 +461,87 @@ func TestHandleJobCancelation(t *testing.T) {
 	testJobWasCanceled()
 }
 
+func TestHandlePipelinesCancelationBeforeRunning(t *testing.T) {
+	db, closeDb, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDb()
+	mockWebhookParser := &mockWebhookParser{}
+	jobsStorage := newFakeJobStorage()
+	trackQueue := newMockTrackQueue()
+	cdQueue := &mockCdQueue{}
+	h := &handler{
+		db:       db,
+		js:       jobsStorage,
+		whParser: mockWebhookParser,
+		cdQueue:  cdQueue,
+		tq:       trackQueue,
+	}
+	pipelineId := job.PipelineId( /*repoId*/ 100,
+		/*commit*/ 101 /*commitV*/, 102,
+		"path/to/cd", "jobname" /*runNumber*/, 1)
+	jobsStorage.pipelinesById[pipelineId] = job.Pipeline{
+		Status:         job.PipelineStatusRunning,
+		NumberOfStages: 2,
+	}
+	jobsStorage.pipelineStagesByPipelineId[pipelineId] = []job.PipelineStage{
+		{PipelineId: pipelineId, Stage: 0, Status: job.JobStatusPosted},
+		{PipelineId: pipelineId, Stage: 1, Status: job.JobStatusWaiting},
+	}
+	stage0Id := job.PipelineStageId(pipelineId, 0)
+
+	// Track canceled stage0 before it started running
+	testStage0WasCanceled := func() {
+		checkOkWebhook(stage0Id, trackclient.TrackJobStatusCancel, mockWebhookParser, h, t)
+		jobsStorage.checkPipelineStatus(pipelineId, job.PipelineStatusCancel, t)
+		jobsStorage.checkPipelineStageStatus(pipelineId, 0, job.JobStatusCanceled, t)
+		jobsStorage.checkPipelineStageStatus(pipelineId, 1, job.JobStatusWaiting, t)
+		trackQueue.checkJobFinished(stage0Id, t)
+		cdQueue.checkIsNotEnqueued(pipelineId, 1, t)
+	}
+	// Run twice to check idempotency
+	testStage0WasCanceled()
+	testStage0WasCanceled()
+}
+
+func TestHandleJobCancelationBeforeRunning(t *testing.T) {
+	db, closeDb, err := webdb.NewMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDb()
+	mockWebhookParser := &mockWebhookParser{}
+	jobsStorage := newFakeJobStorage()
+	trackQueue := newMockTrackQueue()
+	h := &handler{
+		db:       db,
+		js:       jobsStorage,
+		whParser: mockWebhookParser,
+		tq:       trackQueue,
+	}
+	mockJob := job.Job{
+		InternalId: 1,
+		RepoId:     2,
+		Commit:     3,
+		Path:       "path/to/file",
+		Name:       "jobname",
+		Status:     job.JobStatusPosted,
+	}
+	mockJobId := mockJob.Id()
+	jobsStorage.jobsById[mockJobId] = mockJob
+
+	// Track canceled the job before it started running
+	testJobWasCanceled := func() {
+		checkOkWebhook(mockJobId, trackclient.TrackJobStatusCancel, mockWebhookParser, h, t)
+		jobsStorage.checkJobStatus(mockJobId, job.JobStatusCanceled, t)
+		trackQueue.checkJobFinished(mockJobId, t)
+	}
+	// Run twice to check idempotency
+	testJobWasCanceled()
+	testJobWasCanceled()
+}
+
 // Helper to post a webhook of a status and check that an OK response is returned
 func checkOkWebhook(stageId string, status trackclient.TrackJobStatus,
 	parser *mockWebhookParser, h *handler, t *testing.T) {
