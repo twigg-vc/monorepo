@@ -13,9 +13,9 @@ import (
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/bugpermissions"
 	"monorepo/twigg-web/user"
-	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/webdb"
 	"monorepo/twigg-web/wrappers"
+	"monorepo/twigg/client"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -84,7 +84,7 @@ func TestPostBug(t *testing.T) {
 	if rec.Code != http.StatusOK || !shouldCommit {
 		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
 	}
-	var got twiggwc.FrontendBug
+	var got client.FrontendBug
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestPostBug(t *testing.T) {
 		t.Fatalf("unexpected timestamps: %+v", got)
 	}
 	got.CreatedOn, got.UpdatedOn = time.Time{}, time.Time{}
-	want := twiggwc.FrontendBug{
+	want := client.FrontendBug{
 		Number:           1,
 		Title:            "Fix Iroh's tea",
 		Body:             "The tea is cold",
@@ -290,7 +290,7 @@ func TestGetBug(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body)
 	}
-	var b twiggwc.FrontendBug
+	var b client.FrontendBug
 	if err := json.Unmarshal([]byte(bugPageAttr(t, rec.Body.String(), "Bug")), &b); err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +299,7 @@ func TestGetBug(t *testing.T) {
 		t.Fatalf("unexpected timestamps: %+v", b)
 	}
 	b.CreatedOn, b.UpdatedOn = time.Time{}, time.Time{}
-	wantBug := twiggwc.FrontendBug{
+	wantBug := client.FrontendBug{
 		Number:           1,
 		Title:            "Fix Iroh's tea",
 		Body:             "The tea is cold",
@@ -314,7 +314,7 @@ func TestGetBug(t *testing.T) {
 		t.Fatalf("expected %+v, got %+v", wantBug, b)
 	}
 
-	var events []twiggwc.FrontendBugEvent
+	var events []client.FrontendBugEvent
 	if err := json.Unmarshal([]byte(bugPageAttr(t, rec.Body.String(), "Events")), &events); err != nil {
 		t.Fatal(err)
 	}
@@ -323,9 +323,9 @@ func TestGetBug(t *testing.T) {
 		t.Fatalf("unexpected events %+v", events)
 	}
 	events[0].CreatedOn = time.Time{}
-	wantEvents := []twiggwc.FrontendBugEvent{{
+	wantEvents := []client.FrontendBugEvent{{
 		Id:             1,
-		Kind:           twiggwc.FrontendBugEventKind_Comment,
+		Kind:           client.FrontendBugEventKind_Comment,
 		AuthorUsername: "zuko",
 		CreatedOn:      time.Time{},
 		Comment:        &bug.Comment{Body: "Try jasmine"},
@@ -421,7 +421,7 @@ func TestPostComment(t *testing.T) {
 	if rec.Code != http.StatusOK || !shouldCommit {
 		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
 	}
-	var got twiggwc.FrontendBugEvent
+	var got client.FrontendBugEvent
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
@@ -430,9 +430,9 @@ func TestPostComment(t *testing.T) {
 		t.Fatalf("unexpected timestamp: %+v", got)
 	}
 	got.CreatedOn = time.Time{}
-	want := twiggwc.FrontendBugEvent{
+	want := client.FrontendBugEvent{
 		Id:             1,
-		Kind:           twiggwc.FrontendBugEventKind_Comment,
+		Kind:           client.FrontendBugEventKind_Comment,
 		AuthorUsername: "zuko",
 		CreatedOn:      time.Time{},
 		Comment:        &bug.Comment{Body: "Try jasmine"},
@@ -527,7 +527,7 @@ func TestPostStatus(t *testing.T) {
 	}
 	got.Bug.CreatedOn, got.Bug.UpdatedOn, got.Events[0].CreatedOn = time.Time{}, time.Time{}, time.Time{}
 	want := PostStatusResponse{
-		Bug: twiggwc.FrontendBug{
+		Bug: client.FrontendBug{
 			Number:           1,
 			Title:            "Fix Iroh's tea",
 			Body:             "",
@@ -538,9 +538,9 @@ func TestPostStatus(t *testing.T) {
 			CreatedOn:        time.Time{},
 			UpdatedOn:        time.Time{},
 		},
-		Events: []twiggwc.FrontendBugEvent{{
+		Events: []client.FrontendBugEvent{{
 			Id:              1,
-			Kind:            twiggwc.FrontendBugEventKind_StatusChange,
+			Kind:            client.FrontendBugEventKind_StatusChange,
 			AuthorUsername:  "zuko",
 			CreatedOn:       time.Time{},
 			Comment:         nil,
@@ -683,7 +683,7 @@ func TestPostDescription(t *testing.T) {
 	}
 	got.Bug.CreatedOn, got.Bug.UpdatedOn, got.Event.CreatedOn = time.Time{}, time.Time{}, time.Time{}
 	want := PostEditResponse{
-		Bug: twiggwc.FrontendBug{
+		Bug: client.FrontendBug{
 			Number:           1,
 			Title:            "Fix Iroh's tea",
 			Body:             "The tea is lukewarm",
@@ -694,9 +694,9 @@ func TestPostDescription(t *testing.T) {
 			CreatedOn:        time.Time{},
 			UpdatedOn:        time.Time{},
 		},
-		Event: twiggwc.FrontendBugEvent{
+		Event: client.FrontendBugEvent{
 			Id:              1,
-			Kind:            twiggwc.FrontendBugEventKind_DescriptionEdit,
+			Kind:            client.FrontendBugEventKind_DescriptionEdit,
 			AuthorUsername:  "zuko",
 			CreatedOn:       time.Time{},
 			Comment:         nil,
@@ -783,7 +783,7 @@ func TestPostTitle(t *testing.T) {
 	}
 	got.Bug.CreatedOn, got.Bug.UpdatedOn, got.Event.CreatedOn = time.Time{}, time.Time{}, time.Time{}
 	want := PostEditResponse{
-		Bug: twiggwc.FrontendBug{
+		Bug: client.FrontendBug{
 			Number:           1,
 			Title:            "Fix Iroh's tea",
 			Body:             "",
@@ -794,9 +794,9 @@ func TestPostTitle(t *testing.T) {
 			CreatedOn:        time.Time{},
 			UpdatedOn:        time.Time{},
 		},
-		Event: twiggwc.FrontendBugEvent{
+		Event: client.FrontendBugEvent{
 			Id:              1,
-			Kind:            twiggwc.FrontendBugEventKind_TitleEdit,
+			Kind:            client.FrontendBugEventKind_TitleEdit,
 			AuthorUsername:  "zuko",
 			CreatedOn:       time.Time{},
 			Comment:         nil,
@@ -895,7 +895,7 @@ func TestPostAssignee(t *testing.T) {
 	}
 	got.Bug.CreatedOn, got.Bug.UpdatedOn, got.Event.CreatedOn = time.Time{}, time.Time{}, time.Time{}
 	want := PostEditResponse{
-		Bug: twiggwc.FrontendBug{
+		Bug: client.FrontendBug{
 			Number:           1,
 			Title:            "Fix Iroh's tea",
 			Body:             "",
@@ -906,12 +906,12 @@ func TestPostAssignee(t *testing.T) {
 			CreatedOn:        time.Time{},
 			UpdatedOn:        time.Time{},
 		},
-		Event: twiggwc.FrontendBugEvent{
+		Event: client.FrontendBugEvent{
 			Id:             1,
-			Kind:           twiggwc.FrontendBugEventKind_Assignment,
+			Kind:           client.FrontendBugEventKind_Assignment,
 			AuthorUsername: "zuko",
 			CreatedOn:      time.Time{},
-			Assignment:     &twiggwc.FrontendAssignment{NewAssigneeUsername: "iroh"},
+			Assignment:     &client.FrontendAssignment{NewAssigneeUsername: "iroh"},
 		},
 	}
 	if !reflect.DeepEqual(got, want) {

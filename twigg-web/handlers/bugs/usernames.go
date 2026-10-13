@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 	"monorepo/twigg-web/bug"
-	twiggwc "monorepo/twigg-web/webcomponents"
+	"monorepo/twigg/client"
 	"net/http"
 )
 
@@ -40,38 +40,38 @@ func (u *usernameResolver) getUsername(userId int64) (username string, ok bool) 
 	return username, true
 }
 
-func (u *usernameResolver) getFrontendBug(b bug.Bug) (twiggwc.FrontendBug, bool) {
+func (u *usernameResolver) getFrontendBug(b bug.Bug) (client.FrontendBug, bool) {
 	author, ok := u.getUsername(b.AuthorUserId)
 	if !ok {
-		return twiggwc.FrontendBug{}, false
+		return client.FrontendBug{}, false
 	}
 	assignee := ""
 	if b.AssigneeUserId != 0 {
 		assignee, ok = u.getUsername(b.AssigneeUserId)
 		if !ok {
-			return twiggwc.FrontendBug{}, false
+			return client.FrontendBug{}, false
 		}
 	}
-	return twiggwc.BugToFrontend(b, author, assignee), true
+	return client.BugToFrontend(b, author, assignee), true
 }
 
-func (u *usernameResolver) getFrontendBugEvent(e bug.Event) (twiggwc.FrontendBugEvent, bool) {
+func (u *usernameResolver) getFrontendBugEvent(e bug.Event) (client.FrontendBugEvent, bool) {
 	author, ok := u.getUsername(e.AuthorUserId)
 	if !ok {
-		return twiggwc.FrontendBugEvent{}, false
+		return client.FrontendBugEvent{}, false
 	}
 	newAssignee := ""
 	if e.Kind == bug.EventKind_Assignment && e.Assignment.NewAssigneeUserId != 0 {
 		newAssignee, ok = u.getUsername(e.Assignment.NewAssigneeUserId)
 		if !ok {
-			return twiggwc.FrontendBugEvent{}, false
+			return client.FrontendBugEvent{}, false
 		}
 	}
-	return twiggwc.BugEventToFrontend(e, author, newAssignee), true
+	return client.BugEventToFrontend(e, author, newAssignee), true
 }
 
-func (u *usernameResolver) getFrontendBugEvents(es []bug.Event) ([]twiggwc.FrontendBugEvent, bool) {
-	fes := make([]twiggwc.FrontendBugEvent, 0, len(es))
+func (u *usernameResolver) getFrontendBugEvents(es []bug.Event) ([]client.FrontendBugEvent, bool) {
+	fes := make([]client.FrontendBugEvent, 0, len(es))
 	for _, e := range es {
 		fe, ok := u.getFrontendBugEvent(e)
 		if !ok {
@@ -82,8 +82,8 @@ func (u *usernameResolver) getFrontendBugEvents(es []bug.Event) ([]twiggwc.Front
 	return fes, true
 }
 
-func (u *usernameResolver) getFrontendBugs(bs []bug.Bug) ([]twiggwc.FrontendBug, bool) {
-	fbs := make([]twiggwc.FrontendBug, 0, len(bs))
+func (u *usernameResolver) getFrontendBugs(bs []bug.Bug) ([]client.FrontendBug, bool) {
+	fbs := make([]client.FrontendBug, 0, len(bs))
 	for _, b := range bs {
 		fb, ok := u.getFrontendBug(b)
 		if !ok {

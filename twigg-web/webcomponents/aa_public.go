@@ -3,7 +3,6 @@ package webcomponents
 import (
 	"encoding/json"
 	"fmt"
-	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/cicdqueue"
 	"monorepo/twigg-web/featureflags"
 	"monorepo/twigg-web/repo"
@@ -11,6 +10,7 @@ import (
 	"monorepo/twigg-web/secrets"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
+	"monorepo/twigg/client"
 	"monorepo/twigg/commit"
 	"net/http"
 	"time"
@@ -242,62 +242,9 @@ func CommitToFrontend(c commit.Commit, authorUsername string,
 	return commitToFrontend(c, authorUsername, reviewStatus)
 }
 
-// AssigneeUsername is empty when unassigned
-type FrontendBug struct {
-	Number           uint64
-	Title            string
-	Body             string
-	Status           bug.Status
-	AuthorUsername   string
-	AssigneeUsername string
-	CommentCount     int64
-	CreatedOn        time.Time
-	UpdatedOn        time.Time
-}
-
-func BugToFrontend(b bug.Bug, authorUsername, assigneeUsername string) FrontendBug {
-	return bugToFrontend(b, authorUsername, assigneeUsername)
-}
-
-type FrontendBugEventKind string
-
-const (
-	FrontendBugEventKind_Comment         FrontendBugEventKind = "comment"
-	FrontendBugEventKind_StatusChange    FrontendBugEventKind = "status-change"
-	FrontendBugEventKind_DescriptionEdit FrontendBugEventKind = "description-edit"
-	FrontendBugEventKind_TitleEdit       FrontendBugEventKind = "title-edit"
-	FrontendBugEventKind_SubmittedCommit FrontendBugEventKind = "submitted-commit"
-	FrontendBugEventKind_Assignment      FrontendBugEventKind = "assignment"
-)
-
-// Only the details field matching Kind is set
-type FrontendBugEvent struct {
-	Id              uint64
-	Kind            FrontendBugEventKind
-	AuthorUsername  string
-	CreatedOn       time.Time
-	Comment         *bug.Comment         `json:",omitempty"`
-	StatusChange    *bug.StatusChange    `json:",omitempty"`
-	DescriptionEdit *bug.DescriptionEdit `json:",omitempty"`
-	TitleEdit       *bug.TitleEdit       `json:",omitempty"`
-	SubmittedCommit *bug.SubmittedCommit `json:",omitempty"`
-	Assignment      *FrontendAssignment  `json:",omitempty"`
-}
-
-// NewAssigneeUsername is empty when the bug was unassigned
-type FrontendAssignment struct {
-	NewAssigneeUsername string
-}
-
-// newAssigneeUsername is only used by assignment events, and is empty when
-// the bug was unassigned.
-func BugEventToFrontend(e bug.Event, authorUsername, newAssigneeUsername string) FrontendBugEvent {
-	return bugEventToFrontend(e, authorUsername, newAssigneeUsername)
-}
-
 // Returns the <bug-page> component. events are ordered oldest first.
-func BugPage(repoOwnerName, repoDisplayName string, b FrontendBug,
-	events []FrontendBugEvent, canWrite bool) g.Node {
+func BugPage(repoOwnerName, repoDisplayName string, b client.FrontendBug,
+	events []client.FrontendBugEvent, canWrite bool) g.Node {
 	return bugPage(repoOwnerName, repoDisplayName, b, events, canWrite)
 }
 

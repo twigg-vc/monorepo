@@ -10,6 +10,7 @@ import (
 	"monorepo/twigg-web/user"
 	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
+	"monorepo/twigg/client"
 	"net/http"
 	"strconv"
 	"strings"
@@ -222,7 +223,7 @@ func (h handler) handlePostComment(w http.ResponseWriter,
 		}
 	}
 
-	respJson, err := json.Marshal(twiggwc.BugEventToFrontend(e, r.UserWithWritePermission.Username, ""))
+	respJson, err := json.Marshal(client.BugEventToFrontend(e, r.UserWithWritePermission.Username, ""))
 	if err != nil {
 		panic(fmt.Sprintf("failed to marshal the comment: %s", err))
 	}
@@ -261,7 +262,7 @@ func (h handler) handlePostStatus(w http.ResponseWriter,
 		http.Error(w, "the comment is too long", http.StatusBadRequest)
 		return false
 	}
-	events := []twiggwc.FrontendBugEvent{}
+	events := []client.FrontendBugEvent{}
 	if strings.TrimSpace(req.Comment) != "" {
 		c, _, err := h.db.AddBugComment(dbWrite, r.Repo.Id, b.Number, r.UserWithWritePermission.Id, req.Comment)
 		if err != nil {
@@ -269,7 +270,7 @@ func (h handler) handlePostStatus(w http.ResponseWriter,
 			http.Error(w, "failed to add the comment", http.StatusInternalServerError)
 			return false
 		}
-		events = append(events, twiggwc.BugEventToFrontend(c, r.UserWithWritePermission.Username, ""))
+		events = append(events, client.BugEventToFrontend(c, r.UserWithWritePermission.Username, ""))
 	}
 	e, _, err := h.db.SetBugStatus(dbWrite, r.Repo.Id, b.Number, r.UserWithWritePermission.Id, req.Status)
 	if err != nil {
@@ -304,7 +305,7 @@ func (h handler) handlePostStatus(w http.ResponseWriter,
 		return false
 	}
 
-	events = append(events, twiggwc.BugEventToFrontend(e, r.UserWithWritePermission.Username, ""))
+	events = append(events, client.BugEventToFrontend(e, r.UserWithWritePermission.Username, ""))
 
 	respJson, err := json.Marshal(PostStatusResponse{Bug: frontendBug, Events: events})
 	if err != nil {

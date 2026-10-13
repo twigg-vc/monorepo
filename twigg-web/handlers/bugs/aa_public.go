@@ -7,8 +7,8 @@ import (
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/user"
-	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
+	"monorepo/twigg/client"
 )
 
 func AddHandlers(db Db, perms Permissions, readMux wrappers.UserWithReadPermissionMux,
@@ -59,7 +59,7 @@ type Permissions interface {
 
 // NextCursor is empty on the last page. The counts are of the whole repo.
 type GetBugsResponse struct {
-	Bugs        []twiggwc.FrontendBug
+	Bugs        []client.FrontendBug
 	NextCursor  string
 	OpenCount   int64
 	ClosedCount int64
@@ -68,7 +68,7 @@ type GetBugsResponse struct {
 
 // NextCursor is empty on the last page.
 type BugSearchResponse struct {
-	Bugs       []twiggwc.FrontendBug
+	Bugs       []client.FrontendBug
 	NextCursor string
 }
 
@@ -89,13 +89,13 @@ type PostStatusRequest struct {
 
 // Events are the new ones, oldest first
 type PostStatusResponse struct {
-	Bug    twiggwc.FrontendBug
-	Events []twiggwc.FrontendBugEvent
+	Bug    client.FrontendBug
+	Events []client.FrontendBugEvent
 }
 
 type PostEditResponse struct {
-	Bug   twiggwc.FrontendBug
-	Event twiggwc.FrontendBugEvent
+	Bug   client.FrontendBug
+	Event client.FrontendBugEvent
 }
 
 type PostTitleRequest struct {
