@@ -49,6 +49,32 @@ func TestHandleSearchBugs(t *testing.T) {
 	if !reflect.DeepEqual(numbers, []uint64{2}) || resp.NextCursor != "" {
 		t.Fatalf("expected only b/2 and no cursor, got %+v", resp)
 	}
+	if resp.CanCreate {
+		t.Fatal("expected anonymous users to not be able to create bugs")
+	}
+}
+
+func TestHandleSearchBugsLetsTheRepoOwnerCreate(t *testing.T) {
+	h, _, w, zukoId := newTestHandler(t)
+	req := newReadReq("/zuko/tea/bug-search?q=is:open")
+	req.Flags.SearchBugsUi = true
+	req.Repo.OwnerId = zukoId
+	req.IsLoggedIn = true
+	req.MaybeUserWithReadPermission = &user.User{Id: zukoId}
+
+	rec := httptest.NewRecorder()
+	h.handleSearchBugs(rec, req, w)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body)
+	}
+	var resp GetBugsResponse
+	err := json.Unmarshal(rec.Body.Bytes(), &resp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.CanCreate {
+		t.Fatalf("expected the owner to be able to create bugs, got %+v", resp)
+	}
 }
 
 func TestHandleSearchBugsResolvesMe(t *testing.T) {
