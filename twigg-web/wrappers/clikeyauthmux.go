@@ -47,6 +47,26 @@ func (m cliKeyAuthMux) HandleFuncW(pattern string, handler func(w http.ResponseW
 	})
 }
 
+func (m cliKeyAuthMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,
+	r CliKeyAuthMuxRequest, dbRead context.Context)) {
+
+	m.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		xchange.SetTwiggHeaderInResponse(w)
+		dbRead, closeDbRead, err := m.db.BeginRead()
+		defer closeDbRead()
+		if err != nil {
+			log.Printf("failed to get read tx in cli key auth mux: %q", err)
+			http.Error(w, "err getting tx", http.StatusInternalServerError)
+			return
+		}
+		req, ok := m.authenticate(w, r, dbRead)
+		if !ok {
+			return
+		}
+		handler(w, req, dbRead)
+	})
+}
+
 // Validates the api key, the subscriptions of the user and of the repo owner,
 // and that the user is the owner or has write permission in the repo. On any
 // failure, writes an error to the response and returns ok=false.

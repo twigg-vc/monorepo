@@ -65,6 +65,7 @@ type AuthMuxRequest struct {
 
 type CliKeyAuthMuxDb interface {
 	UserRepoMuxDb
+	BeginRead() (readCtx context.Context, closeTx func(), err error)
 	BeginWrite() (writeCtx context.Context, closeTx func(), commitTx func() error, err error)
 }
 
@@ -89,6 +90,14 @@ type CliKeyAuthMux struct {
 func (m CliKeyAuthMux) HandleFuncW(pattern string, handler func(w http.ResponseWriter,
 	r CliKeyAuthMuxRequest, dbWrite context.Context) (shouldCommit bool)) {
 	m.m.HandleFuncW(pattern, handler)
+}
+
+// HandleFuncR registers a handler for routes that only read. It runs the
+// same checks as HandleFuncW (the CLI needs write permission even to read,
+// like pull does). dbRead is automatically closed after handler returns.
+func (m CliKeyAuthMux) HandleFuncR(pattern string, handler func(w http.ResponseWriter,
+	r CliKeyAuthMuxRequest, dbRead context.Context)) {
+	m.m.HandleFuncR(pattern, handler)
 }
 
 // CliKeyAuthMuxRequest is intentionally a different type from the session
