@@ -13,6 +13,7 @@ type Flags struct {
 	SearchCommitsUi              bool // If set, the repo page searches its commits
 	ShowBugs                     bool // If set, repos have a bug tracker
 	SearchBugsUi                 bool // If set, the bugs tab searches its bugs
+	BugMethodsFromCliAreEnabled  bool // If set, the CLI can read and change bugs
 }
 
 func GetFlags(configName string, repoOwnerUsername string, currentUsername string) Flags {
@@ -29,6 +30,8 @@ func GetFlags(configName string, repoOwnerUsername string, currentUsername strin
 		SearchCommitsUi: true,
 		ShowBugs:        true,
 		SearchBugsUi:    EnabledForReposOfTwiggers(repoOwnerUsername),
+		BugMethodsFromCliAreEnabled: EnabledOutsideProd(configName) ||
+			EnabledForReposOfTwiggers(repoOwnerUsername),
 	}
 }
 

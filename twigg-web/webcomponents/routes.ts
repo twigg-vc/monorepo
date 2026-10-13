@@ -145,6 +145,14 @@ export function PathToBugTitle(owner: string, repoName: string, number: number):
 export function PathToBugAssignee(owner: string, repoName: string, number: number): string {
     return `${UrlToBug(owner, repoName, number)}/assignee`
 }
+export function PathToBugSearch(owner: string, repoName: string,
+    query: string, cursor: string): string {
+    const params = new URLSearchParams({ q: query })
+    if (cursor !== "") {
+        params.set("cursor", cursor)
+    }
+    return `${UrlToRepo(owner, repoName)}/bug-search?${params.toString()}`
+}
 
 
 export function PathToMoreSubmittedCommits(owner: string, repoName: string,

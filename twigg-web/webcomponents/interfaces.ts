@@ -301,3 +301,9 @@ export interface GetBugsResponse {
     ClosedCount: number
     CanCreate: boolean
 }
+
+// Copy of go-code bugs.BugSearchResponse
+export interface BugSearchResponse {
+    Bugs: Bug[]
+    NextCursor: string // empty on the last page
+}

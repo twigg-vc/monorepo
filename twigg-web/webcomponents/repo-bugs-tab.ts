@@ -22,6 +22,7 @@ export class RepoBugsTab extends LitElement {
 
         view: { type: String, state: true },
         filter: { type: String, state: true },
+        assigneeFilter: { type: String, state: true },
         page: { type: Object, state: true },
         isLoadingPage: { type: Boolean, state: true },
         isLoadingMore: { type: Boolean, state: true },
@@ -34,6 +35,8 @@ export class RepoBugsTab extends LitElement {
     declare RepoName: string;
     declare private view: View;
     declare private filter: Filter;
+    // "" (no assignee filter), "unassigned", "me", or a specific username.
+    declare private assigneeFilter: string;
     declare private page: GetBugsResponse | undefined;
     declare private isLoadingPage: boolean;
     declare private isLoadingMore: boolean;
@@ -48,6 +51,7 @@ export class RepoBugsTab extends LitElement {
         this.RepoName = "";
         this.view = "list";
         this.filter = "open";
+        this.assigneeFilter = "";
         this.page = undefined;
         this.isLoadingPage = false;
         this.isLoadingMore = false;
@@ -296,14 +300,17 @@ export class RepoBugsTab extends LitElement {
 
     private pageRequestId = 0
 
+    private pathToPage(cursor: string): string {
+        return PathToBugs(this.RepoOwnerName, this.RepoName, this.filter, cursor)
+    }
+
     private async fetchPage() {
         const requestId = ++this.pageRequestId
         this.isLoadingPage = true
         this.loadFailed = false
         const tm = new MinDurationTimer()
         try {
-            const resp = await fetchGetWithRetry(
-                PathToBugs(this.RepoOwnerName, this.RepoName, this.filter, ""))
+            const resp = await fetchGetWithRetry(this.pathToPage(""))
             await tm.Wait()
             if (!resp.ok) {
                 throw `request failed with status ${resp.status}`
@@ -331,8 +338,7 @@ export class RepoBugsTab extends LitElement {
         this.isLoadingMore = true
         const requestId = this.pageRequestId
         try {
-            const resp = await fetchGetWithRetry(
-                PathToBugs(this.RepoOwnerName, this.RepoName, this.filter, this.page.NextCursor))
+            const resp = await fetchGetWithRetry(this.pathToPage(this.page.NextCursor))
             if (!resp.ok) {
                 throw `request failed with status ${resp.status}`
             }
