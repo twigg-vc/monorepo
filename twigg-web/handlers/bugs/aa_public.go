@@ -59,17 +59,13 @@ type Permissions interface {
 
 // NextCursor is empty on the last page. The counts are of the whole repo.
 type GetBugsResponse struct {
-	Bugs        []client.FrontendBug
-	NextCursor  string
-	OpenCount   int64
-	ClosedCount int64
-	CanCreate   bool
-}
-
-// NextCursor is empty on the last page.
-type BugSearchResponse struct {
-	Bugs       []client.FrontendBug
-	NextCursor string
+	Bugs           []client.FrontendBug
+	NextCursor     string
+	HasOpenCount   bool
+	OpenCount      int64
+	HasClosedCount bool
+	ClosedCount    int64
+	CanCreate      bool
 }
 
 type PostBugRequest struct {

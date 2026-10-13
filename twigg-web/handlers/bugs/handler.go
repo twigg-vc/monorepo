@@ -65,11 +65,13 @@ func (h handler) handleGetBugs(w http.ResponseWriter,
 	}
 
 	respJson, err := json.Marshal(GetBugsResponse{
-		Bugs:        frontendBugs,
-		NextCursor:  nextCursor,
-		OpenCount:   open,
-		ClosedCount: closed,
-		CanCreate:   canCreate,
+		Bugs:           frontendBugs,
+		NextCursor:     nextCursor,
+		HasOpenCount:   true,
+		OpenCount:      open,
+		HasClosedCount: true,
+		ClosedCount:    closed,
+		CanCreate:      canCreate,
 	})
 	if err != nil {
 		panic(fmt.Sprintf("failed to marshal the bugs: %s", err))

@@ -139,7 +139,7 @@ func TestGetBugs(t *testing.T) {
 	if !reflect.DeepEqual(numbers, []uint64{1}) || !reflect.DeepEqual(authors, []string{"zuko"}) || resp.NextCursor != "" {
 		t.Fatalf("expected the closed b/1 by zuko and no cursor, got %+v", resp)
 	}
-	if resp.OpenCount != 2 || resp.ClosedCount != 1 {
+	if !resp.HasOpenCount || resp.OpenCount != 2 || !resp.HasClosedCount || resp.ClosedCount != 1 {
 		t.Fatalf("expected the counts of the whole repo, got open=%d closed=%d", resp.OpenCount, resp.ClosedCount)
 	}
 	if resp.CanCreate {

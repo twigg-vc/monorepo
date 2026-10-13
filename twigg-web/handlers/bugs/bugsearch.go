@@ -42,10 +42,19 @@ func (h handler) handleSearchBugs(w http.ResponseWriter,
 	if !ok {
 		return
 	}
+	canCreate, err := h.perms.CanCreateBugs(dbRead, viewer(r), r.Repo)
+	if err != nil {
+		log.Printf("failed to check if bugs can be created in repo id=%d: %s", r.Repo.Id, err)
+		http.Error(w, "failed to check the permission", http.StatusInternalServerError)
+		return
+	}
 
-	respJson, err := json.Marshal(BugSearchResponse{
-		Bugs:       frontendBugs,
-		NextCursor: nextCursor,
+	respJson, err := json.Marshal(GetBugsResponse{
+		Bugs:           frontendBugs,
+		NextCursor:     nextCursor,
+		HasOpenCount:   false,
+		HasClosedCount: false,
+		CanCreate:      canCreate,
 	})
 	if err != nil {
 		panic(fmt.Sprintf("failed to marshal the search results: %s", err))

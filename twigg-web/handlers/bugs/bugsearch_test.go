@@ -37,7 +37,7 @@ func TestHandleSearchBugs(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body)
 	}
-	var resp BugSearchResponse
+	var resp GetBugsResponse
 	err = json.Unmarshal(rec.Body.Bytes(), &resp)
 	if err != nil {
 		t.Fatal(err)
@@ -71,7 +71,7 @@ func TestHandleSearchBugsResolvesMe(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body)
 	}
-	var resp BugSearchResponse
+	var resp GetBugsResponse
 	err = json.Unmarshal(rec.Body.Bytes(), &resp)
 	if err != nil {
 		t.Fatal(err)
