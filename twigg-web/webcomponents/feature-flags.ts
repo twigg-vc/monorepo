@@ -9,6 +9,7 @@ export type FeatureFlags = {
     DummyFlag: boolean
     SearchCommitsUi: boolean
     ShowBugs: boolean
+    SearchBugsUi: boolean
 }
 export function GetFeatureFlags(): FeatureFlags{
     return featureFlags

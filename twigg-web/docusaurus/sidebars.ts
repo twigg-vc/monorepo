@@ -80,6 +80,7 @@ const sidebars: SidebarsConfig = {
         'commands/key',
         'commands/key-dump',
         'commands/server',
+        'commands/set-server-id',
         'commands/diff',
         'commands/ci-list',
       ],
