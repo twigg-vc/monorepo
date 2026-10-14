@@ -29,6 +29,9 @@ class MarkdownDisplay extends LitElement {
             overflow-wrap: break-word;
             resize: vertical;
         }
+        ul, ol {
+            padding-left: var(--space5p);
+        }
         a {
             color: var(--color-primary-pop);
             text-decoration: underline;
