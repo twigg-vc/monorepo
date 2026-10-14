@@ -956,7 +956,7 @@ func TestCantRestoreSubmitted(t *testing.T) {
 	h.CheckOutContains(cantRestoreSubmitted)
 }
 
-func TestDescriptionSetRequiresServerCommitSyntax(t *testing.T) {
+func TestDescriptionSetCommitSyntax(t *testing.T) {
 	h := NewTestHelper(t)
 	srv := server.NewTestServer(FakeApiKey, t)
 	h.SetServerRootUrl(srv.RootUrl())
@@ -969,6 +969,11 @@ func TestDescriptionSetRequiresServerCommitSyntax(t *testing.T) {
 	h.Run("commit", "aaa")
 	h.Run("description-set", "1", "aaa description")
 	h.CheckOutContains(badCommitServerSyntax)
+
+	h.Run("description-set", "c/1v0", "aaa description")
+	h.CheckOutContains(cantDescribeCommitVersion)
+	h.Run("description-set", "c1v0", "aaa description")
+	h.CheckOutContains(cantDescribeCommitVersion)
 }
 
 func TestRestoreDoesntSwitchCommitIfWorkdirIsDirty(t *testing.T) {
