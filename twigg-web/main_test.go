@@ -3282,6 +3282,11 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 	if err == nil || !isNotFoundErr {
 		t.Fatalf("expected not found err got %v %v", err, isNotFoundErr)
 	}
+	tw.Run("get-bug", "1")
+	tw.CheckOutContains("Momo")
+	//WIP: tw.CheckOutContains("Appa")
+	tw.Run("get-bug", "9999999")
+	tw.CheckOutContains("not found")
 }
 
 func TestGetReviewers(t *testing.T) {

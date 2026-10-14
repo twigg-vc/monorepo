@@ -1,6 +1,9 @@
 package cli
 
-import twiggwebclient "monorepo/twigg-web/twigg-web-client"
+import (
+	"fmt"
+	twiggwebclient "monorepo/twigg-web/twigg-web-client"
+)
 
 // Simple helper that logs an error and returns false if the server and api
 // were not setup yet.
@@ -38,5 +41,16 @@ func (a *app) getBug(args commandArgs) {
 	if !a.checkServerIsSetup() {
 		return
 	}
-	a.logSuccess("wip")
+	client := a.getTwiggWebClient()
+	bug, isNotFoundErr, err := client.GetBugAndEvents(args.bugNumber)
+	if isNotFoundErr {
+		a.logError(fmt.Sprintf("b/%d not found", args.bugNumber))
+		return
+	}
+	if err != nil {
+		a.logError(err.Error())
+		return
+	}
+	s := fmt.Sprintf("%+v\n", bug)
+	a.logInfo(s)
 }
