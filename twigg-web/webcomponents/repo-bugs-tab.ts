@@ -89,7 +89,23 @@ export class RepoBugsTab extends LitElement {
                 </div>
                 ${this.renderNewBugBtn()}
             </div>
+            ${this.renderAssigneeFilters()}
             ${this.renderListBody()}
+        `
+    }
+
+    private renderAssigneeFilters() {
+        if (!GetFeatureFlags().SearchBugsUi) {
+            return html``
+        }
+        return html`
+            <div class="assignee-filters">
+                <div class="filters">
+                    ${this.renderAssigneeFilterBtn("unassigned", "Question", "Unassigned")}
+                    ${this.renderAssigneeFilterBtn("me", "User", "Assigned to me")}
+                </div>
+                ${this.renderAssigneeUsernameFilter()}
+            </div>
         `
     }
 
@@ -473,6 +489,13 @@ export class RepoBugsTab extends LitElement {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: var(--space2);
+            margin-bottom: var(--space3);
+        }
+        .assignee-filters {
+            display: flex;
+            align-items: center;
             flex-wrap: wrap;
             gap: var(--space2);
             margin-bottom: var(--space3);
