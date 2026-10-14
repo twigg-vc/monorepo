@@ -46,6 +46,7 @@ const (
 	ciListShortCmd         = "cil"
 	enableUnsafeDevModeCmd = "enable-unsafe-dev-mode"
 	pingTwiggWebCmd        = "ping"
+	getBugTwiggWebCmd      = "get-bug"
 )
 
 // Flags
@@ -116,6 +117,7 @@ type commandArgs struct {
 	apiKey          string
 	boolInFirstArg  bool
 	serverId        uint64
+	bugNumber       uint64
 
 	dryRun        bool
 	force         bool
@@ -164,6 +166,8 @@ type command struct {
 	firstArgIsServerId bool
 	// first argument must be bool
 	firstArgIsBool bool
+	// first argument must be a bug number
+	firstArgIsBugNumber bool
 	// a second argument might be provided. If so, it's the api key.
 	secondArgMightBeApiKey bool
 	// supports "--yolo"
@@ -389,6 +393,11 @@ func (a *app) initCommand(cmdLineArgs []string) (ok bool) {
 		c = command{
 			callback: a.pingTwiggWeb,
 		}
+	case getBugTwiggWebCmd:
+		c = command{
+			callback:            a.getBug,
+			firstArgIsBugNumber: true,
+		}
 	default:
 		a.logError(invalidCommand)
 		return
@@ -560,6 +569,19 @@ func parseFlags(cmd command, c *commandArgs, args []string) (cmdLineArgsWithoutF
 
 // args should be free of flags
 func parseArgs(c command, cArgs *commandArgs, args []string) (err error) {
+	if c.firstArgIsBugNumber {
+		if len(args) == 0 {
+			err = errors.New(bugNumberNotProvided)
+			return
+		}
+		var bugNum uint64
+		bugNum, err = strconv.ParseUint(args[0], 10, 64)
+		if err != nil {
+			err = fmt.Errorf("bad bug number: %s", args[0])
+			return
+		}
+		cArgs.bugNumber = bugNum
+	}
 	if c.firstArgMightBeNumber {
 		if len(args) > 0 {
 			num, err := strconv.Atoi(args[0])
@@ -761,6 +783,9 @@ func checkCommandOrDie(c command) {
 		nArgOneMustBe += 1
 	}
 	if c.firstArgIsMessage {
+		nArgOneMustBe += 1
+	}
+	if c.firstArgIsBugNumber {
 		nArgOneMustBe += 1
 	}
 	if c.firstArgIsCommit {
