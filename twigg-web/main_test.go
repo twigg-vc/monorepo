@@ -3338,7 +3338,7 @@ func TestBugGetFromCliIsDeniedToNonCollaborators(t *testing.T) {
 	tw.Run("server", "aang/BookOne")
 	tw.Run("key", srv.KeysMock.GetLastRandomCliKey())
 	tw.Run("bug-get", "1")
-	tw.CheckOutContains("Forbidden") // TODO: improve msg
+	tw.CheckOutContains("user does not have permission")
 	tw.CheckOutDoesntContain("Momo ate the moon peach")
 }
 

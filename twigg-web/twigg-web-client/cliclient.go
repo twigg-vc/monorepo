@@ -23,7 +23,8 @@ var (
 	ErrFailedToReachServer = errors.New("failed to reach the server")
 )
 
-// General function to make a request. Returns error for any non200 status.
+// General function to make a request. Returns error for any non200 status,
+// with the server's error message when it sends one.
 func (c cliclient) doRequest(method string, url string, contentType string,
 	body io.Reader, out any) (int, error) {
 	req, err := http.NewRequest(method, url, body)
@@ -40,7 +41,13 @@ func (c cliclient) doRequest(method string, url string, contentType string,
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return resp.StatusCode, fmt.Errorf("%w: %s", ErrFailedToReachServer, resp.Status)
+		const maxErrMsgLen = 1024
+		msg, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrMsgLen))
+		trimmed := strings.TrimSpace(string(msg))
+		if trimmed == "" {
+			return resp.StatusCode, errors.New(resp.Status)
+		}
+		return resp.StatusCode, errors.New(trimmed)
 	}
 	if out == nil {
 		return 0, nil
