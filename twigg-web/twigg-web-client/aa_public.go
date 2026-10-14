@@ -56,7 +56,7 @@ func (c CliKeyClient) GetBugAndEvents(id uint64) (b GetBugAndEventsResponse, isN
 }
 
 // commitId is the commit's server id
-func (c CliKeyClient) SetCommitDescription(commitId uint64, description string) (isNotFoundErr bool, err error) {
+func (c CliKeyClient) SetCommitDescription(commitId uint64, description string) (isNotFoundErr bool, isSubmittedErr bool, err error) {
 	return c.c.setCommitDescription(commitId, description)
 }
 

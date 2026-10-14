@@ -62,9 +62,13 @@ func (a *app) setCommitDescription(args commandArgs) {
 		serverId = id
 	}
 	client := a.getTwiggWebClient()
-	isNotFoundErr, err := client.SetCommitDescription(serverId, args.description)
+	isNotFoundErr, isSubmittedErr, err := client.SetCommitDescription(serverId, args.description)
 	if isNotFoundErr {
 		a.logError(fmt.Sprintf("c/%d not found", serverId))
+		return
+	}
+	if isSubmittedErr {
+		a.logError(fmt.Sprintf("c/%d is submitted, its description can't change", serverId))
 		return
 	}
 	if err != nil {

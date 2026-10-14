@@ -3293,11 +3293,11 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 	tw.Run("commit", "feed appa")
 	tw.Run("push")
 	tw.CheckOutContains("push succeeded")
-	_, err = client.SetCommitDescription(1, "appa ate all the cabbages")
+	_, _, err = client.SetCommitDescription(1, "appa ate all the cabbages")
 	if err != nil {
 		t.Fatal(err)
 	}
-	isNotFoundErr, err = client.SetCommitDescription(99999, "appa ate nothing")
+	isNotFoundErr, _, err = client.SetCommitDescription(99999, "appa ate nothing")
 	if err == nil || !isNotFoundErr {
 		t.Fatalf("expected not found err got %v %v", err, isNotFoundErr)
 	}
@@ -3313,6 +3313,15 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 	bAang.CheckCurrentPageContains("sokka ate the cactus juice")
 	tw.Run("description-set", "c/99999", "momo ate nothing")
 	tw.CheckOutContains("c/99999 not found")
+
+	bAang.Post("/aang/BookOne/c/1/lgtm", map[string]string{"version": "0"})
+	bAang.Post("/aang/BookOne/c/1/submit", map[string]string{"version": "0"})
+	_, isSubmittedErr, err := client.SetCommitDescription(1, "appa ate it again")
+	if err == nil || !isSubmittedErr {
+		t.Fatalf("expected submitted err got %v %v", err, isSubmittedErr)
+	}
+	tw.Run("description-set", "c/1", "momo ate it again")
+	tw.CheckOutContains("c/1 is submitted")
 }
 
 func TestBugGetFromCliIsDeniedToNonCollaborators(t *testing.T) {
