@@ -1084,6 +1084,11 @@ func (hl handler) handleUserRepoMuxPostCommit(w http.ResponseWriter,
 	return hl.handlePostCommit(w, r.Request, r.Repo, r.RepoOwnerUsr, dbWrite)
 }
 
+func (hl handler) handleCliKeyAuthMuxPostCommit(w http.ResponseWriter,
+	r wrappers.CliKeyAuthMuxRequest, dbWrite context.Context) (shouldCommit bool) {
+	return hl.handlePostCommit(w, r.Request, r.Repo, r.RepoOwnerUsr, dbWrite)
+}
+
 // Returns a HTML fragment of the commit description
 func (hl handler) handlePostCommit(w http.ResponseWriter, r *http.Request,
 	rp webrepo.Repo, repoOwnerUsr user.User,

@@ -139,6 +139,7 @@ const (
 
 	CommitParamName                  = "c"
 	CommitPattern                    = RepoPattern + "/c/{c}"
+	CliCommitPattern                 = RepoPattern + "/cli-c/{c}"
 	ReviewDataPattern                = CommitPattern + "/rev-data"
 	JobsPattern                      = CommitPattern + "/jobs"
 	JobCombinedOutPattern            = JobsPattern + "/out"

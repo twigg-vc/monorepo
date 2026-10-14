@@ -325,7 +325,7 @@ func (s *Srv) Run(runInMaintenanceMode bool) {
 	bugs.AddHandlers(sDb, bugpermissions.NewService(sDb), cliKeyAuthMux, userWithReadPermMux, userRepoMux)
 	twigg.AddHandlers(sDb, userSrv, rSrv, ciQueue, s.mux, s.C.Name, tokenSigner, nil)
 	commit.AddHandlers(rt, sDb, rSrv, revSrv, userSrv, jobsService,
-		ciQueue, ciCdFileParser, trackClient, userRepoMux, userWithReadPermMux,
+		ciQueue, ciCdFileParser, trackClient, userRepoMux, cliKeyAuthMux, userWithReadPermMux,
 		s.QueueRunner, canSubCache, s.C.Name)
 	payments.AddHandlers(sDb, sessionService, userSrv, stripeClient,
 		orgHelper, s.mux, userMux, userWithSubMux)

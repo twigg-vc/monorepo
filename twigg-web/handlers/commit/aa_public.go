@@ -29,6 +29,7 @@ func AddHandlers(
 	parser Parser,
 	trackClient TrackClient,
 	userRepoMux wrappers.UserRepoMux,
+	cliKeyAuthMux wrappers.CliKeyAuthMux,
 	readMux wrappers.UserWithReadPermissionMux,
 	queue Queue,
 	canSubCache CanSubmitCache,
@@ -51,6 +52,8 @@ func AddHandlers(
 		h.handleGetFile)
 	userRepoMux.HandleFuncW("POST "+routes.CommitPattern,
 		h.handleUserRepoMuxPostCommit)
+	cliKeyAuthMux.HandleFuncW("POST "+routes.CliCommitPattern,
+		h.handleCliKeyAuthMuxPostCommit)
 	userRepoMux.HandleFuncW("POST "+routes.SubmitCommitPattern,
 		h.handlePostSubmit)
 	userRepoMux.HandleFuncW("POST "+routes.RollbackCommitPattern,
