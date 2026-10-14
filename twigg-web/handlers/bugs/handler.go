@@ -131,6 +131,61 @@ func (h handler) handleGetBug(w http.ResponseWriter,
 	).Render(w)
 }
 
+func (h handler) handleCliGetBugAndEvents(w http.ResponseWriter,
+	r wrappers.CliKeyAuthMuxRequest, dbRead context.Context) {
+	if !r.Flags.ShowBugs || !r.Flags.BugMethodsFromCliAreEnabled {
+		http.Error(w, "flag ShowBugs or BugMethodsFromCliAreEnabled is disabled", http.StatusServiceUnavailable)
+		return
+	}
+	number, ok := parseBugNumber(w, r.Request)
+	if !ok {
+		return
+	}
+	b, isNotFoundErr, err := h.db.GetBug(dbRead, r.Repo.Id, number)
+	if isNotFoundErr {
+		http.Error(w, "bug not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("failed to get bug b/%d of repo id=%d: %s", number, r.Repo.Id, err)
+		http.Error(w, "failed to get the bug", http.StatusInternalServerError)
+		return
+	}
+	events, _, err := h.db.GetBugEvents(dbRead, r.Repo.Id, number, "", bugEventsPageSize+1)
+	if err != nil {
+		log.Printf("failed to get the events of b/%d of repo id=%d: %s", number, r.Repo.Id, err)
+		http.Error(w, "failed to get the bug events", http.StatusInternalServerError)
+		return
+	}
+	// TODO: if the number of bug events ever increases, implement pagination
+	if len(events) >= bugEventsPageSize {
+		log.Printf("failed to get the events of b/%d of repo id=%d: Too many events to return", number, r.Repo.Id)
+		http.Error(w, "failed to get the bug events", http.StatusInternalServerError)
+		return
+	}
+	u := newUsernames(h.db, dbRead, w)
+	frontendBug, ok := u.getFrontendBug(b)
+	if !ok {
+		return
+	}
+	frontendEvents, ok := u.getFrontendBugEvents(events)
+	if !ok {
+		return
+	}
+	respJson, err := json.Marshal(twiggwebclient.GetBugAndEventsResponse{
+		Bug:    frontendBug,
+		Events: frontendEvents,
+	})
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal the bug: %s", err))
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, err = w.Write(respJson)
+	if err != nil {
+		log.Printf("failed to write the bug: %s", err)
+	}
+}
+
 func (h handler) handlePostBug(w http.ResponseWriter,
 	r wrappers.UserRepoMuxRequest, dbWrite context.Context) (shouldCommit bool) {
 	if !r.Flags.ShowBugs {

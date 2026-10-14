@@ -103,3 +103,8 @@ func BugToFrontend(b bug.Bug, authorUsername, assigneeUsername string) FrontendB
 func BugEventToFrontend(e bug.Event, authorUsername, newAssigneeUsername string) FrontendBugEvent {
 	return bugEventToFrontend(e, authorUsername, newAssigneeUsername)
 }
+
+type GetBugAndEventsResponse struct {
+	Bug    FrontendBug
+	Events []FrontendBugEvent
+}

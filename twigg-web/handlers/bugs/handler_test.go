@@ -392,6 +392,78 @@ func TestGetBugFails(t *testing.T) {
 	}
 }
 
+func newCliGetBugAndEventsReq(bugNumber string) wrappers.CliKeyAuthMuxRequest {
+	req := httptest.NewRequest("GET", "/zuko/tea/b/"+bugNumber, nil)
+	req.SetPathValue(routes.BugNumberParamName, bugNumber)
+	return wrappers.CliKeyAuthMuxRequest{
+		Request: req,
+		Repo:    repo.Repo{Id: testRepoId},
+		Flags:   featureflags.Flags{ShowBugs: true, BugMethodsFromCliAreEnabled: true},
+	}
+}
+func TestHandleCliGetBugAndEvents(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", "The tea is cold"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := db.AddBugComment(w, testRepoId, 1, zukoId, "Try jasmine"); err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	h.handleCliGetBugAndEvents(rec, newCliGetBugAndEventsReq("1"), w)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body)
+	}
+	var got twiggwebclient.GetBugAndEventsResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if got.Bug.CreatedOn.UnixMilli() != 200 ||
+		got.Bug.UpdatedOn.UnixMilli() != 200 ||
+		len(got.Events) != 1 ||
+		got.Events[0].CreatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamps: %+v", got)
+	}
+	got.Bug.CreatedOn, got.Bug.UpdatedOn = time.Time{}, time.Time{}
+	got.Events[0].CreatedOn = time.Time{}
+	want := twiggwebclient.GetBugAndEventsResponse{
+		Bug: twiggwebclient.FrontendBug{
+			Number:         1,
+			Title:          "Fix Iroh's tea",
+			Body:           "The tea is cold",
+			Status:         bug.Status_Open,
+			AuthorUsername: "zuko",
+			CommentCount:   1,
+		},
+		Events: []twiggwebclient.FrontendBugEvent{{
+			Id:             1,
+			Kind:           twiggwebclient.FrontendBugEventKind_Comment,
+			AuthorUsername: "zuko",
+			Comment:        &bug.Comment{Body: "Try jasmine"},
+		}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+	// Test for non-existent Bug
+	rec = httptest.NewRecorder()
+	reqNonExistentReq := newCliGetBugAndEventsReq("999")
+	h.handleCliGetBugAndEvents(rec, reqNonExistentReq, w)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("cli off: expected 404, got %d", rec.Code)
+	}
+	// Test flag
+	rec = httptest.NewRecorder()
+	reqFlag := newCliGetBugAndEventsReq("1")
+	reqFlag.Flags.BugMethodsFromCliAreEnabled = false
+	h.handleCliGetBugAndEvents(rec, reqFlag, w)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("cli off: expected 503, got %d", rec.Code)
+	}
+}
+
 func newBugWriteReq(u user.User, repoOwner user.User, repoDisplayName string, number string, body string) wrappers.UserRepoMuxRequest {
 	req := newWriteReq(
 		u,
