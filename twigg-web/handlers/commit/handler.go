@@ -13,6 +13,7 @@ import (
 	"monorepo/twigg-web/commitparser"
 	"monorepo/twigg-web/handlers/reposettings"
 	"monorepo/twigg-web/job"
+	webrepo "monorepo/twigg-web/repo"
 	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/services/cicdpublisher"
@@ -20,6 +21,7 @@ import (
 	"monorepo/twigg-web/services/repo"
 	reviewservice "monorepo/twigg-web/services/review"
 	userservice "monorepo/twigg-web/services/user"
+	"monorepo/twigg-web/user"
 	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
@@ -1077,19 +1079,25 @@ func (hl handler) handlePostToThread(w http.ResponseWriter, r wrappers.UserRepoM
 	return
 }
 
-// Returns a HTML fragment of the commit description
-func (hl handler) handlePostCommit(w http.ResponseWriter,
+func (hl handler) handleUserRepoMuxPostCommit(w http.ResponseWriter,
 	r wrappers.UserRepoMuxRequest, dbWrite context.Context) (shouldCommit bool) {
-	cI, err := hl.rt.GetCommitParameter(r.Request)
+	return hl.handlePostCommit(w, r.Request, r.Repo, r.RepoOwnerUsr, dbWrite)
+}
+
+// Returns a HTML fragment of the commit description
+func (hl handler) handlePostCommit(w http.ResponseWriter, r *http.Request,
+	rp webrepo.Repo, repoOwnerUsr user.User,
+	dbWrite context.Context) (shouldCommit bool) {
+	cI, err := hl.rt.GetCommitParameter(r)
 	if err != nil {
 		http.Error(w, "bad commit format", http.StatusBadRequest)
 		return
 	}
 	serverRead := hl.rSrv.GetServerRead(dbWrite)
-	hasLeft, left := hl.rt.GetLeftVersionParameter(r.Request)
-	hasRight, right := hl.rt.GetRightVersionParameter(r.Request)
+	hasLeft, left := hl.rt.GetLeftVersionParameter(r)
+	hasRight, right := hl.rt.GetRightVersionParameter(r)
 
-	s, isNotFoundErr, err := hl.rSrv.GetServer(dbWrite, r.RepoOwnerUsr.Id, r.Repo.DisplayName)
+	s, isNotFoundErr, err := hl.rSrv.GetServer(dbWrite, repoOwnerUsr.Id, rp.DisplayName)
 	if isNotFoundErr {
 		http.Error(w, "repo not found", http.StatusBadRequest)
 		return
@@ -1109,7 +1117,7 @@ func (hl handler) handlePostCommit(w http.ResponseWriter,
 		return
 	}
 
-	desc := twiggwc.ParsePostClDescription(r.Request)
+	desc := twiggwc.ParsePostClDescription(r)
 	if len(desc) == 0 {
 		http.Error(w, "description cant be empty", http.StatusBadRequest)
 		return
@@ -1120,15 +1128,15 @@ func (hl handler) handlePostCommit(w http.ResponseWriter,
 				reviewservice.MaxDescriptionLength), http.StatusBadRequest)
 		return
 	}
-	err = hl.revSrv.SetDescription(dbWrite, quotaOwner(r.Repo.OwnerId),
-		r.Repo.Id, cI, desc /*createIfNeeded*/, true)
+	err = hl.revSrv.SetDescription(dbWrite, quotaOwner(rp.OwnerId),
+		rp.Id, cI, desc /*createIfNeeded*/, true)
 	if err != nil {
 		http.Error(w, "internal error setting desc",
 			http.StatusInternalServerError)
 		return
 	}
 	twiggwc.ClDescription(desc, hl.rt.Commit(
-		r.RepoOwnerUsr.Username, r.Repo.DisplayName, cI, hasLeft,
+		repoOwnerUsr.Username, rp.DisplayName, cI, hasLeft,
 		left, hasRight, right)).Render(w)
 	shouldCommit = true
 	return

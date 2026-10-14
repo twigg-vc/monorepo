@@ -50,7 +50,7 @@ func AddHandlers(
 	readMux.HandleFuncR("GET "+routes.FileBlobPattern,
 		h.handleGetFile)
 	userRepoMux.HandleFuncW("POST "+routes.CommitPattern,
-		h.handlePostCommit)
+		h.handleUserRepoMuxPostCommit)
 	userRepoMux.HandleFuncW("POST "+routes.SubmitCommitPattern,
 		h.handlePostSubmit)
 	userRepoMux.HandleFuncW("POST "+routes.RollbackCommitPattern,
