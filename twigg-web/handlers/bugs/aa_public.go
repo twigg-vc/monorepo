@@ -11,7 +11,9 @@ import (
 	"monorepo/twigg/client"
 )
 
-func AddHandlers(db Db, perms Permissions, readMux wrappers.UserWithReadPermissionMux,
+func AddHandlers(db Db, perms Permissions,
+	cliMux wrappers.CliKeyAuthMux,
+	readMux wrappers.UserWithReadPermissionMux,
 	userRepoMux wrappers.UserRepoMux) {
 	h := handler{db: db, perms: perms}
 	readMux.HandleFuncR("GET "+routes.BugsPattern, h.handleGetBugs)
