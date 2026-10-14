@@ -4,7 +4,7 @@
 # -> `docker build -f ./twigg-runner/DOCKERFILE .` at the repo root
 FROM golang:1.26-alpine AS builder
 
-ARG `
+ARG TW_ID
 
 WORKDIR /monorepo
 
@@ -21,6 +21,10 @@ COPY base /monorepo/base
 COPY tw /monorepo/tw
 COPY data /monorepo/data
 COPY twiggbuildflags /monorepo/twiggbuildflags
+COPY twigg-web/bug /monorepo/twigg-web/bug
+COPY twigg-web/routes /monorepo/twigg-web/routes
+COPY twigg-web/services/twiggtoken /monorepo/twigg-web/services/twiggtoken
+COPY twigg-web/twigg-web-client /monorepo/twigg-web/twigg-web-client
 RUN go build -ldflags "-X 'monorepo/buildmeta.Version=$TW_ID'" -o tw.bin ./tw
 
 # Each target sets its own WORKDIR: `tw init` turns the dir the steps run on
