@@ -75,11 +75,12 @@ var _ int = func() int {
 	return 0
 }()
 
-func (c cliclient) setCommitDescription(commitId uint64, description string) error {
+func (c cliclient) setCommitDescription(commitId uint64, description string) (isNotFoundErr bool, err error) {
 	form := url.Values{"description": {description}}
-	_, err := c.doRequest("POST", fmt.Sprintf("%s/cli-c/%d", c.repoUrl, commitId),
+	status, err := c.doRequest("POST", fmt.Sprintf("%s/cli-c/%d", c.repoUrl, commitId),
 		"application/x-www-form-urlencoded", strings.NewReader(form.Encode()), nil)
-	return err
+	isNotFoundErr = status == http.StatusNotFound
+	return
 }
 
 var _ int = func() int {

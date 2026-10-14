@@ -1112,6 +1112,10 @@ func (hl handler) handlePostCommit(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	c, err := s.GetLatest(cI, serverRead)
+	if errors.Is(err, server.ErrNotFound) {
+		http.Error(w, "commit not found", http.StatusNotFound)
+		return
+	}
 	if err != nil {
 		http.Error(w, "err getting commit", http.StatusInternalServerError)
 		return

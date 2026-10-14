@@ -3293,9 +3293,13 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 	tw.Run("commit", "feed appa")
 	tw.Run("push")
 	tw.CheckOutContains("push succeeded")
-	err = client.SetCommitDescription(1, "appa ate all the cabbages")
+	_, err = client.SetCommitDescription(1, "appa ate all the cabbages")
 	if err != nil {
 		t.Fatal(err)
+	}
+	isNotFoundErr, err = client.SetCommitDescription(99999, "appa ate nothing")
+	if err == nil || !isNotFoundErr {
+		t.Fatalf("expected not found err got %v %v", err, isNotFoundErr)
 	}
 	bAang.Get("/aang/BookOne/c/1")
 	bAang.CheckCurrentPageContains("appa ate all the cabbages")
@@ -3307,6 +3311,8 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 	tw.CheckOutContains("ok")
 	bAang.Get("/aang/BookOne/c/1")
 	bAang.CheckCurrentPageContains("sokka ate the cactus juice")
+	tw.Run("description-set", "c/99999", "momo ate nothing")
+	tw.CheckOutContains("c/99999 not found")
 }
 
 func TestBugGetFromCliIsDeniedToNonCollaborators(t *testing.T) {
