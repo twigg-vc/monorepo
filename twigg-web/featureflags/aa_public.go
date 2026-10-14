@@ -27,11 +27,10 @@ func GetFlags(configName string, repoOwnerUsername string, currentUsername strin
 		DummyFlag: EnabledOutsideProd(configName) ||
 			EnabledForReposOfTwiggers(repoOwnerUsername) ||
 			EnabledForReposOfFriends(repoOwnerUsername),
-		SearchCommitsUi: true,
-		ShowBugs:        true,
-		SearchBugsUi:    EnabledForReposOfTwiggers(repoOwnerUsername),
-		BugMethodsFromCliAreEnabled: EnabledOutsideProd(configName) ||
-			EnabledForReposOfTwiggers(repoOwnerUsername),
+		SearchCommitsUi:             true,
+		ShowBugs:                    true,
+		SearchBugsUi:                EnabledForReposOfTwiggers(repoOwnerUsername),
+		BugMethodsFromCliAreEnabled: true,
 	}
 }
 
