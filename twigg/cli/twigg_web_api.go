@@ -38,6 +38,23 @@ func (a *app) pingTwiggWeb(args commandArgs) {
 	a.logSuccess("ok")
 }
 
+func (a *app) setCommitDescription(args commandArgs) {
+	if !a.checkServerIsSetup() {
+		return
+	}
+	c, ok := a.parseCommit(args.commit0)
+	if !ok {
+		return
+	}
+	client := a.getTwiggWebClient()
+	err := client.SetCommitDescription(uint64(c.ServerL), args.description)
+	if err != nil {
+		a.logError(err.Error())
+		return
+	}
+	a.logSuccess("ok")
+}
+
 func (a *app) getBug(args commandArgs) {
 	if !a.checkServerIsSetup() {
 		return

@@ -47,6 +47,7 @@ const (
 	enableUnsafeDevModeCmd = "enable-unsafe-dev-mode"
 	pingTwiggWebCmd        = "ping"
 	getBugTwiggWebCmd      = "bug-get"
+	setDescriptionCmd      = "description-set"
 )
 
 // Flags
@@ -118,6 +119,7 @@ type commandArgs struct {
 	boolInFirstArg  bool
 	serverId        uint64
 	bugNumber       uint64
+	description     string
 
 	dryRun        bool
 	force         bool
@@ -168,6 +170,8 @@ type command struct {
 	firstArgIsBool bool
 	// first argument must be a bug number
 	firstArgIsBugNumber bool
+	// second argument must be a commit description
+	secondArgIsDescription bool
 	// a second argument might be provided. If so, it's the api key.
 	secondArgMightBeApiKey bool
 	// supports "--yolo"
@@ -397,6 +401,12 @@ func (a *app) initCommand(cmdLineArgs []string) (ok bool) {
 		c = command{
 			callback:            a.getBug,
 			firstArgIsBugNumber: true,
+		}
+	case setDescriptionCmd:
+		c = command{
+			callback:               a.setCommitDescription,
+			firstArgIsCommit:       true,
+			secondArgIsDescription: true,
 		}
 	default:
 		a.logError(invalidCommand)
@@ -638,6 +648,13 @@ func parseArgs(c command, cArgs *commandArgs, args []string) (err error) {
 		if len(args) > 1 {
 			cArgs.commit1 = args[1]
 		}
+	}
+	if c.secondArgIsDescription {
+		if len(args) < 2 {
+			err = errors.New(descriptionNotProvided)
+			return
+		}
+		cArgs.description = args[1]
 	}
 	if c.firstArgIsFile {
 		if len(args) == 0 {

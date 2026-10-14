@@ -62,6 +62,7 @@ const (
 	invalidBoolValue           = "invalid bool value"
 	serverIdNotProvided        = "server id wasn't provided"
 	bugNumberNotProvided       = "bug number wasn't provided"
+	descriptionNotProvided     = "description wasn't provided"
 	invalidServerId            = "invalid server id"
 	alreadyHidden              = "already hidden"
 	cantHideSubmitted          = "submitted commits can't be hidden"

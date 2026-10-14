@@ -3299,6 +3299,10 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 	}
 	bAang.Get("/aang/BookOne/c/1")
 	bAang.CheckCurrentPageContains("appa ate all the cabbages")
+	tw.Run("description-set", "c/1", "momo ate the moon peaches")
+	tw.CheckOutContains("ok")
+	bAang.Get("/aang/BookOne/c/1")
+	bAang.CheckCurrentPageContains("momo ate the moon peaches")
 }
 
 func TestBugGetFromCliIsDeniedToNonCollaborators(t *testing.T) {
