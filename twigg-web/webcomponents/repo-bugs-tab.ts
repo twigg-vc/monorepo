@@ -7,7 +7,9 @@ import { MinDurationTimer } from './min-duration-timer';
 import { fetchGetWithRetry } from './fetch-get-with-retry';
 import { FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
+import { UserSelected } from './username-input';
 import './bug-status-badge';
+import './username-input';
 
 type View = "list" | "new"
 type Filter = BugStatus | ""
@@ -134,6 +136,36 @@ export class RepoBugsTab extends LitElement {
         } else {
             this.assigneeFilter = value
         }
+        this.fetchPage()
+    }
+
+    private renderAssigneeUsernameFilter() {
+        if (this.assigneeFilter === "" || this.assigneeFilter === "unassigned" || this.assigneeFilter === "me") {
+            return html`
+                <username-input
+                    Placeholder="Assignee username"
+                    ButtonText="Filter"
+                    @user-selected=${(e: CustomEvent<UserSelected>) => this.onAssigneeUsernameSelected(e)}>
+                </username-input>
+            `
+        }
+        return html`
+            <span class="assignee-chip">
+                Assigned to <username-tag .Username=${this.assigneeFilter}></username-tag>
+                <button class="remove-assignee-filter-btn" title="Clear" @click=${this.clearAssigneeFilter}>
+                    <twigg-icon icon="XMark"></twigg-icon>
+                </button>
+            </span>
+        `
+    }
+
+    private clearAssigneeFilter() {
+        this.assigneeFilter = ""
+        this.fetchPage()
+    }
+
+    private onAssigneeUsernameSelected(e: CustomEvent<UserSelected>) {
+        this.assigneeFilter = e.detail.Username
         this.fetchPage()
     }
 
@@ -444,6 +476,27 @@ export class RepoBugsTab extends LitElement {
             flex-wrap: wrap;
             gap: var(--space2);
             margin-bottom: var(--space3);
+        }
+        .assignee-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space1);
+            padding: var(--space0) var(--space1) var(--space0) var(--space3);
+            border: var(--border-width) solid var(--color-border);
+            border-radius: 999px;
+            background: var(--color-surface);
+            color: var(--color-text-muted);
+        }
+        .remove-assignee-filter-btn {
+            display: flex;
+            padding: var(--space1);
+            border: none;
+            background: none;
+            color: inherit;
+            cursor: pointer;
+        }
+        .remove-assignee-filter-btn:hover {
+            color: var(--color-text);
         }
         .filters {
             display: inline-flex;
