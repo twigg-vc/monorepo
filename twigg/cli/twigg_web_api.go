@@ -42,12 +42,13 @@ func (a *app) setCommitDescription(args commandArgs) {
 	if !a.checkServerIsSetup() {
 		return
 	}
-	c, ok := a.parseCommit(args.commit0)
-	if !ok {
+	match, serverId, _, _ := a.tryParseServerCommitString(args.commit0)
+	if !match {
+		a.logError(badCommitServerSyntax)
 		return
 	}
 	client := a.getTwiggWebClient()
-	err := client.SetCommitDescription(uint64(c.ServerL), args.description)
+	err := client.SetCommitDescription(serverId, args.description)
 	if err != nil {
 		a.logError(err.Error())
 		return
