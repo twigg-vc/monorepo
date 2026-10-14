@@ -1,0 +1,16 @@
+{
+    "Name": "test-on-push",
+    "ImageName": "go",
+    "On": [
+        "push"
+    ],
+    "Steps": [
+        {
+            "TemplateName": "get-code"
+        },
+        {
+            "Run": "go test ./..."
+        }
+    ],
+    "TimeoutMinutes": 10
+}
