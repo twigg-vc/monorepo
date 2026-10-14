@@ -9,6 +9,8 @@ import (
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg/xchange"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 type cliclient struct {
@@ -22,10 +24,14 @@ var (
 )
 
 // General function to make a request. Returns error for any non200 status.
-func (c cliclient) doRequest(method string, url string, body io.Reader, out any) (int, error) {
+func (c cliclient) doRequest(method string, url string, contentType string,
+	body io.Reader, out any) (int, error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return 0, err
+	}
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
 	xchange.SetApiKeyHeader(c.twiggCliKey, req)
 	resp, err := c.httpClient.Do(req)
@@ -44,7 +50,7 @@ func (c cliclient) doRequest(method string, url string, body io.Reader, out any)
 }
 
 func (c cliclient) ping() (ok bool, err error) {
-	_, err = c.doRequest("GET", c.repoUrl+"/ping", nil, nil)
+	_, err = c.doRequest("GET", c.repoUrl+"/ping", "", nil, nil)
 	ok = err == nil
 	return
 }
@@ -57,7 +63,7 @@ var _ int = func() int {
 }()
 
 func (c cliclient) GetBugAndEvents(id uint64) (b GetBugAndEventsResponse, isNotFoundErr bool, err error) {
-	status, err := c.doRequest("GET", fmt.Sprintf("%s/cli-b/%d", c.repoUrl, id), nil, &b)
+	status, err := c.doRequest("GET", fmt.Sprintf("%s/cli-b/%d", c.repoUrl, id), "", nil, &b)
 	isNotFoundErr = status == http.StatusNotFound
 	return
 }
@@ -65,6 +71,20 @@ func (c cliclient) GetBugAndEvents(id uint64) (b GetBugAndEventsResponse, isNotF
 var _ int = func() int {
 	if routes.CliBugPattern != "/{owner}/{repo}/cli-b/{bug}" {
 		panic("CliBugsPattern pattern changed! did you update the client?")
+	}
+	return 0
+}()
+
+func (c cliclient) setCommitDescription(commitId uint64, description string) error {
+	form := url.Values{"description": {description}}
+	_, err := c.doRequest("POST", fmt.Sprintf("%s/cli-c/%d", c.repoUrl, commitId),
+		"application/x-www-form-urlencoded", strings.NewReader(form.Encode()), nil)
+	return err
+}
+
+var _ int = func() int {
+	if routes.CliCommitPattern != "/{owner}/{repo}/cli-c/{c}" {
+		panic("CliCommitPattern pattern changed! did you update the client?")
 	}
 	return 0
 }()

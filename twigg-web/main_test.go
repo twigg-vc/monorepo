@@ -3287,6 +3287,18 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 	tw.CheckOutContains("Appa")
 	tw.Run("bug-get", "9999999")
 	tw.CheckOutContains("not found")
+
+	// Test SetCommitDescription
+	tw.WriteFile("a.txt", "aaa")
+	tw.Run("commit", "feed appa")
+	tw.Run("push")
+	tw.CheckOutContains("push succeeded")
+	err = client.SetCommitDescription(1, "appa ate all the cabbages")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bAang.Get("/aang/BookOne/c/1")
+	bAang.CheckCurrentPageContains("appa ate all the cabbages")
 }
 
 func TestBugGetFromCliIsDeniedToNonCollaborators(t *testing.T) {

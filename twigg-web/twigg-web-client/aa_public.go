@@ -55,6 +55,11 @@ func (c CliKeyClient) GetBugAndEvents(id uint64) (b GetBugAndEventsResponse, isN
 	return c.c.GetBugAndEvents(id)
 }
 
+// commitId is the commit's server id
+func (c CliKeyClient) SetCommitDescription(commitId uint64, description string) error {
+	return c.c.setCommitDescription(commitId, description)
+}
+
 // AssigneeUsername is empty when unassigned
 type FrontendBug struct {
 	Number           uint64
