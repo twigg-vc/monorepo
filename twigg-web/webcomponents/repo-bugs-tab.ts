@@ -2,7 +2,7 @@ import { html, css, LitElement, TemplateResult } from 'lit';
 import { TwiggCss } from './css';
 import { Bug, BugStatus, GetBugsResponse, MaxBugTitleLen } from './interfaces';
 import { GetFeatureFlags } from './feature-flags';
-import { GetCsrfHeaders, PathToBugs, PathToNewBug, UrlToBug } from './routes';
+import { GetCsrfHeaders, PathToBugs, PathToBugSearch, PathToNewBug, UrlToBug } from './routes';
 import { MinDurationTimer } from './min-duration-timer';
 import { fetchGetWithRetry } from './fetch-get-with-retry';
 import { FormatRelativeTime } from './helpers';
@@ -300,8 +300,19 @@ export class RepoBugsTab extends LitElement {
 
     private pageRequestId = 0
 
+    // Plain status filter stays on the simple /bugs endpoint (counts + can
+    // create). Any assignee filter switches to /bug-search instead, which
+    // only returns the matching bugs.
     private pathToPage(cursor: string): string {
-        return PathToBugs(this.RepoOwnerName, this.RepoName, this.filter, cursor)
+        if (this.assigneeFilter === "") {
+            return PathToBugs(this.RepoOwnerName, this.RepoName, this.filter, cursor)
+        }
+        var terms: string[] = []
+        if (this.filter !== "") {
+            terms.push(`is:${this.filter}`)
+        }
+        terms.push(`assignee:${this.assigneeFilter}`)
+        return PathToBugSearch(this.RepoOwnerName, this.RepoName, terms.join(" "), cursor)
     }
 
     private async fetchPage() {
