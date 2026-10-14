@@ -113,6 +113,30 @@ export class RepoBugsTab extends LitElement {
         `
     }
 
+    private renderAssigneeFilterBtn(value: string, icon: IconName, label: string) {
+        var cls: string
+        if (this.assigneeFilter === value) {
+            cls = "filter active"
+        } else {
+            cls = "filter"
+        }
+        return html`
+            <button class=${cls} @click=${() => this.setAssigneeFilter(value)}>
+                <twigg-icon .icon=${icon}></twigg-icon>
+                <span>${label}</span>
+            </button>
+        `
+    }
+
+    private setAssigneeFilter(value: string) {
+        if (this.assigneeFilter === value) {
+            this.assigneeFilter = ""
+        } else {
+            this.assigneeFilter = value
+        }
+        this.fetchPage()
+    }
+
     private renderNewBugBtn() {
         if (!this.page?.CanCreate) {
             return html``
