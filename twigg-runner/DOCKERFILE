@@ -51,7 +51,7 @@ WORKDIR /twigg-workdir
 ENTRYPOINT ["/twigg-runner.bin"]
 
 # Bun target
-FROM oven/bun:1-alpine AS bun
+FROM oven/bun:1.4-alpine AS bun
 COPY --from=builder /monorepo/twigg-runner.bin /twigg-runner.bin
 COPY --from=builder /monorepo/tw.bin /usr/local/bin/tw
 RUN chmod +x /usr/local/bin/tw
