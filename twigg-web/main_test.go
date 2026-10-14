@@ -3289,6 +3289,24 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 	tw.CheckOutContains("not found")
 }
 
+func TestBugGetFromCliIsDeniedToNonCollaborators(t *testing.T) {
+	srv := GetMockServer(t)
+	aang := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, aang, "aang@twigg.vc")
+	aang.PostJson("/aang/BookOne/bugs", bugs.PostBugRequest{Title: "Momo ate the moon peach"})
+	momo := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthRegistration(srv, momo, "momo@northern-temple.air", "momo")
+	momo.Post(routes.GenerateCLIKey, nil)
+	tw := cli.NewTestHelper(t)
+	tw.SetServerRootUrl(srv.C.PublicUrl)
+	tw.Run("init")
+	tw.Run("server", "aang/BookOne")
+	tw.Run("key", srv.KeysMock.GetLastRandomCliKey())
+	tw.Run("get-bug", "1")
+	tw.CheckOutContains("Forbidden") // TODO: improve msg
+	tw.CheckOutDoesntContain("Momo ate the moon peach")
+}
+
 func TestGetReviewers(t *testing.T) {
 	srv := GetMockServer(t)
 
