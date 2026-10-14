@@ -6,9 +6,9 @@ import (
 	"monorepo/twigg-web/bugsearch"
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/routes"
+	twiggwebclient "monorepo/twigg-web/twigg-web-client"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
-	"monorepo/twigg/client"
 )
 
 func AddHandlers(db Db, perms Permissions,
@@ -61,7 +61,7 @@ type Permissions interface {
 
 // NextCursor is empty on the last page. The counts are of the whole repo.
 type GetBugsResponse struct {
-	Bugs           []client.FrontendBug
+	Bugs           []twiggwebclient.FrontendBug
 	NextCursor     string
 	HasOpenCount   bool
 	OpenCount      int64
@@ -87,13 +87,13 @@ type PostStatusRequest struct {
 
 // Events are the new ones, oldest first
 type PostStatusResponse struct {
-	Bug    client.FrontendBug
-	Events []client.FrontendBugEvent
+	Bug    twiggwebclient.FrontendBug
+	Events []twiggwebclient.FrontendBugEvent
 }
 
 type PostEditResponse struct {
-	Bug   client.FrontendBug
-	Event client.FrontendBugEvent
+	Bug   twiggwebclient.FrontendBug
+	Event twiggwebclient.FrontendBugEvent
 }
 
 type PostTitleRequest struct {

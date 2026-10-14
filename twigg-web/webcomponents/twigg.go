@@ -10,10 +10,10 @@ import (
 	"monorepo/twigg-web/featureflags"
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/review"
+	twiggwebclient "monorepo/twigg-web/twigg-web-client"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webcomponents/bundles"
 	"monorepo/twigg-web/wrappers"
-	"monorepo/twigg/client"
 	"monorepo/twigg/commit"
 	"net/http"
 
@@ -379,8 +379,8 @@ func userToFrontendUser(u user.User) frontendUser {
 	}
 }
 
-func bugPage(repoOwnerName, repoDisplayName string, b client.FrontendBug,
-	events []client.FrontendBugEvent, canWrite bool) g.Node {
+func bugPage(repoOwnerName, repoDisplayName string, b twiggwebclient.FrontendBug,
+	events []twiggwebclient.FrontendBugEvent, canWrite bool) g.Node {
 	return g.El(
 		"bug-page",
 		g.Attr("RepoOwnerName", repoOwnerName),

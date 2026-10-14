@@ -8,9 +8,9 @@ import (
 	"monorepo/twigg-web/repo"
 	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/secrets"
+	twiggwebclient "monorepo/twigg-web/twigg-web-client"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/wrappers"
-	"monorepo/twigg/client"
 	"monorepo/twigg/commit"
 	"net/http"
 	"time"
@@ -243,8 +243,8 @@ func CommitToFrontend(c commit.Commit, authorUsername string,
 }
 
 // Returns the <bug-page> component. events are ordered oldest first.
-func BugPage(repoOwnerName, repoDisplayName string, b client.FrontendBug,
-	events []client.FrontendBugEvent, canWrite bool) g.Node {
+func BugPage(repoOwnerName, repoDisplayName string, b twiggwebclient.FrontendBug,
+	events []twiggwebclient.FrontendBugEvent, canWrite bool) g.Node {
 	return bugPage(repoOwnerName, repoDisplayName, b, events, canWrite)
 }
 

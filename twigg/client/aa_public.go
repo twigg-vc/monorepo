@@ -3,13 +3,11 @@ package client
 import (
 	"errors"
 	"io"
-	"monorepo/twigg-web/bug"
 	"monorepo/twigg/commit"
 	"monorepo/twigg/repo"
 	"monorepo/twigg/tree"
 	"monorepo/twigg/workdir"
 	"testing"
-	"time"
 )
 
 type Read interface {
@@ -186,56 +184,3 @@ const (
 	SetServerIdMethod                     = "POST"
 	SetServerIdQueryParam                 = "id"
 )
-
-// AssigneeUsername is empty when unassigned
-type FrontendBug struct {
-	Number           uint64
-	Title            string
-	Body             string
-	Status           bug.Status
-	AuthorUsername   string
-	AssigneeUsername string
-	CommentCount     int64
-	CreatedOn        time.Time
-	UpdatedOn        time.Time
-}
-
-type FrontendBugEventKind string
-
-const (
-	FrontendBugEventKind_Comment         FrontendBugEventKind = "comment"
-	FrontendBugEventKind_StatusChange    FrontendBugEventKind = "status-change"
-	FrontendBugEventKind_DescriptionEdit FrontendBugEventKind = "description-edit"
-	FrontendBugEventKind_TitleEdit       FrontendBugEventKind = "title-edit"
-	FrontendBugEventKind_SubmittedCommit FrontendBugEventKind = "submitted-commit"
-	FrontendBugEventKind_Assignment      FrontendBugEventKind = "assignment"
-)
-
-// Only the details field matching Kind is set
-type FrontendBugEvent struct {
-	Id              uint64
-	Kind            FrontendBugEventKind
-	AuthorUsername  string
-	CreatedOn       time.Time
-	Comment         *bug.Comment         `json:",omitempty"`
-	StatusChange    *bug.StatusChange    `json:",omitempty"`
-	DescriptionEdit *bug.DescriptionEdit `json:",omitempty"`
-	TitleEdit       *bug.TitleEdit       `json:",omitempty"`
-	SubmittedCommit *bug.SubmittedCommit `json:",omitempty"`
-	Assignment      *FrontendAssignment  `json:",omitempty"`
-}
-
-// NewAssigneeUsername is empty when the bug was unassigned
-type FrontendAssignment struct {
-	NewAssigneeUsername string
-}
-
-func BugToFrontend(b bug.Bug, authorUsername, assigneeUsername string) FrontendBug {
-	return bugToFrontend(b, authorUsername, assigneeUsername)
-}
-
-// newAssigneeUsername is only used by assignment events, and is empty when
-// the bug was unassigned.
-func BugEventToFrontend(e bug.Event, authorUsername, newAssigneeUsername string) FrontendBugEvent {
-	return bugEventToFrontend(e, authorUsername, newAssigneeUsername)
-}
