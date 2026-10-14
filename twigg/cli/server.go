@@ -56,14 +56,10 @@ func (a *app) dumpApiKey(args commandArgs) {
 }
 
 func (a *app) setServerId(args commandArgs) {
-	if a.s.ServerUrl == "" {
-		a.logError(serverUrlNotSet)
+	if !a.checkServerIsSetup() {
 		return
 	}
-	if a.s.ApiKey == "" {
-		a.logError(apiKeyNotSet)
-		return
-	}
+
 	notOkMsg, err := a.ag.SetNextServerId(a.s.ServerUrl, a.s.ApiKey,
 		args.serverId)
 	if err != nil {
@@ -78,12 +74,7 @@ func (a *app) setServerId(args commandArgs) {
 }
 
 func (a *app) push(args commandArgs) {
-	if a.s.ServerUrl == "" {
-		a.logError(serverUrlNotSet)
-		return
-	}
-	if a.s.ApiKey == "" {
-		a.logError(apiKeyNotSet)
+	if !a.checkServerIsSetup() {
 		return
 	}
 	if a.s.Current.IsOnServer() {
@@ -122,14 +113,10 @@ func (a *app) onPull(pulled commit.Commit, hasLocal bool, local commit.Commit) e
 }
 
 func (a *app) pull(args commandArgs) {
-	if a.s.ServerUrl == "" {
-		a.logError(serverUrlNotSet)
+	if !a.checkServerIsSetup() {
 		return
 	}
-	if a.s.ApiKey == "" {
-		a.logError(apiKeyNotSet)
-		return
-	}
+
 	if args.commit0InServerSyntax != "" {
 		a.pullCommit(args)
 		return
