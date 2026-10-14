@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	twiggwebclient "monorepo/twigg-web/twigg-web-client"
 )
@@ -51,6 +52,10 @@ func (a *app) getBug(args commandArgs) {
 		a.logError(err.Error())
 		return
 	}
-	s := fmt.Sprintf("%+v\n", bug)
-	a.logInfo(s)
+	b, err := json.MarshalIndent(bug, "", "  ") // prefix, indent
+	if err != nil {
+		a.logError(err.Error())
+		return
+	}
+	a.logInfo(string(b))
 }

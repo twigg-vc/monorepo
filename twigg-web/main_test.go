@@ -3284,7 +3284,7 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 	}
 	tw.Run("get-bug", "1")
 	tw.CheckOutContains("Momo")
-	//WIP: tw.CheckOutContains("Appa")
+	tw.CheckOutContains("Appa")
 	tw.Run("get-bug", "9999999")
 	tw.CheckOutContains("not found")
 }
