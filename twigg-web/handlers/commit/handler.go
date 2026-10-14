@@ -1113,7 +1113,7 @@ func (hl handler) handlePostCommit(w http.ResponseWriter, r *http.Request,
 	}
 	c, err := s.GetLatest(cI, serverRead)
 	if errors.Is(err, server.ErrNotFound) {
-		http.Error(w, "commit not found", http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("c/%d not found", cI), http.StatusNotFound)
 		return
 	}
 	if err != nil {
@@ -1121,7 +1121,8 @@ func (hl handler) handlePostCommit(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	if c.IsSubmitted {
-		http.Error(w, "desc of submitted commit cant be changed",
+		http.Error(w,
+			fmt.Sprintf("c/%d is submitted, its description can't change", cI),
 			http.StatusBadRequest)
 		return
 	}
