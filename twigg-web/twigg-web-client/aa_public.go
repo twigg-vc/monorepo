@@ -51,6 +51,10 @@ func (c CliKeyClient) Ping() (ok bool, err error) {
 	return c.c.ping()
 }
 
+func (c CliKeyClient) GetBugAndEvents(id uint64) (b GetBugAndEventsResponse, isNotFoundErr bool, err error) {
+	return c.c.GetBugAndEvents(id)
+}
+
 // AssigneeUsername is empty when unassigned
 type FrontendBug struct {
 	Number           uint64

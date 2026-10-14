@@ -3238,7 +3238,7 @@ func TestTwiggWebClient_GetSecretValsFromTwiggWeb(t *testing.T) {
 		t.Fatal("got nil err for not allowed secret")
 	}
 }
-func TestTwiggWebCliKeyClient_Ping(t *testing.T) {
+func TestTwiggWebCliKeyClient(t *testing.T) {
 	// Start server and create a CLI key
 	srv := GetMockServer(t)
 	bAang := NewTestBrowser(srv.C.PublicUrl, t)
@@ -3247,22 +3247,43 @@ func TestTwiggWebCliKeyClient_Ping(t *testing.T) {
 	bAang.Post(routes.GenerateCLIKey, nil)
 	cliKey := srv.KeysMock.GetLastRandomCliKey()
 
-	// Initialize a CliKeyClient
+	// Initialize a CliKeyClient and a tw client
 	client := twiggwebclient.NewCliKeyClient(srv.C.PublicUrl+"/aang/BookOne", cliKey)
-	ok, err := client.Ping()
-	if err != nil || !ok {
-		t.Fatal(err)
-	}
-
-	// Also test with a tw client
 	tw := cli.NewTestHelper(t)
 	tw.SetServerRootUrl(srv.C.PublicUrl)
 	tw.Run("init")
 	tw.Run("server", "aang/BookOne")
 	tw.Run("key", cliKey)
+
+	// Test ping
+	ok, err := client.Ping()
+	if err != nil || !ok {
+		t.Fatal(err)
+	}
 	tw.Run("ping")
 	tw.CheckOutContains("ok")
+
+	// Test GetBugAndEvents
+	bAang.PostJson("/aang/BookOne/bugs",
+		bugs.PostBugRequest{Title: "Momo ate the moon peach"})
+	bAang.PostJson("/aang/BookOne/b/1/comments",
+		bugs.PostCommentRequest{Body: "Appa did it"})
+	bug, isNotFoundErr, err := client.GetBugAndEvents(1)
+	if err != nil || isNotFoundErr {
+		t.Fatal(err)
+	}
+	if bug.Bug.Title != "Momo ate the moon peach" {
+		t.Fatalf("bad bug title: %s", bug.Bug.Title)
+	}
+	if len(bug.Events) == 0 {
+		t.Fatalf("bug has no events")
+	}
+	_, isNotFoundErr, err = client.GetBugAndEvents(99999)
+	if err == nil || !isNotFoundErr {
+		t.Fatalf("expected not found err got %v %v", err, isNotFoundErr)
+	}
 }
+
 func TestGetReviewers(t *testing.T) {
 	srv := GetMockServer(t)
 

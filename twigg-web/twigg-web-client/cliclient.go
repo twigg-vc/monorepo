@@ -22,29 +22,29 @@ var (
 )
 
 // General function to make a request. Returns error for any non200 status.
-func (c cliclient) doRequest(method string, url string, body io.Reader, out any) error {
+func (c cliclient) doRequest(method string, url string, body io.Reader, out any) (int, error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	xchange.SetApiKeyHeader(c.twiggCliKey, req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrFailedToReachServer, err)
+		return 0, fmt.Errorf("%w: %s", ErrFailedToReachServer, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%w: %s", ErrFailedToReachServer, resp.Status)
+		return resp.StatusCode, fmt.Errorf("%w: %s", ErrFailedToReachServer, resp.Status)
 	}
 	if out == nil {
-		return nil
+		return 0, nil
 	}
-	decoder := json.NewDecoder(req.Body)
-	return decoder.Decode(out)
+	decoder := json.NewDecoder(resp.Body)
+	return 0, decoder.Decode(out)
 }
 
 func (c cliclient) ping() (ok bool, err error) {
-	err = c.doRequest("GET", c.repoUrl+"/ping", nil, nil)
+	_, err = c.doRequest("GET", c.repoUrl+"/ping", nil, nil)
 	ok = err == nil
 	return
 }
@@ -52,6 +52,19 @@ func (c cliclient) ping() (ok bool, err error) {
 var _ int = func() int {
 	if routes.CliClientPing != "/{owner}/{repo}/ping" {
 		panic("CliClientPing pattern changed! did you update the client?")
+	}
+	return 0
+}()
+
+func (c cliclient) GetBugAndEvents(id uint64) (b GetBugAndEventsResponse, isNotFoundErr bool, err error) {
+	status, err := c.doRequest("GET", fmt.Sprintf("%s/cli-b/%d", c.repoUrl, id), nil, &b)
+	isNotFoundErr = status == http.StatusNotFound
+	return
+}
+
+var _ int = func() int {
+	if routes.CliBugPattern != "/{owner}/{repo}/cli-b/{bug}" {
+		panic("CliBugsPattern pattern changed! did you update the client?")
 	}
 	return 0
 }()

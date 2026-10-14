@@ -25,7 +25,7 @@ func AddHandlers(db Db, perms Permissions,
 	userRepoMux.HandleFuncW("POST "+routes.BugDescriptionPattern, h.handlePostDescription)
 	userRepoMux.HandleFuncW("POST "+routes.BugTitlePattern, h.handlePostTitle)
 	userRepoMux.HandleFuncW("POST "+routes.BugAssigneePattern, h.handlePostAssignee)
-	cliMux.HandleFuncR("GET "+routes.CliBugsPattern, h.handleCliGetBugAndEvents)
+	cliMux.HandleFuncR("GET "+routes.CliBugPattern, h.handleCliGetBugAndEvents)
 }
 
 type Db interface {

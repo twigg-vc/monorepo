@@ -170,7 +170,7 @@ const (
 
 	BugNumberParamName       = "bug"
 	BugsPattern              = RepoPattern + "/bugs"
-	CliBugsPattern           = RepoPattern + "/cbugs"
+	CliBugPattern            = RepoPattern + "/cli-b/{bug}"
 	BugPattern               = RepoPattern + "/b/{bug}"
 	BugCommentsPattern       = BugPattern + "/comments"
 	BugStatusPattern         = BugPattern + "/status"
