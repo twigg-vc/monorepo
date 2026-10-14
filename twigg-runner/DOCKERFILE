@@ -35,7 +35,7 @@ WORKDIR /twigg-workdir
 ENTRYPOINT ["/twigg-runner.bin"]
 
 # Go target
-FROM golang:1.26-alpine AS go
+FROM golang:1.27-alpine AS go
 COPY --from=builder /monorepo/twigg-runner.bin /twigg-runner.bin
 COPY --from=builder /monorepo/tw.bin /usr/local/bin/tw
 RUN chmod +x /usr/local/bin/tw
