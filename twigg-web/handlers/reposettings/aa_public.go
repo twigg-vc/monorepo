@@ -47,6 +47,7 @@ func AddHandlers(userRepoMux wrappers.UserRepoMux,
 	// Description
 	userRepoMux.HandleFuncW("POST "+routes.RepoSetDescriptionPattern, h.handlePostSetDescription)
 	// Server id (called by the CLI)
+	cliKeyAuthMux.HandleFuncR("GET "+routes.CliClientPing, h.handleCliClientPing)
 	cliKeyAuthMux.HandleFuncW("POST "+routes.RepoSetServerIdPattern, h.handlePostSetServerId)
 	// Git Mirror
 	userRepoMux.HandleFuncW("POST "+routes.RepoGitMirrorEnabledPattern, h.handlePostGitMirrorEnabled)

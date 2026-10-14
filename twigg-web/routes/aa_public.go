@@ -87,6 +87,7 @@ const (
 	RepoNameParamName                         = "repo"
 	RepoOwnerParamName                        = "owner"
 	RepoPattern                               = "/{owner}/{repo}"
+	CliClientPing                             = RepoPattern + "/ping"
 	RepoSearchCommitsPattern                  = RepoPattern + "/search-c"
 	RepoSearchCommitsSeachQueryQueryParamName = "q" // name of the query parameter of the search query
 	RepoCommitSearchPattern                   = RepoPattern + "/commit-search"

@@ -27,3 +27,24 @@ func (c Client) GetSecretValsFromTwiggWeb(
 ) (requiredSecrets map[string]string, isNotFoundOrForbiddenErr bool, err error) {
 	return c.c.getSecretValsFromTwiggWeb(requiredSecretsNames, twiggToken)
 }
+
+// MUST BE INITIALIZED WITH `NewClient`
+// Client for services to communicate with the twigg web server via CLI key
+type CliKeyClient struct {
+	c cliclient
+}
+
+// Instantiates a new Client ready to be used
+func NewCliKeyClient(repoUrl string, twiggCliKey string) CliKeyClient {
+	return CliKeyClient{
+		c: cliclient{
+			httpClient:  &http.Client{},
+			repoUrl:     repoUrl,
+			twiggCliKey: twiggCliKey,
+		},
+	}
+}
+
+func (c CliKeyClient) Ping() (ok bool, err error) {
+	return c.c.ping()
+}

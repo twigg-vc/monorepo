@@ -244,6 +244,12 @@ func (h handler) handlePostSetPublic(w http.ResponseWriter,
 	return
 }
 
+func (h handler) handleCliClientPing(w http.ResponseWriter,
+	r wrappers.CliKeyAuthMuxRequest,
+	dbRead context.Context) {
+	_, _ = w.Write([]byte("pong"))
+}
+
 func (h handler) handlePostSetServerId(w http.ResponseWriter,
 	r wrappers.CliKeyAuthMuxRequest,
 	dbWrite context.Context) (shouldCommit bool) {

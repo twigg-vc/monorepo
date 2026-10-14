@@ -3238,6 +3238,22 @@ func TestTwiggWebClient_GetSecretValsFromTwiggWeb(t *testing.T) {
 		t.Fatal("got nil err for not allowed secret")
 	}
 }
+func TestTwiggWebCliKeyClient_Ping(t *testing.T) {
+	// Start server and create a CLI key
+	srv := GetMockServer(t)
+	bAang := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, bAang, "aang@twigg.vc")
+	bAang.Get(routes.UserSettings)
+	bAang.Post(routes.GenerateCLIKey, nil)
+	cliKey := srv.KeysMock.GetLastRandomCliKey()
+
+	// Initialize a CliKeyClient
+	client := twiggwebclient.NewCliKeyClient(srv.C.PublicUrl+"/aang/BookOne", cliKey)
+	ok, err := client.Ping()
+	if err != nil || !ok {
+		t.Fatal(err)
+	}
+}
 func TestGetReviewers(t *testing.T) {
 	srv := GetMockServer(t)
 
