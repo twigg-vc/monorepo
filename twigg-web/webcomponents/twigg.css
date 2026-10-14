@@ -30,6 +30,7 @@
     --radius1: 8px;
     --radius2: 16px;
     --radius3: 32px;
+    --border-width: 1px;
 
     /* Large sizes to limit sizes of some components */
     --size0: 300px;

@@ -395,7 +395,7 @@ export class RepoBugsTab extends LitElement {
         css`
         .card {
             background: var(--color-surface);
-            border: 1px solid var(--color-border);
+            border: var(--border-width) solid var(--color-border);
             border-radius: var(--radius1);
             box-shadow: var(--shadow-surface);
         }
@@ -447,7 +447,7 @@ export class RepoBugsTab extends LitElement {
         }
         .filters {
             display: inline-flex;
-            border: 1px solid var(--color-border);
+            border: var(--border-width) solid var(--color-border);
             border-radius: 999px;
             overflow: hidden;
             background: var(--color-surface);
@@ -462,7 +462,7 @@ export class RepoBugsTab extends LitElement {
             font: inherit;
         }
         .filter + .filter {
-            border-left: 1px solid var(--color-border);
+            border-left: var(--border-width) solid var(--color-border);
         }
         .filter:hover {
             transform: none;
@@ -515,7 +515,7 @@ export class RepoBugsTab extends LitElement {
             transition: background .15s;
         }
         a.bug-row + a.bug-row {
-            border-top: 1px solid var(--color-border);
+            border-top: var(--border-width) solid var(--color-border);
         }
         a.bug-row:hover {
             background: var(--color-surface-alt);
@@ -577,7 +577,7 @@ export class RepoBugsTab extends LitElement {
             font: inherit;
             font-size: var(--space5);
             padding: var(--space2) var(--space3);
-            border: 1px solid var(--color-border);
+            border: var(--border-width) solid var(--color-border);
             border-radius: var(--radius1);
             background: var(--color-surface-alt);
             color: var(--color-text);
