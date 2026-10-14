@@ -976,6 +976,21 @@ func TestDescriptionSetCommitSyntax(t *testing.T) {
 	h.CheckOutContains(cantDescribeCommitVersion)
 }
 
+func TestDescriptionSetRejectsCurrentCommitNotPushed(t *testing.T) {
+	h := NewTestHelper(t)
+	srv := server.NewTestServer(FakeApiKey, t)
+	h.SetServerRootUrl(srv.RootUrl())
+
+	h.Run("init")
+	h.Run("server", srv.ServerPath())
+	h.Run("key", FakeApiKey)
+
+	h.WriteFile("a.txt", "aaa")
+	h.Run("commit", "aaa")
+	h.Run("description-set", "aaa description")
+	h.CheckOutContains(cantDescribeNotPushed)
+}
+
 func TestRestoreDoesntSwitchCommitIfWorkdirIsDirty(t *testing.T) {
 	h := NewTestHelper(t)
 	h.Run("init")

@@ -170,8 +170,8 @@ type command struct {
 	firstArgIsBool bool
 	// first argument must be a bug number
 	firstArgIsBugNumber bool
-	// second argument must be a commit description
-	secondArgIsDescription bool
+	// args are either `<description>` or `<commit> <description>`
+	optionalCommitThenDescription bool
 	// a second argument might be provided. If so, it's the api key.
 	secondArgMightBeApiKey bool
 	// supports "--yolo"
@@ -404,9 +404,8 @@ func (a *app) initCommand(cmdLineArgs []string) (ok bool) {
 		}
 	case setDescriptionCmd:
 		c = command{
-			callback:               a.setCommitDescription,
-			firstArgIsCommit:       true,
-			secondArgIsDescription: true,
+			callback:                      a.setCommitDescription,
+			optionalCommitThenDescription: true,
 		}
 	default:
 		a.logError(invalidCommand)
@@ -649,12 +648,17 @@ func parseArgs(c command, cArgs *commandArgs, args []string) (err error) {
 			cArgs.commit1 = args[1]
 		}
 	}
-	if c.secondArgIsDescription {
-		if len(args) < 2 {
+	if c.optionalCommitThenDescription {
+		if len(args) == 0 {
 			err = errors.New(descriptionNotProvided)
 			return
 		}
-		cArgs.description = args[1]
+		if len(args) == 1 {
+			cArgs.description = args[0]
+		} else {
+			cArgs.commit0 = args[0]
+			cArgs.description = args[1]
+		}
 	}
 	if c.firstArgIsFile {
 		if len(args) == 0 {
@@ -827,6 +831,9 @@ func checkCommandOrDie(c command) {
 		nArgOneMustBe += 1
 	}
 	if c.firstArgIsCommitOrCurrent {
+		nArgOneMustBe += 1
+	}
+	if c.optionalCommitThenDescription {
 		nArgOneMustBe += 1
 	}
 	if nArgOneMustBe > 1 {

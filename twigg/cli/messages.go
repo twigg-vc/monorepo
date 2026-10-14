@@ -63,6 +63,7 @@ const (
 	serverIdNotProvided        = "server id wasn't provided"
 	bugNumberNotProvided       = "bug number wasn't provided"
 	descriptionNotProvided     = "description wasn't provided"
+	cantDescribeNotPushed      = "push the commit before setting its description"
 	cantDescribeCommitVersion  = "descriptions are set on commits, not versions. Remove the version"
 	invalidServerId            = "invalid server id"
 	alreadyHidden              = "already hidden"

@@ -3303,6 +3303,10 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 	tw.CheckOutContains("ok")
 	bAang.Get("/aang/BookOne/c/1")
 	bAang.CheckCurrentPageContains("momo ate the moon peaches")
+	tw.Run("description-set", "sokka ate the cactus juice")
+	tw.CheckOutContains("ok")
+	bAang.Get("/aang/BookOne/c/1")
+	bAang.CheckCurrentPageContains("sokka ate the cactus juice")
 }
 
 func TestBugGetFromCliIsDeniedToNonCollaborators(t *testing.T) {
