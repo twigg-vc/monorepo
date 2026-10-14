@@ -3282,10 +3282,10 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 	if err == nil || !isNotFoundErr {
 		t.Fatalf("expected not found err got %v %v", err, isNotFoundErr)
 	}
-	tw.Run("get-bug", "1")
+	tw.Run("bug-get", "1")
 	tw.CheckOutContains("Momo")
 	tw.CheckOutContains("Appa")
-	tw.Run("get-bug", "9999999")
+	tw.Run("bug-get", "9999999")
 	tw.CheckOutContains("not found")
 }
 
@@ -3302,7 +3302,7 @@ func TestBugGetFromCliIsDeniedToNonCollaborators(t *testing.T) {
 	tw.Run("init")
 	tw.Run("server", "aang/BookOne")
 	tw.Run("key", srv.KeysMock.GetLastRandomCliKey())
-	tw.Run("get-bug", "1")
+	tw.Run("bug-get", "1")
 	tw.CheckOutContains("Forbidden") // TODO: improve msg
 	tw.CheckOutDoesntContain("Momo ate the moon peach")
 }

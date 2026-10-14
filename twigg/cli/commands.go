@@ -46,7 +46,7 @@ const (
 	ciListShortCmd         = "cil"
 	enableUnsafeDevModeCmd = "enable-unsafe-dev-mode"
 	pingTwiggWebCmd        = "ping"
-	getBugTwiggWebCmd      = "get-bug"
+	getBugTwiggWebCmd      = "bug-get"
 )
 
 // Flags
