@@ -1,8 +1,10 @@
 package twiggwebclient
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg/xchange"
@@ -19,21 +21,32 @@ var (
 	ErrFailedToReachServer = errors.New("failed to reach the server")
 )
 
-func (c cliclient) ping() (ok bool, err error) {
-	req, err := http.NewRequest("GET", c.repoUrl+"/ping", nil)
+// General function to make a request. Returns error for any non200 status.
+func (c cliclient) doRequest(method string, url string, body io.Reader, out any) error {
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		panic(fmt.Sprintf("failed to create GET request to pull: %s", err))
+		return err
 	}
 	xchange.SetApiKeyHeader(c.twiggCliKey, req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return false, fmt.Errorf("%w: %s", ErrFailedToReachServer, err)
+		return fmt.Errorf("%w: %s", ErrFailedToReachServer, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("%w: %s", ErrFailedToReachServer, resp.Status)
+		return fmt.Errorf("%w: %s", ErrFailedToReachServer, resp.Status)
 	}
-	return true, nil
+	if out == nil {
+		return nil
+	}
+	decoder := json.NewDecoder(req.Body)
+	return decoder.Decode(out)
+}
+
+func (c cliclient) ping() (ok bool, err error) {
+	err = c.doRequest("GET", c.repoUrl+"/ping", nil, nil)
+	ok = err == nil
+	return
 }
 
 var _ int = func() int {
