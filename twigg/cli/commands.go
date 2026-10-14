@@ -45,6 +45,7 @@ const (
 	ciListCmd              = "ci-list"
 	ciListShortCmd         = "cil"
 	enableUnsafeDevModeCmd = "enable-unsafe-dev-mode"
+	pingTwiggWebCmd        = "ping"
 )
 
 // Flags
@@ -383,6 +384,10 @@ func (a *app) initCommand(cmdLineArgs []string) (ok bool) {
 		c = command{
 			firstArgIsCommitOrCurrent: true,
 			callback:                  a.ciList,
+		}
+	case pingTwiggWebCmd:
+		c = command{
+			callback: a.pingTwiggWeb,
 		}
 	default:
 		a.logError(invalidCommand)

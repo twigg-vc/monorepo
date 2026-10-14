@@ -3253,6 +3253,15 @@ func TestTwiggWebCliKeyClient_Ping(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatal(err)
 	}
+
+	// Also test with a tw client
+	tw := cli.NewTestHelper(t)
+	tw.SetServerRootUrl(srv.C.PublicUrl)
+	tw.Run("init")
+	tw.Run("server", "aang/BookOne")
+	tw.Run("key", cliKey)
+	tw.Run("ping")
+	tw.CheckOutContains("ok")
 }
 func TestGetReviewers(t *testing.T) {
 	srv := GetMockServer(t)
