@@ -1,9 +1,11 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
+	"monorepo/twigg-web/bug"
 	twiggwebclient "monorepo/twigg-web/twigg-web-client"
+	"strings"
+	"time"
 )
 
 // Simple helper that logs an error and returns false if the server and api
@@ -84,10 +86,65 @@ func (a *app) getBug(args commandArgs) {
 		a.logError(err.Error())
 		return
 	}
-	b, err := json.MarshalIndent(bug, "", "  ") // prefix, indent
-	if err != nil {
-		a.logError(err.Error())
-		return
+	a.logInfo(bugToString(bug))
+}
+
+// Human readable version of a bug and its events
+func bugToString(b twiggwebclient.GetBugAndEventsResponse) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "b/%d %s [%s]\n", b.Bug.Number, b.Bug.Title, b.Bug.Status)
+	assignee := b.Bug.AssigneeUsername
+	if assignee == "" {
+		assignee = "nobody"
 	}
-	a.logInfo(string(b))
+	fmt.Fprintf(&sb, "author: %s | assignee: %s | comments: %d\n",
+		b.Bug.AuthorUsername, assignee, b.Bug.CommentCount)
+	fmt.Fprintf(&sb, "created: %s | updated: %s\n",
+		bugTime(b.Bug.CreatedOn), bugTime(b.Bug.UpdatedOn))
+	if strings.TrimSpace(b.Bug.Body) != "" {
+		sb.WriteString("\n" + b.Bug.Body + "\n")
+	}
+	if len(b.Events) > 0 {
+		sb.WriteString("\n")
+	}
+	for _, e := range b.Events {
+		sb.WriteString(bugEventString(e) + "\n")
+	}
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+func bugEventString(e twiggwebclient.FrontendBugEvent) string {
+	who := fmt.Sprintf("[%s %s]", bugTime(e.CreatedOn), e.AuthorUsername)
+	switch e.Kind {
+	case twiggwebclient.FrontendBugEventKind_Comment:
+		body := ""
+		if e.Comment != nil {
+			body = e.Comment.Body
+		}
+		return who + " commented:\n" + body
+	case twiggwebclient.FrontendBugEventKind_StatusChange:
+		if e.StatusChange != nil && e.StatusChange.NewStatus == bug.Status_Closed {
+			return who + " closed the bug"
+		}
+		return who + " reopened the bug"
+	case twiggwebclient.FrontendBugEventKind_DescriptionEdit:
+		return who + " edited the description"
+	case twiggwebclient.FrontendBugEventKind_TitleEdit:
+		return who + " edited the title"
+	case twiggwebclient.FrontendBugEventKind_SubmittedCommit:
+		if e.SubmittedCommit != nil {
+			return who + fmt.Sprintf(" submitted c/%d", e.SubmittedCommit.CommitL)
+		}
+		return who + " submitted a commit"
+	case twiggwebclient.FrontendBugEventKind_Assignment:
+		if e.Assignment != nil && e.Assignment.NewAssigneeUsername != "" {
+			return who + " assigned the bug to " + e.Assignment.NewAssigneeUsername
+		}
+		return who + " unassigned the bug"
+	}
+	return who + " " + string(e.Kind)
+}
+
+func bugTime(t time.Time) string {
+	return t.Local().Format("2006-01-02 15:04")
 }
