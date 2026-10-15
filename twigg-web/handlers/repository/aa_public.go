@@ -51,6 +51,10 @@ func NewHandler(rSrv RepoService,
 const GoLinksFileName = "GOLINKS"
 const GoLinksFileMaxSize = 1024 * 1024
 
+func ParseGolinksFile(b []byte) (aliasToUrl map[string]string, err error) {
+	return parseGolinksFile(b)
+}
+
 // What the commit search endpoint answers with.
 type CommitSearchResponse struct {
 	Commits []twiggwc.FrontendCommit
