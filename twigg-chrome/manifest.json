@@ -3,6 +3,16 @@
   "name": "Twigg Links",
   "description": "Type go/alias, b/123 or c/123 in the address bar to open your Twigg repo's go links, bugs and commits.",
   "version": "0.0.1",
+  "minimum_chrome_version": "121",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "links@twigg.vc",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
   "homepage_url": "https://twigg.vc",
   "icons": {
     "128": "icons/twigg.png"
@@ -19,6 +29,7 @@
     "open_in_tab": false
   },
   "background": {
+    "scripts": ["background.js"],
     "service_worker": "background.js",
     "type": "module"
   },

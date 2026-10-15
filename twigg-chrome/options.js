@@ -1,5 +1,7 @@
-import { linkUrl, parseRepo } from "./golinks.js";
+import { getBrowserApi } from "./browser-api.js";
+import { parseRepo } from "./golinks.js";
 
+const api = getBrowserApi();
 const REPO_URL_KEY = "repoUrl";
 
 var form = document.getElementById("form");
@@ -16,11 +18,11 @@ function showStatus(text, isError) {
 }
 
 function showConfigured(repoUrl) {
-  showStatus(`go/docs → ${linkUrl(repoUrl, "go/docs")}`, false);
+  showStatus(`Links will open in ${repoUrl}.`, false);
 }
 
 async function load() {
-  var stored = await chrome.storage.sync.get(REPO_URL_KEY);
+  var stored = await api.storage.sync.get(REPO_URL_KEY);
   var repoUrl = stored[REPO_URL_KEY];
   if (repoUrl === undefined) {
     showStatus("Not configured: go links are disabled.", false);
@@ -33,7 +35,7 @@ async function load() {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (input.value.trim() === "") {
-    await chrome.storage.sync.remove(REPO_URL_KEY);
+    await api.storage.sync.remove(REPO_URL_KEY);
     showStatus("Cleared: go links are disabled.", false);
     return;
   }
@@ -42,7 +44,7 @@ form.addEventListener("submit", async (event) => {
     showStatus("Invalid repository. Use user/repo.", true);
     return;
   }
-  await chrome.storage.sync.set({ [REPO_URL_KEY]: repoUrl });
+  await api.storage.sync.set({ [REPO_URL_KEY]: repoUrl });
   input.value = repoUrl;
   showConfigured(repoUrl);
 });
