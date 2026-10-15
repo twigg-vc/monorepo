@@ -3630,3 +3630,24 @@ func TestBugsBelongToTheirRepo(t *testing.T) {
 	aang.CheckGetErrors("/aang/BookTwo/b/1", http.StatusNotFound)
 	aang.CheckPostJsonErrors("/aang/BookTwo/b/1/comments", bugs.PostCommentRequest{Body: "Wrong repo"})
 }
+
+func TestGoLinksOfPrivateReposNeedReadPermission(t *testing.T) {
+	srv := GetMockServer(t)
+	aang := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, aang, "aang@twigg.vc")
+	MockUserSubmitsFirstCommit(srv, aang, "aang", "BookOne", "GOLINKS",
+		"health "+srv.C.PublicUrl+"/health\n")
+
+	katara := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, katara, "katara@twigg.vc") // has write permission on aang/BookOne
+	katara.Get("/aang/BookOne/go/health")
+	katara.CheckCurrentPath("/health")
+
+	momo := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthRegistration(srv, momo, "momo@northern-temple.air", "momo")
+	momo.CheckGetErrors("/aang/BookOne/go/health", http.StatusForbidden)
+
+	anonymous := NewTestBrowser(srv.C.PublicUrl, t)
+	anonymous.Get("/aang/BookOne/go/health")
+	anonymous.CheckCurrentPath(routes.LoginPage)
+}

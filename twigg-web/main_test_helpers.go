@@ -17,6 +17,7 @@ import (
 	"monorepo/twigg-web/services/oauthclient"
 	"monorepo/twigg-web/services/stripeclient"
 	"monorepo/twigg-web/srvconfig"
+	"monorepo/twigg/cli"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -524,6 +525,24 @@ func MockUserChoosesToPayForOrgViaStripe(srv server.Srv, b *TestBrowser, orgName
 }
 
 // Helper that mocks what happens when user grants permission to a user
+// Pushes a commit with the file to a repo without commits and submits it.
+func MockUserSubmitsFirstCommit(srv server.Srv, b *TestBrowser, repoOwner, repoName, filename, content string) {
+	b.t.Helper()
+	b.Post(routes.GenerateCLIKey, nil)
+	tw := cli.NewTestHelper(b.t)
+	tw.SetServerRootUrl(srv.C.PublicUrl)
+	tw.Run("init")
+	tw.Run("server", repoOwner+"/"+repoName)
+	tw.Run("key", srv.KeysMock.GetLastRandomCliKey())
+	tw.WriteFile(filename, content)
+	tw.Run("commit", "add "+filename)
+	tw.Run("push")
+
+	repoPath := "/" + repoOwner + "/" + repoName
+	b.Post(repoPath+"/c/1/lgtm", map[string]string{"version": "0"})
+	b.Post(repoPath+"/c/1/submit", map[string]string{"version": "0"})
+}
+
 func MockUserGrantsPermission(srv server.Srv, b *TestBrowser, repoOwner, repoName, usernameToGrantPermission string) {
 	b.t.Helper()
 
