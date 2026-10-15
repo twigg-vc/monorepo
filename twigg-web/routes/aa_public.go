@@ -100,6 +100,8 @@ const (
 	RepoLoadMoreSubmitted                     = RepoPattern + "/load-s"
 	RepoLoadMorePending                       = RepoPattern + "/load-p"
 	RepoTwiggDocPattern                       = RepoPattern + "/docs/"
+	GoLinksPattern                            = RepoPattern + "/go/{alias}"
+	GoLinksAliasPathParamName                 = "alias"
 
 	PipelineRefsPattern              = RepoPattern + "/cd-refs"
 	RefPipelinesPattern              = PipelineRefsPattern + "/{path}/{name}"

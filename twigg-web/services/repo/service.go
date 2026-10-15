@@ -10,6 +10,7 @@ import (
 	"monorepo/twigg-web/services/secrets"
 	"monorepo/twigg/commit"
 	"monorepo/twigg/server"
+	"monorepo/twigg/tree"
 	"net/url"
 	"strconv"
 	"strings"
@@ -283,4 +284,13 @@ func (s service) GetRepoFile(rl context.Context, repoId uint64, a commit.Commit,
 		return err
 	}
 	return server.WriteFile(a, filename, w, s.GetServerRead(rl))
+}
+func (s service) GetRepoTree(rl context.Context, repoId uint64, a commit.Commit, filename string) (tr tree.Tree, isNotFoundErr bool, err error) {
+	srv, err := s.GetServerByRepoId(rl, repoId)
+	if err != nil {
+		return nil, false, err
+	}
+	tr, err = srv.GetTree(a, filename, s.GetServerRead(rl))
+	isNotFoundErr = errors.Is(err, server.ErrNotFound)
+	return
 }

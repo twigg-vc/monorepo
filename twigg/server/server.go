@@ -164,6 +164,9 @@ func (s srv) GetTree(a commit.Commit, path string, l Read) (tree.Tree, error) {
 		return nil, errors.New("not initialized")
 	}
 	tr, err := s.r.Root(a.TreeVersion, l).Tree(path)
+	if errors.Is(err, tree.ErrTreeNotFound) {
+		return nil, errors.Join(tree.ErrTreeNotFound, ErrNotFound)
+	}
 	if err != nil {
 		return nil, err
 	}

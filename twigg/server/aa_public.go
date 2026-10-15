@@ -114,7 +114,8 @@ type Server interface {
 	WriteDiff(a, b commit.Commit, filename string, w io.Writer, l Read) error
 	// Write the file of a commit
 	WriteFile(a commit.Commit, filename string, w io.Writer, l Read) error
-	// Returns a tree of the specified path in the specified commit
+	// Returns a tree of the specified path in the specified commit or
+	// ErrNotFound if not found
 	GetTree(a commit.Commit, path string, l Read) (tree.Tree, error)
 	// Returns the size of the root directory on the specified commit
 	GetCommitWorkdirSize(c commit.Commit, l Read) (int64, error)

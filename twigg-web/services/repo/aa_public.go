@@ -8,6 +8,7 @@ import (
 	"monorepo/twigg-web/services/secrets"
 	"monorepo/twigg/commit"
 	"monorepo/twigg/server"
+	"monorepo/twigg/tree"
 )
 
 type Service interface {
@@ -24,6 +25,7 @@ type Service interface {
 	GetRepoCommit(rl context.Context, repoId uint64, n commit.LocalId) (commit.Commit, error)
 	GetRepoCommitVersion(rl context.Context, repoId uint64, n commit.LocalId, v uint64) (commit.Commit, error)
 	GetRepoFile(rl context.Context, repoId uint64, a commit.Commit, filename string, w io.Writer) error
+	GetRepoTree(rl context.Context, repoId uint64, a commit.Commit, filename string) (tr tree.Tree, isNotFoundErr bool, err error)
 
 	SetPublic(wl context.Context, ownerId int64, displayName string) error
 	// Makes the repo readable only by users with permission.

@@ -15,6 +15,7 @@ import (
 	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
+	"monorepo/twigg/server"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -716,6 +717,7 @@ type repoServiceMock struct {
 	getRepoCommit              func(n uint64) (commit.Commit, error)
 	getRepoCommitVersion       func(n, v uint64) (commit.Commit, error)
 	getRepoFile                func() error
+	getServer                  func() (server.Server, error)
 }
 
 func (m repoServiceMock) GetRepoTopCommit(rl context.Context, repoId uint64) (commit.Commit, error) {
@@ -736,6 +738,9 @@ func (m repoServiceMock) GetRepoCommitVersion(rl context.Context, repoId uint64,
 }
 func (m repoServiceMock) GetRepoFile(rl context.Context, repoId uint64, a commit.Commit, filename string, w io.Writer) error {
 	return m.getRepoFile()
+}
+func (m repoServiceMock) GetServerByRepoId(rl context.Context, repoId uint64) (srv server.Server, err error) {
+	return m.getServer()
 }
 
 type reviewServiceMock struct {

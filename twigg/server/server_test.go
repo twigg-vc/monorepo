@@ -79,6 +79,13 @@ func TestGracefullErrMessages(t *testing.T) {
 	if !errors.Is(err, client.ErrFailedToReachServer) {
 		t.Fatal(err)
 	}
+
+	w, closeW, _ := srv.BeginWrite()
+	defer closeW()
+	_, err = srv.GetServer().GetTree(root1, "non existing path", srv.BindR(w))
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatal(err)
+	}
 }
 
 func TestNothingToPull(t *testing.T) {

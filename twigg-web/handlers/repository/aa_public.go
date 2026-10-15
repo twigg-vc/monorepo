@@ -11,6 +11,7 @@ import (
 	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
+	"monorepo/twigg/server"
 )
 
 func AddHandlers(
@@ -65,6 +66,7 @@ type RepoService interface {
 	GetRepoCommit(rl context.Context, repoId uint64, n commit.LocalId) (commit.Commit, error)
 	GetRepoCommitVersion(rl context.Context, repoId uint64, n commit.LocalId, v uint64) (commit.Commit, error)
 	GetRepoFile(rl context.Context, repoId uint64, a commit.Commit, filename string, w io.Writer) error
+	GetServerByRepoId(rl context.Context, repoId uint64) (srv server.Server, err error)
 }
 
 type ReviewService interface {
