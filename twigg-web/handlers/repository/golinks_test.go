@@ -1,7 +1,15 @@
 package repository
 
 import (
+	"io"
+	"monorepo/twigg-web/routes"
+	"monorepo/twigg-web/wrappers"
+	"monorepo/twigg/commit"
+	"monorepo/twigg/tree"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -56,4 +64,69 @@ func TestParseGolinksFileRejectsBadFiles(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandleGetGoLinkRedirects(t *testing.T) {
+	h := newGoLinkHandler(func(filename string) (tree.Tree, bool, error) {
+		if filename != GoLinksFileName {
+			t.Fatalf("GetRepoTree(%q), want %q", filename, GoLinksFileName)
+		}
+		return newGoLinksFileTree("docs https://example.com/docs\n"), false, nil
+	})
+	w := httptest.NewRecorder()
+
+	h.handleGetGoLink(w, newGoLinkReq("docs"), nil)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("code=%d, want %d. body=%s", w.Code, http.StatusFound, w.Body)
+	}
+	if got := w.Header().Get("Location"); got != "https://example.com/docs" {
+		t.Errorf("Location=%q, want %q", got, "https://example.com/docs")
+	}
+}
+
+func TestHandleGetGoLinkUnknownAlias(t *testing.T) {
+	h := newGoLinkHandler(func(string) (tree.Tree, bool, error) {
+		return newGoLinksFileTree("docs https://example.com/docs\n"), false, nil
+	})
+	w := httptest.NewRecorder()
+
+	h.handleGetGoLink(w, newGoLinkReq("ci"), nil)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("code=%d, want %d. body=%s", w.Code, http.StatusNotFound, w.Body)
+	}
+}
+
+func newGoLinkHandler(getRepoTree func(filename string) (tree.Tree, bool, error)) handler {
+	repoS := repoServiceMock{
+		getRepoTopCommit: func() (commit.Commit, error) {
+			return commit.Commit{}, nil
+		},
+		getRepoTree: getRepoTree,
+	}
+	return NewHandler(repoS, reviewServiceMock{}, userServiceMock{}, &commitSearchDbMock{})
+}
+
+func newGoLinkReq(alias string) wrappers.UserWithReadPermissionMuxRequest {
+	return newMockReq(map[string]string{routes.GoLinksAliasPathParamName: alias}, nil)
+}
+
+type treeMock struct {
+	data    tree.Data
+	content string
+}
+
+func newGoLinksFileTree(content string) treeMock {
+	return treeMock{
+		data:    tree.Data{BaseName: GoLinksFileName, IsText: true, Size: int64(len(content))},
+		content: content,
+	}
+}
+
+func (m treeMock) IsRemovedChild() bool { return false }
+func (m treeMock) DataIsComplete() bool { return true }
+func (m treeMock) Data() tree.Data      { return m.data }
+func (m treeMock) GetFile() (io.WriterTo, error) {
+	return strings.NewReader(m.content), nil
 }
