@@ -52,6 +52,7 @@ func TestParseGolinksFileRejectsBadFiles(t *testing.T) {
 		{"extra field", "docs https://a.com x\n", `line 1: expected "<alias> <url>"`},
 		{"relative url", "docs /docs\n", `line 1: "/docs" is not an http(s) url`},
 		{"javascript url", "x javascript:alert(1)\n", `line 1: "javascript:alert(1)" is not an http(s) url`},
+		{"bad alias", "docs/api https://a.com\n", `line 1: bad alias "docs/api" - only letters, numbers, "_" and "-" are allowed`},
 		{"duplicate alias", "# c\ndocs https://a.com\ndocs https://b.com\n", `line 3: duplicate alias "docs"`},
 	}
 	for _, tc := range tests {

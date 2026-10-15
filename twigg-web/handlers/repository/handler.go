@@ -214,6 +214,8 @@ func (hl handler) handleGetGoLink(w http.ResponseWriter,
 	http.Redirect(w, r.Request, target, http.StatusFound)
 }
 
+var goLinkAliasRegex = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+
 // Each line is "<alias> <url>". Blank lines and lines starting with "#" are
 // skipped. Returns a user-facing error if the file is badly formatted.
 func parseGolinksFile(b []byte) (map[string]string, error) {
@@ -228,6 +230,9 @@ func parseGolinksFile(b []byte) (map[string]string, error) {
 			return nil, fmt.Errorf("line %d: expected \"<alias> <url>\"", i+1)
 		}
 		alias, rawUrl := fields[0], fields[1]
+		if !goLinkAliasRegex.MatchString(alias) {
+			return nil, fmt.Errorf("line %d: bad alias %q - only letters, numbers, \"_\" and \"-\" are allowed", i+1, alias)
+		}
 		u, err := url.Parse(rawUrl)
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 			return nil, fmt.Errorf("line %d: %q is not an http(s) url", i+1, rawUrl)
