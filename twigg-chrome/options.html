@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Twigg Links</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <form id="form">
+      <label for="repo">Twigg repository</label>
+      <input id="repo" type="text" placeholder="user/repo" autocomplete="off" spellcheck="false" />
+      <p class="hint">
+        <code>user/repo</code> or a repo link like <code>https://twigg.vc/user/repo</code>.
+      </p>
+      <p class="hint">
+        Then type <code>go/docs</code>, <code>b/123</code> or <code>c/123</code> in the address bar.
+      </p>
+      <button type="submit">Save</button>
+      <p id="status" class="status"></p>
+    </form>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

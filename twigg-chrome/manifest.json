@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Twigg Links",
+  "description": "Type go/alias, b/123 or c/123 in the address bar to open your Twigg repo's go links, bugs and commits.",
+  "version": "0.0.1",
+  "homepage_url": "https://twigg.vc",
+  "icons": {
+    "128": "icons/twigg.png"
+  },
+  "action": {
+    "default_title": "Twigg Links",
+    "default_popup": "options.html",
+    "default_icon": {
+      "128": "icons/twigg.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "omnibox": {
+    "keyword": "go"
+  },
+  "permissions": [
+    "declarativeNetRequestWithHostAccess",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://go/*",
+    "*://b/*",
+    "*://c/*",
+    "https://www.google.com/*",
+    "https://www.bing.com/*",
+    "https://duckduckgo.com/*"
+  ]
+}

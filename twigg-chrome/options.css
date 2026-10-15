@@ -1,0 +1,105 @@
+/* Colors mirror twigg-web/webcomponents/twigg.css. */
+:root {
+  --color-primary: #7c5cff;
+  --color-primary-pop: #9a84ff;
+  --color-bg: #f9f9fc;
+  --color-surface-alt: #f0f0f5;
+  --color-border: #d1d1e0;
+  --color-text: #1a1a1a;
+  --color-text-muted: #555770;
+  --color-text-on-primary: #ffffff;
+  --color-danger: #ff4d4d;
+  --radius0: 4px;
+  --space1: 0.25rem;
+  --space2: 0.5rem;
+  --space3: 0.75rem;
+  --space4: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0f0b1a;
+    --color-surface-alt: #26213a;
+    --color-border: #2a2440;
+    --color-text: #e9e6f2;
+    --color-text-muted: #d3dcf7;
+    --color-text-on-primary: #e9e6f2;
+    --color-danger: #ff6b6b;
+  }
+}
+
+/* Whole-pixel sizes only: Chrome rounds the popup size down, so a fractional
+   content height (e.g. line-height: 1.6 at 14px) shows a scrollbar. */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: var(--space4);
+  min-width: 320px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space2);
+}
+
+label {
+  font-weight: 600;
+}
+
+input {
+  padding: var(--space2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius0);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font: inherit;
+}
+
+input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -1px;
+}
+
+button {
+  align-self: flex-start;
+  padding: var(--space1) var(--space4);
+  border: none;
+  border-radius: var(--radius0);
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--color-primary-pop);
+}
+
+.hint,
+.status {
+  margin: 0;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.status.error {
+  color: var(--color-danger);
+}
+
+code {
+  /* Monospace metrics would otherwise grow the line box by a fraction. */
+  vertical-align: top;
+  padding: 0 var(--space1);
+  border-radius: var(--radius0);
+  background: var(--color-surface-alt);
+}
