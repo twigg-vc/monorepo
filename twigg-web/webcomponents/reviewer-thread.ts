@@ -1,7 +1,7 @@
 import { html, css, LitElement } from 'lit';
 import { TwiggCss } from './css';
 import { Thread } from './interfaces';
-import { FormatDateTime } from './helpers';
+import { FormatDateTime, FormatRelativeTime } from './helpers';
 
 /**
  * Displays a reviewer add/remove "thread".
@@ -44,7 +44,7 @@ export class ReviewerThread extends LitElement {
 
     private renderTime() {
         var createdOn = this.Thread.CreatedOn
-        return html`<span class="lgtm-time">${FormatDateTime(createdOn)}</span>`
+        return html`<span class="lgtm-time" title=${FormatDateTime(createdOn)}>${FormatRelativeTime(createdOn)}</span>`
     }
 
     private renderText(isAdd: boolean){
