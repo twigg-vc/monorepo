@@ -145,15 +145,19 @@ export class RepoBugsTab extends LitElement {
 
     private renderAssigneeFilterBtn(value: string, icon: IconName, label: string) {
         var cls: string
+        var removeIcon: TemplateResult
         if (this.assigneeFilter === value) {
             cls = "filter active"
+            removeIcon = html`<twigg-icon icon="XMark"></twigg-icon>`
         } else {
             cls = "filter"
+            removeIcon = html``
         }
         return html`
             <button class=${cls} @click=${() => this.setAssigneeFilter(value)}>
                 <twigg-icon .icon=${icon}></twigg-icon>
                 <span>${label}</span>
+                ${removeIcon}
             </button>
         `
     }
