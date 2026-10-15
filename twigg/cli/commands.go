@@ -48,6 +48,7 @@ const (
 	pingTwiggWebCmd        = "ping"
 	getBugTwiggWebCmd      = "bug-get"
 	setDescriptionCmd      = "description-set"
+	skillCmd               = "skill"
 )
 
 // Flags
@@ -198,6 +199,10 @@ type command struct {
 	// If true, logs an error if the workdir is dirty and --force is not used.
 	// --force skips this check.
 	checkCleanWorkdir bool
+	// If set, almost all of the setup is skipped - db, workdir, etc - so it
+	// so only the log commands will properly work. As the name suggests, it's
+	// use it carefully for commands that only log "static" data
+	isLogOnly_HERE_BE_DRAGONS bool
 }
 
 // Sets the command and command args in the app by parsing the
@@ -406,6 +411,11 @@ func (a *app) initCommand(cmdLineArgs []string) (ok bool) {
 		c = command{
 			callback:                      a.setCommitDescription,
 			optionalCommitThenDescription: true,
+		}
+	case skillCmd:
+		c = command{
+			callback:                  a.skill,
+			isLogOnly_HERE_BE_DRAGONS: true,
 		}
 	default:
 		a.logError(invalidCommand)

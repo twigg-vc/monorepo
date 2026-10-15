@@ -87,6 +87,10 @@ func run(systemRootPath *string, twiggWebUrl string, out io.Writer, in io.Reader
 	if !ok {
 		return
 	}
+	if app.c.isLogOnly_HERE_BE_DRAGONS {
+		app.c.callback(app.args)
+		return
+	}
 	// Check if already initialized
 	isInit := app.isInitialized()
 	// The "isInit" command is an edge case. We just need to check if initialize
