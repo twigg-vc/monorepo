@@ -16,8 +16,9 @@ const (
 	DocumentationPage  = "/docs"
 	BlogPage           = "/blog"
 
-	TermsPage   = "/terms"
-	PrivacyPage = "/privacy"
+	TermsPage            = "/terms"
+	PrivacyPage          = "/privacy"
+	ChromeExtPrivacyPage = "/chrome-ext-privacy"
 
 	AdminDash                    = "/admindash"
 	AdminDashRequestCounts       = AdminDash + "/request-counts"

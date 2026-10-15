@@ -9,4 +9,5 @@ func AddHandlers(mux wrappers.RlMux) {
 
 	mux.HandleFunc("GET "+routes.TermsPage, handleGetTerms)
 	mux.HandleFunc("GET "+routes.PrivacyPage, handleGetPrivacy)
+	mux.HandleFunc("GET "+routes.ChromeExtPrivacyPage, handleGetChromeExtPrivacy)
 }

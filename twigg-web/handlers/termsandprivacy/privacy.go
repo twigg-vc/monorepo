@@ -102,3 +102,22 @@ marcos@twigg.vc
 `
 	_, _ = w.Write([]byte(privacy))
 }
+
+func handleGetChromeExtPrivacy(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+
+	const privacy = `Twigg Links Chrome Extension Privacy Policy
+Effective Date: October 15, 2026
+
+Twigg Links redirects go/X to https://twigg.vc/user/repo/go/X, where user and repo are configured in the extension. It also redirects b/X and c/X to https://twigg.vc/user/repo/b/X and https://twigg.vc/user/repo/c/X. It does not collect browsing history, read page content, or include analytics.
+
+Your repository URL is saved using Chrome storage and may sync through your Google account when Chrome Sync is enabled. It is used only to configure redirects. Clear the repository field and click Save to remove this setting and disable redirects.
+
+The extension does not send separate usage reports or sell user data.
+
+Twigg Links complies with the Chrome Web Store User Data Policy, including its Limited Use requirements.
+
+For privacy inquiries, contact andre@twigg.vc.
+`
+	_, _ = w.Write([]byte(privacy))
+}
