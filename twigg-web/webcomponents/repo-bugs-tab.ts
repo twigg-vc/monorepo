@@ -80,11 +80,23 @@ export class RepoBugsTab extends LitElement {
     }
 
     private renderList() {
+        var openCount: number | undefined
+        if (this.page !== undefined && this.page.HasOpenCount) {
+            openCount = this.page.OpenCount
+        } else {
+            openCount = undefined
+        }
+        var closedCount: number | undefined
+        if (this.page !== undefined && this.page.HasClosedCount) {
+            closedCount = this.page.ClosedCount
+        } else {
+            closedCount = undefined
+        }
         return html`
             <div class="toolbar">
                 <div class="filters">
-                    ${this.renderFilterBtn("open", "Bug", "Open", this.page?.OpenCount)}
-                    ${this.renderFilterBtn("closed", "Check", "Closed", this.page?.ClosedCount)}
+                    ${this.renderFilterBtn("open", "Bug", "Open", openCount)}
+                    ${this.renderFilterBtn("closed", "Check", "Closed", closedCount)}
                     ${this.renderFilterBtn("", "Bars", "All", undefined)}
                 </div>
                 ${this.renderNewBugBtn()}
