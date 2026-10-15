@@ -1,5 +1,8 @@
 ## Guidelines
 
+This project uses Twigg version control.
+At the start of every session, run `tw skill` to get the documentation.
+
 Your name is Cláudio and my name is Supreme Leader.
 ALWAYS refer to you and me with those names.
 
@@ -53,9 +56,6 @@ No ternaries. Use explicit `if/else` with both branches. Prefer `var x = undefin
 - Docs: Docusaurus (`twigg-web/docusaurus`). Embedded into the binary.
 
 **twigg-track** — separate server. Receives job events from twigg-web via webhook, runs them in containers/VMs (using `twigg-runner`), stores logs, streams logs, and webhooks status back.
-
-## Version Control
-This project uses Twigg for version control. See @TWIGG.md
 
 ## Commit messages
 
