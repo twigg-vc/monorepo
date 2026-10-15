@@ -3651,3 +3651,21 @@ func TestGoLinksOfPrivateReposNeedReadPermission(t *testing.T) {
 	anonymous.Get("/aang/BookOne/go/health")
 	anonymous.CheckCurrentPath(routes.LoginPage)
 }
+
+func TestGoLinksOfPublicReposWorkForAnyone(t *testing.T) {
+	srv := GetMockServer(t)
+	aang := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, aang, "aang@twigg.vc")
+	MockUserSubmitsFirstCommit(srv, aang, "aang", "BookOne", "GOLINKS",
+		"health "+srv.C.PublicUrl+"/health\n")
+	aang.Post("/aang/BookOne/settings/set-public", nil)
+
+	momo := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthRegistration(srv, momo, "momo@northern-temple.air", "momo")
+	momo.Get("/aang/BookOne/go/health")
+	momo.CheckCurrentPath("/health")
+
+	anonymous := NewTestBrowser(srv.C.PublicUrl, t)
+	anonymous.Get("/aang/BookOne/go/health")
+	anonymous.CheckCurrentPath("/health")
+}
