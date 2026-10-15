@@ -583,13 +583,10 @@ func parseArgs(c command, cArgs *commandArgs, args []string) (err error) {
 			err = errors.New(bugNumberNotProvided)
 			return
 		}
-		var bugNum uint64
-		bugNum, err = strconv.ParseUint(args[0], 10, 64)
+		cArgs.bugNumber, err = parseBugNumber(args[0])
 		if err != nil {
-			err = fmt.Errorf("bad bug number: %s", args[0])
 			return
 		}
-		cArgs.bugNumber = bugNum
 	}
 	if c.firstArgMightBeNumber {
 		if len(args) > 0 {
@@ -748,6 +745,16 @@ func parseVersion(v string) (uint64, error) {
 		return 0, fmt.Errorf("%s is not a valid version", v)
 	}
 	return V, nil
+}
+
+// Parses a bug reference: 12, b12 or b/12.
+func parseBugNumber(s string) (uint64, error) {
+	digits := strings.TrimPrefix(strings.TrimPrefix(s, "b/"), "b")
+	n, err := strconv.ParseUint(digits, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("`%s` is not a bug. Use the bug number (e.g. `b/12`)", s)
+	}
+	return n, nil
 }
 
 // Ask the user to input their api key and put it in the args.
