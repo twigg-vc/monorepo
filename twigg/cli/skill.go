@@ -1,5 +1,10 @@
 package cli
 
+import _ "embed"
+
+//go:embed SKILL.md
+var skillMarkdown string
+
 func (a *app) skill(args commandArgs) {
-	a.logError("not implemented yet")
+	a.out.Write([]byte(skillMarkdown))
 }

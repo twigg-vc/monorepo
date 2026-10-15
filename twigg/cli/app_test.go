@@ -31,6 +31,14 @@ func TestHelp(t *testing.T) {
 	h.Run("--help")
 	h.CheckOutContains("/docs/v/2")
 }
+func TestSkill(t *testing.T) {
+	h := NewTestHelper(t)
+	h.Run("skill")
+	if h.Out() != skillMarkdown {
+		t.Fatalf("expected skill markdown, got: %s", h.Out())
+	}
+	h.CheckDirectoryDoesntExist(storageFolder)
+}
 func TestDebug(t *testing.T) {
 	h := NewTestHelper(t)
 	h.Run("init", "--debug")
