@@ -228,6 +228,12 @@ export class RepoBugsTab extends LitElement {
     }
 
     private renderEmptyMsg() {
+        if (this.assigneeFilter !== "") {
+            return html`
+                <twigg-icon class="empty-icon" icon="Bug"></twigg-icon>
+                <h3>No bugs match this filter</h3>
+            `
+        }
         const p = this.page!
         const total = p.OpenCount + p.ClosedCount
         if (total === 0) {
