@@ -11,7 +11,7 @@ import (
 	twiggwc "monorepo/twigg-web/webcomponents"
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
-	"monorepo/twigg/server"
+	"monorepo/twigg/tree"
 )
 
 func AddHandlers(
@@ -32,6 +32,8 @@ func AddHandlers(
 		h.handleCommitSearch)
 	readMux.HandleFuncR("GET "+routes.RepoTwiggDocPattern,
 		h.handleGetTwiggDoc)
+	readMux.HandleFuncR("GET "+routes.GoLinksPattern,
+		h.handleGetGoLink)
 }
 
 func NewHandler(rSrv RepoService,
@@ -45,6 +47,9 @@ func NewHandler(rSrv RepoService,
 		searchDb: searchDb,
 	}
 }
+
+const GoLinksFileName = "GOLINKS"
+const GoLinksFileMaxSize = 1024 * 1024
 
 // What the commit search endpoint answers with.
 type CommitSearchResponse struct {
@@ -66,7 +71,7 @@ type RepoService interface {
 	GetRepoCommit(rl context.Context, repoId uint64, n commit.LocalId) (commit.Commit, error)
 	GetRepoCommitVersion(rl context.Context, repoId uint64, n commit.LocalId, v uint64) (commit.Commit, error)
 	GetRepoFile(rl context.Context, repoId uint64, a commit.Commit, filename string, w io.Writer) error
-	GetServerByRepoId(rl context.Context, repoId uint64) (srv server.Server, err error)
+	GetRepoTree(rl context.Context, repoId uint64, a commit.Commit, filename string) (tr tree.Tree, isNotFoundErr bool, err error)
 }
 
 type ReviewService interface {

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	"encoding/json"
@@ -12,6 +13,7 @@ import (
 	"monorepo/twigg-web/wrappers"
 	"monorepo/twigg/commit"
 	"net/http"
+	"net/url"
 	"path"
 	"regexp"
 	"strconv"
@@ -155,6 +157,87 @@ func (hl handler) handleGetMorePending(w http.ResponseWriter, r wrappers.UserWit
 type getMorePendingResponse struct {
 	PendingFrontendCommits        []twiggwc.FrontendCommit
 	HaveMorePendingCommitsToFetch bool
+}
+
+func (hl handler) handleGetGoLink(w http.ResponseWriter,
+	r wrappers.UserWithReadPermissionMuxRequest, dbRead context.Context) {
+	targetCommit, err := hl.rSrv.GetRepoTopCommit(dbRead, r.Repo.Id)
+	if err != nil {
+		log.Printf("failed to get repo id=%d top commit: %s", r.Repo.Id, err)
+		http.Error(w, "failed to get commit", http.StatusInternalServerError)
+		return
+	}
+
+	tr, isNotFoundErr, err := hl.rSrv.GetRepoTree(dbRead, r.Repo.Id, targetCommit, GoLinksFileName)
+	if isNotFoundErr {
+		http.Error(w, fmt.Sprintf("%s not found", GoLinksFileName), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("failed to get repo id=%d %s tree: %s", r.Repo.Id, GoLinksFileName, err)
+		http.Error(w, "failed to get golinks file", http.StatusInternalServerError)
+		return
+	}
+	if tr.Data().IsDir {
+		http.Error(w, fmt.Sprintf("%s is a directory", GoLinksFileName), http.StatusBadRequest)
+		return
+	}
+	if tr.Data().Size > GoLinksFileMaxSize {
+		http.Error(w, fmt.Sprintf("%s file is too large", GoLinksFileName), http.StatusBadRequest)
+		return
+	}
+	buff := bytes.NewBuffer(nil)
+	file, err := tr.GetFile()
+	if err != nil {
+		log.Printf("failed to get repo id=%d %s file: %s", r.Repo.Id, GoLinksFileName, err)
+		http.Error(w, "failed to get golinks file", http.StatusInternalServerError)
+		return
+	}
+	_, err = file.WriteTo(buff)
+	if err != nil {
+		log.Printf("failed to read repo id=%d %s file: %s", r.Repo.Id, GoLinksFileName, err)
+		http.Error(w, "failed to read golinks file", http.StatusInternalServerError)
+		return
+	}
+
+	alias := r.Request.PathValue(routes.GoLinksAliasPathParamName)
+	aliasToUrl, err := parseGolinksFile(buff.Bytes())
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%s: %s", GoLinksFileName, err), http.StatusBadRequest)
+		return
+	}
+	target, ok := aliasToUrl[alias]
+	if !ok {
+		http.Error(w, fmt.Sprintf("%s not found", alias), http.StatusNotFound)
+		return
+	}
+	http.Redirect(w, r.Request, target, http.StatusFound)
+}
+
+// Each line is "<alias> <url>". Blank lines and lines starting with "#" are
+// skipped. Returns a user-facing error if the file is badly formatted.
+func parseGolinksFile(b []byte) (map[string]string, error) {
+	res := map[string]string{}
+	for i, line := range strings.Split(string(b), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			return nil, fmt.Errorf("line %d: expected \"<alias> <url>\"", i+1)
+		}
+		alias, rawUrl := fields[0], fields[1]
+		u, err := url.Parse(rawUrl)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return nil, fmt.Errorf("line %d: %q is not an http(s) url", i+1, rawUrl)
+		}
+		if _, ok := res[alias]; ok {
+			return nil, fmt.Errorf("line %d: duplicate alias %q", i+1, alias)
+		}
+		res[alias] = rawUrl
+	}
+	return res, nil
 }
 
 func (hl handler) handleGetTwiggDoc(w http.ResponseWriter,
