@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"io"
 	"monorepo/twigg-web/routes"
 	"monorepo/twigg-web/wrappers"
@@ -95,6 +96,36 @@ func TestHandleGetGoLinkUnknownAlias(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("code=%d, want %d. body=%s", w.Code, http.StatusNotFound, w.Body)
+	}
+}
+
+func TestHandleGetGoLinkBadGoLinksFile(t *testing.T) {
+	tests := []struct {
+		name          string
+		tr            tree.Tree
+		isNotFoundErr bool
+		err           error
+		wantCode      int
+	}{
+		{"isNotFoundErr", nil, true, errors.New("not found"), http.StatusNotFound},
+		{"read error", nil, false, errors.New("boom"), http.StatusInternalServerError},
+		{"directory", treeMock{data: tree.Data{IsDir: true}}, false, nil, http.StatusBadRequest},
+		{"too large", treeMock{data: tree.Data{Size: GoLinksFileMaxSize + 1}}, false, nil, http.StatusBadRequest},
+		{"malformed", newGoLinksFileTree("docs\n"), false, nil, http.StatusBadRequest},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newGoLinkHandler(func(string) (tree.Tree, bool, error) {
+				return tc.tr, tc.isNotFoundErr, tc.err
+			})
+			w := httptest.NewRecorder()
+
+			h.handleGetGoLink(w, newGoLinkReq("docs"), nil)
+
+			if w.Code != tc.wantCode {
+				t.Errorf("code=%d, want %d. body=%s", w.Code, tc.wantCode, w.Body)
+			}
+		})
 	}
 }
 
