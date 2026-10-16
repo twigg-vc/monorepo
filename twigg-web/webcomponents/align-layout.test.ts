@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { AlignmentPoint, LayoutRows } from './align-layout';
-import { AlignedRow, MyersDiffer } from './differs';
+import { AlignedRow } from './differs';
 // rowsToStr renders the rows as "left|right", with a dot for a missing side.
 function rowsToStr(left: string[], right: string[], rows: AlignedRow[]): string[] {
     return rows.map(r => lineAt(left, r.Left) + "|" + lineAt(right, r.Right));
@@ -20,12 +20,12 @@ function checkLayoutRows(left: string[], right: string[], expectedRowsStr: strin
 // checkPinnedLayoutRows is checkLayoutRows for a layout with alignment points.
 function checkPinnedLayoutRows(left: string[], right: string[],
     points: AlignmentPoint[], expectedRowsStr: string[]) {
-    const gotRowsStr = rowsToStr(left, right, LayoutRows(left, right, points, new MyersDiffer()));
+    const gotRowsStr = rowsToStr(left, right, LayoutRows(left, right, points, "myers"));
     expect(gotRowsStr).to.deep.equal(expectedRowsStr);
 }
 describe('LayoutRows', () => {
     it('handles both empty', () => {
-        expect(LayoutRows([], [], [], new MyersDiffer())).to.deep.equal([]);
+        expect(LayoutRows([], [], [], "myers")).to.deep.equal([]);
     });
 
     it('pairs up the lines of an unchanged file', () => {
