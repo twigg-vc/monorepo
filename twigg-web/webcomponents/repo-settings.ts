@@ -10,6 +10,7 @@ import { GetCsrfHeaders, HomeUrl, PathToAddRepoPermission, PathToArchiveRepo,
     UrlToDeleteRepoSecret,
     PathToSetRepoPublic,
     PathToSetRepoPrivate,
+    PathToOrganization,
     GitMirrorUrlSecretName} from './routes';
 import { GetFeatureFlags } from './feature-flags';
 import { Secret } from './interfaces';
@@ -789,6 +790,7 @@ export class RepoSettings extends LitElement {
         const notFoundMsg = "not found"
         const hasPermissionMsg = "Already had"
         const okMsg = "ok"
+        const userNotPartOfOrganizationMsg = "can not add user that is not part of the organization"
         const formData = new FormData();
         formData.append(usernameParameterName, this.inputValue)
         let url: string = PathToAddRepoPermission(this.RepoOwnerName, this.RepoName)
@@ -800,7 +802,12 @@ export class RepoSettings extends LitElement {
             });
             if (!resp.ok){
                 const msg = await resp.text();
-                alert(msg);
+                if (msg.trim() === userNotPartOfOrganizationMsg) {
+                    const organizationUrl = new URL(PathToOrganization(this.RepoOwnerName), window.location.origin).href;
+                    alert(`Cannot add a user who is not part of the organization. Add the user to the organization first: ${organizationUrl}`);
+                } else {
+                    alert(msg);
+                }
                 this.isLoading = false;
                 return
             }
