@@ -13,6 +13,12 @@ Type a short link in the address bar to open it in your Twigg repo:
 To add a new kind of link, add it to `LINK_KINDS` in `golinks.js` and add its
 host to `host_permissions` in `manifest.json`.
 
+## Install from the Chrome Web Store
+
+Install [Twigg Links](https://chromewebstore.google.com/detail/fdbalodlehkpnmaocfhhjfdbhhbeoelg)
+from the Chrome Web Store. The sections below are for running the extension
+from source.
+
 ## Install in Chrome (unpacked)
 
 1. Open `chrome://extensions` and turn on **Developer mode** (top right).
