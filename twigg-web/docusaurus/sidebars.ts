@@ -48,6 +48,7 @@ const sidebars: SidebarsConfig = {
           ],
         },
         'vs-code-extension',
+        'twigg-links',
       ],
     },
     {
