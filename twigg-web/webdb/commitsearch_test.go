@@ -186,6 +186,35 @@ func Test_SearchCommits_PaginatesATextSearchWithTheTextIndexRow(t *testing.T) {
 	}
 }
 
+func Test_SearchCommits_FindsACommitWithManyMatchingVersionsOnce(t *testing.T) {
+	db, w := newSearchTestDb(t)
+	versions := []commit.Commit{
+		{L: 6, Version: 0, AuthorUserId: 1, Message: "Add the flag"},
+		{L: 7, Version: 0, AuthorUserId: 1, Message: "Remove the flag"},
+		{L: 6, Version: 1, AuthorUserId: 1, Message: "Add the flag again"},
+	}
+	for _, c := range versions {
+		if err := db.SetCommit(w, "owner", searchRepoId, c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f := commitsearch.NewFilter(searchRepoId)
+	f.Message = "flag"
+
+	got, next := searchLocalIds(t, db, w, f, "", 1)
+	if !reflect.DeepEqual(got, []uint64{6}) {
+		t.Fatalf("first page is %v, want [6]", got)
+	}
+	got2, next2 := searchLocalIds(t, db, w, f, next, 1)
+	if !reflect.DeepEqual(got2, []uint64{7}) {
+		t.Fatalf("second page is %v, want [7]", got2)
+	}
+	// The older version of c6 is not another page
+	if next2 != "" {
+		t.Fatalf("the last page points at %q, want it to point at nothing", next2)
+	}
+}
+
 func Test_SearchCommits_MatchesTheSearchOperatorsLiterally(t *testing.T) {
 	db, w := newSearchTestDb(t)
 

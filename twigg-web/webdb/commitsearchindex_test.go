@@ -93,8 +93,8 @@ func Test_SetCommit_IgnoresAnOlderCommitVersion(t *testing.T) {
 		t.Fatalf("indexed v%d, want v2", got.version)
 	}
 	text := readIndexedText(t, db, w, 1)
-	if !reflect.DeepEqual(text, []string{"older", "newer"}) {
-		t.Fatalf("indexed text is %v, want [older newer]", text)
+	if !reflect.DeepEqual(text, []string{"newer"}) {
+		t.Fatalf("indexed text is %v, want [newer]", text)
 	}
 }
 
@@ -123,7 +123,7 @@ func readIndexedText(t *testing.T, db WebDb, w context.Context,
 	return messages
 }
 
-func Test_SetCommit_IndexesTheMessageTextOfEveryVersion(t *testing.T) {
+func Test_SetCommit_IndexesTheMessageTextOfTheLatestVersion(t *testing.T) {
 	db, w := newIndexTestDb(t)
 
 	for _, c := range []commit.Commit{
@@ -136,8 +136,8 @@ func Test_SetCommit_IndexesTheMessageTextOfEveryVersion(t *testing.T) {
 	}
 
 	got := readIndexedText(t, db, w, 1)
-	if !reflect.DeepEqual(got, []string{"first", "second"}) {
-		t.Fatalf("indexed text is %v, want [first second]", got)
+	if !reflect.DeepEqual(got, []string{"second"}) {
+		t.Fatalf("indexed text is %v, want [second]", got)
 	}
 }
 

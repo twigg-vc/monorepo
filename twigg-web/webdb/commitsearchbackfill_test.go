@@ -62,7 +62,7 @@ func Test_IndexCommitsForSearch_IndexesEveryCommitInBatches(t *testing.T) {
 	}
 }
 
-func Test_IndexCommitsForSearch_IndexesTheTextOfEveryVersion(t *testing.T) {
+func Test_IndexCommitsForSearch_IndexesTheTextOfTheLatestVersion(t *testing.T) {
 	db, w := newIndexTestDb(t)
 	for _, c := range []commit.Commit{
 		{L: 1, Version: 0, AuthorUserId: 3, Message: "first try"},
@@ -88,8 +88,8 @@ func Test_IndexCommitsForSearch_IndexesTheTextOfEveryVersion(t *testing.T) {
 	}
 
 	got := readIndexedText(t, db, w, 1)
-	if !reflect.DeepEqual(got, []string{"first try", "second try"}) {
-		t.Fatalf("indexed text is %v, want [first try, second try]", got)
+	if !reflect.DeepEqual(got, []string{"second try"}) {
+		t.Fatalf("indexed text is %v, want [second try]", got)
 	}
 }
 

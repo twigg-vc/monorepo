@@ -10,7 +10,7 @@ import (
 // A version older than the indexed one is ignored.
 func (db webDb) indexCommitForSearch(w context.Context, repoId uint64,
 	c commit.Commit) error {
-	_, err := db.s.Exec(w, `
+	res, err := db.s.Exec(w, `
 		INSERT INTO twigg_commit_search
 			(repoId, commitId, commitVersion, authorId, isSubmitted,
 			createdOnUnixMilli, isWip, isArchived)
@@ -29,17 +29,20 @@ func (db webDb) indexCommitForSearch(w context.Context, repoId uint64,
 	if err != nil {
 		return err
 	}
+	affected, err := res.RowsAffected()
+	if err != nil || affected == 0 {
+		return err
+	}
 	return db.indexCommitTextForSearch(w, repoId, c.L, c.Version, c.Message)
 }
 
 // The message of a commit is only stored in the text index, one row per
-// version so that the message of an older version is searchable too.
+// commit with the message of its indexed version.
 func (db webDb) indexCommitTextForSearch(w context.Context, repoId uint64,
 	cId commit.LocalId, cVersion uint64, message string) error {
 	_, err := db.s.Exec(w, `
-		DELETE FROM commit_search_text
-		WHERE repoId = ? AND commitId = ? AND commitVersion = ?
-	`, repoId, cId, cVersion)
+		DELETE FROM commit_search_text WHERE repoId = ? AND commitId = ?
+	`, repoId, cId)
 	if err != nil {
 		return err
 	}

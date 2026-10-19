@@ -24,8 +24,8 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 	}
 
 	// A text search is driven by the text index and ordered by its rows.
-	// Since commit versions are saved incrementally, this should be equivalent
-	// to ordering by commit anyway.
+	// A commit has one row, rewritten by each newer version, so the commits
+	// that changed last come first.
 	// Any other search is driven by the commits themselves, unless it asks
 	// for a review status.
 	// This is done because fts5 is efficient for text macthing, but any other
