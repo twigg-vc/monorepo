@@ -25,7 +25,7 @@ docs https://twigg.vc/docs/v/2/
 dashboard https://grafana.example.com/d/main
 ```
 
-Blank lines and lines starting with `#` are ignored. Aliases may only contain letters, numbers, `_` and `-`.
+Blank lines and lines starting with `#` are ignored. Aliases may only contain letters, numbers, `_` and `-`, and must be unique. URLs must start with `http://` or `https://`. A badly formatted line makes every go link of the repository fail with an error pointing at that line, so keep the file tidy.
 
 Twigg resolves the aliases from the repository's trunk at `https://twigg.vc/<user>/<repo>/go/<alias>`, so the links also work without the extension. The extension just saves you the typing.
 
