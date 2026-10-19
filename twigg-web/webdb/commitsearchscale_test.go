@@ -65,9 +65,8 @@ func DISABLED_Test_SearchScale(t *testing.T) {
 		textFilterStart := time.Now()
 		textFilterCursor := ""
 		for {
-			var nResults int
-			_, nResults, textFilterCursor = timeSearch(t, db, w, textFilter, textFilterCursor)
-			if nResults == 0 {
+			_, _, textFilterCursor = timeSearch(t, db, w, textFilter, textFilterCursor)
+			if textFilterCursor == "" {
 				break
 			}
 		}
