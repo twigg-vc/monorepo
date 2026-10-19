@@ -9,6 +9,7 @@
   <a href="LICENSE.txt"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue" alt="License: AGPL-3.0"></a>
   <a href="https://twigg.vc/docs/v/2/"><img src="https://img.shields.io/badge/Docs-twigg.vc-7c5cff" alt="Documentation"></a>
   <a href="https://twigg.vc/twigg/monorepo"><img src="https://img.shields.io/badge/Source-twigg.vc%2Ftwigg%2Fmonorepo-2ea44f" alt="Source repository"></a>
+  <a href="https://chromewebstore.google.com/detail/fdbalodlehkpnmaocfhhjfdbhhbeoelg"><img src="https://img.shields.io/badge/Chrome%20Web%20Store-Twigg%20Links-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Web Store"></a>
   <a href="https://discord.gg/ncPE6cDkC4"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
 
@@ -54,6 +55,8 @@ We host Twigg under [twigg.vc](https://twigg.vc) with free and paid plans so you
 It offers [Git Mirror](https://twigg.vc/docs/v/2/git-mirror/) functionality: all submitted commits are pushed to a Git repository. This allows you to test it out but easily switch back to a Git server if needed.
 
 See a tutorial [here](https://twigg.vc/docs/v/2/category/getting-started).
+
+Twigg also ships a [VS Code extension](https://marketplace.visualstudio.com/items?itemName=Twigg.twigg) and [Twigg Links](https://chromewebstore.google.com/detail/fdbalodlehkpnmaocfhhjfdbhhbeoelg), a browser extension that opens `go/<alias>`, `b/1234` and `c/1234` typed in the address bar in your repository ([docs](https://twigg.vc/docs/v/2/twigg-links/)).
 
 
 # FAQ
