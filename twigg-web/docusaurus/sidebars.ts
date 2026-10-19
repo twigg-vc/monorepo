@@ -84,6 +84,7 @@ const sidebars: SidebarsConfig = {
         'commands/set-server-id',
         'commands/diff',
         'commands/ci-list',
+        'commands/bug-get',
       ],
     },
     {
