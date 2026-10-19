@@ -416,52 +416,7 @@ func (h handler) handlePostGitMirrorUrl(w http.ResponseWriter,
 	shouldCommit = err == nil
 	return
 }
-func (h handler) handlePutSetRepoSecret(w http.ResponseWriter,
-	r wrappers.UserRepoMuxRequest,
-	dbWrite context.Context) (shouldCommit bool) {
-	if !r.Flags.RepoSecretsIsEnabled {
-		http.Error(w, "feature is disabled", http.StatusServiceUnavailable)
-		return
-	}
-	secretName := r.Request.FormValue(routes.RepoSecretNameParamName)
-	if secretName == "" {
-		http.Error(w, "invalid secretName", http.StatusBadRequest)
-		return
-	}
-	if secretName == repo.GitMirrorUrlSecretName {
-		http.Error(w, "reserved secret name", http.StatusBadRequest)
-		return
-	}
-	secretValue := r.Request.FormValue(routes.RepoSecretValueParamName)
-	if secretValue == "" {
-		http.Error(w, "invalid secretValue", http.StatusBadRequest)
-		return
-	}
 
-	newSecret, err := h.secrets.SetRepoIdSecret(dbWrite, r.Repo.Id, secretName, secretValue)
-	if err != nil {
-		log.Printf("failed to set repo secret, repoId=%d secretName=%q. err=%q", r.Repo.Id, secretName, err)
-		http.Error(w, "failed to set repo secret", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	newSecretJson, err := json.Marshal(newSecret)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	_, err = w.Write(newSecretJson)
-	if err != nil {
-		log.Printf("failed to write response for set repo secret repoId=%d secretName=%q.err=%q", r.Repo.Id, secretName, err)
-		http.Error(w, "internal error in set repo secret", http.StatusInternalServerError)
-		return
-	}
-
-	shouldCommit = true
-	return
-}
 func (h handler) handleDeleteRepoSecret(w http.ResponseWriter,
 	r wrappers.UserRepoMuxRequest,
 	dbWrite context.Context) (shouldCommit bool) {

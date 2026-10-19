@@ -53,7 +53,6 @@ func AddHandlers(userRepoMux wrappers.UserRepoMux,
 	userRepoMux.HandleFuncW("POST "+routes.RepoGitMirrorEnabledPattern, h.handlePostGitMirrorEnabled)
 	userRepoMux.HandleFuncW("POST "+routes.RepoGitMirrorUrlPattern, h.handlePostGitMirrorUrl)
 	// Secrets
-	userRepoMux.HandleFuncW("PUT "+routes.RepoSettingsSecret, h.handlePutSetRepoSecret)
 	userRepoMux.HandleFuncW("DELETE "+routes.RepoSettingsSecret, h.handleDeleteRepoSecret)
 	userRepoMux.HandleFuncW("POST "+routes.RepoSettingsSecretsBulk, h.handlePostSetRepoSecretsBulk)
 

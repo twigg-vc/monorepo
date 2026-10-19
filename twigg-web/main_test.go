@@ -212,27 +212,34 @@ func TestRepoSettingsPage(t *testing.T) {
 		"katara", "</repo-settings>", "</twigg-app>", "</body>")
 }
 
-func TestRepoSettingsPage_PutAndDeleteSecret(t *testing.T) {
+func TestRepoSettingsPage_CreateAndDeleteSecret(t *testing.T) {
 	srv := GetMockServer(t)
 	b := NewTestBrowser(srv.C.PublicUrl, t)
 
 	MockUserOAuthSignIn(srv, b, "aang@twigg.vc")
-	// Put
-	b.Put("/aang/BookOne/settings/repo-secret", map[string]string{
-		routes.RepoSecretNameParamName:  "satoshi-private-key",
-		routes.RepoSecretValueParamName: "we will never know",
-	}, http.StatusOK)
+	// Create
+	status := b.PostJson("/aang/BookOne/settings/repo-secrets", map[string]any{
+		"Secrets": []map[string]string{{"Name": "satoshi-private-key", "Value": "we will never know"}},
+	})
+	if status != http.StatusOK {
+		t.Fatalf("unexpected status %d. body=%s", status, b.lastResponse)
+	}
+	if strings.Contains(string(b.lastResponse), "secret already exist") {
+		t.Fatalf("unexpected error creating secret: %s", b.lastResponse)
+	}
 	b.Get("/aang/BookOne/settings")
 	b.CheckCurrentPageContains("satoshi-private-key")
 	b.CheckCurrentPageNotContains("we will never know")
-	// Put with already existing secret name overwrites it
-	b.Put("/aang/BookOne/settings/repo-secret", map[string]string{
-		routes.RepoSecretNameParamName:  "satoshi-private-key",
-		routes.RepoSecretValueParamName: "i don't know",
-	}, http.StatusOK)
-	b.Get("/aang/BookOne/settings")
-	b.CheckCurrentPageContains("satoshi-private-key")
-	b.CheckCurrentPageNotContains("i don't know")
+	// Create with already existing secret name reports an error
+	status = b.PostJson("/aang/BookOne/settings/repo-secrets", map[string]any{
+		"Secrets": []map[string]string{{"Name": "satoshi-private-key", "Value": "or will we?"}},
+	})
+	if status != http.StatusOK {
+		t.Fatalf("unexpected status %d. body=%s", status, b.lastResponse)
+	}
+	if !strings.Contains(string(b.lastResponse), "secret already exist") {
+		t.Fatalf("expected already exist error, got: %s", b.lastResponse)
+	}
 
 	// Delete
 	b.Delete("/aang/BookOne/settings/repo-secret", map[string]string{
@@ -247,11 +254,16 @@ func TestRepoSettingsPage_ValidateReservedSecrets(t *testing.T) {
 	b := NewTestBrowser(srv.C.PublicUrl, t)
 
 	MockUserOAuthSignIn(srv, b, "aang@twigg.vc")
-	// Put
-	b.Put("/aang/BookOne/settings/repo-secret", map[string]string{
-		routes.RepoSecretNameParamName:  reposervice.GitMirrorUrlSecretName,
-		routes.RepoSecretValueParamName: "i don't know",
-	}, http.StatusBadRequest)
+	// Create
+	status := b.PostJson("/aang/BookOne/settings/repo-secrets", map[string]any{
+		"Secrets": []map[string]string{{"Name": reposervice.GitMirrorUrlSecretName, "Value": "should return error for reserved secret"}},
+	})
+	if status != http.StatusOK {
+		t.Fatalf("unexpected status %d. body=%s", status, b.lastResponse)
+	}
+	if !strings.Contains(string(b.lastResponse), "reserved secret name") {
+		t.Fatalf("expected reserved name error, got: %s", b.lastResponse)
+	}
 
 	// Delete
 	b.Delete("/aang/BookOne/settings/repo-secret", map[string]string{
@@ -3134,18 +3146,16 @@ func TestTwiggWebClient_GetSecretValsFromTwiggWeb(t *testing.T) {
 	srv := GetMockServer(t)
 	b := NewTestBrowser(srv.C.PublicUrl, t)
 	MockUserOAuthSignIn(srv, b, "aang@twigg.vc")
-	b.Put("/aang/BookOne/settings/repo-secret", map[string]string{
-		routes.RepoSecretNameParamName:  "aaa",
-		routes.RepoSecretValueParamName: "value-a",
-	}, http.StatusOK)
-	b.Put("/aang/BookOne/settings/repo-secret", map[string]string{
-		routes.RepoSecretNameParamName:  "bbb",
-		routes.RepoSecretValueParamName: "value-b",
-	}, http.StatusOK)
-	b.Put("/aang/BookOne/settings/repo-secret", map[string]string{
-		routes.RepoSecretNameParamName:  "NOT-ALLOWED-SECRET",
-		routes.RepoSecretValueParamName: "random-value",
-	}, http.StatusOK)
+	status := b.PostJson("/aang/BookOne/settings/repo-secrets", map[string]any{
+		"Secrets": []map[string]string{
+			{"Name": "aaa", "Value": "value-a"},
+			{"Name": "bbb", "Value": "value-b"},
+			{"Name": "NOT-ALLOWED-SECRET", "Value": "random-value"},
+		},
+	})
+	if status != http.StatusOK {
+		t.Fatalf("unexpected status %d. body=%s", status, b.lastResponse)
+	}
 
 	// Happy path:
 	twToken, err := twiggtoken.NewTwiggToken(
