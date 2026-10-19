@@ -29,8 +29,7 @@ func GetFlags(configName string, repoOwnerUsername string, currentUsername strin
 			EnabledForReposOfFriends(repoOwnerUsername),
 		SearchCommitsUi: true,
 		ShowBugs:        true,
-		SearchBugsUi: EnabledOutsideProd(configName) ||
-			EnabledForReposOfTwiggers(repoOwnerUsername),
+		SearchBugsUi: true,
 		BugMethodsFromCliAreEnabled: true,
 	}
 }
