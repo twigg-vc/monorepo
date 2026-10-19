@@ -212,28 +212,20 @@ func TestRepoSettingsPage(t *testing.T) {
 		"katara", "</repo-settings>", "</twigg-app>", "</body>")
 }
 
-func TestRepoSettingsPage_PostPutAndDeleteSecret(t *testing.T) {
+func TestRepoSettingsPage_PutAndDeleteSecret(t *testing.T) {
 	srv := GetMockServer(t)
 	b := NewTestBrowser(srv.C.PublicUrl, t)
 
 	MockUserOAuthSignIn(srv, b, "aang@twigg.vc")
-	// Post
-	b.Post("/aang/BookOne/settings/repo-secret", map[string]string{
+	// Put
+	b.Put("/aang/BookOne/settings/repo-secret", map[string]string{
 		routes.RepoSecretNameParamName:  "satoshi-private-key",
 		routes.RepoSecretValueParamName: "we will never know",
-	})
+	}, http.StatusOK)
 	b.Get("/aang/BookOne/settings")
 	b.CheckCurrentPageContains("satoshi-private-key")
 	b.CheckCurrentPageNotContains("we will never know")
-	// Post with already existing secret name
-	b.CheckPostErrors("/aang/BookOne/settings/repo-secret", map[string]string{
-		routes.RepoSecretNameParamName:  "satoshi-private-key",
-		routes.RepoSecretValueParamName: "or will we?",
-	})
-	b.Get("/aang/BookOne/settings")
-	b.CheckCurrentPageContains("satoshi-private-key")
-
-	// Put
+	// Put with already existing secret name overwrites it
 	b.Put("/aang/BookOne/settings/repo-secret", map[string]string{
 		routes.RepoSecretNameParamName:  "satoshi-private-key",
 		routes.RepoSecretValueParamName: "i don't know",
@@ -255,11 +247,6 @@ func TestRepoSettingsPage_ValidateReservedSecrets(t *testing.T) {
 	b := NewTestBrowser(srv.C.PublicUrl, t)
 
 	MockUserOAuthSignIn(srv, b, "aang@twigg.vc")
-	// Post
-	b.CheckPostErrors("/aang/BookOne/settings/repo-secret", map[string]string{
-		routes.RepoSecretNameParamName:  reposervice.GitMirrorUrlSecretName,
-		routes.RepoSecretValueParamName: "should return error for reserved secret",
-	})
 	// Put
 	b.Put("/aang/BookOne/settings/repo-secret", map[string]string{
 		routes.RepoSecretNameParamName:  reposervice.GitMirrorUrlSecretName,
@@ -3147,18 +3134,18 @@ func TestTwiggWebClient_GetSecretValsFromTwiggWeb(t *testing.T) {
 	srv := GetMockServer(t)
 	b := NewTestBrowser(srv.C.PublicUrl, t)
 	MockUserOAuthSignIn(srv, b, "aang@twigg.vc")
-	b.Post("/aang/BookOne/settings/repo-secret", map[string]string{
+	b.Put("/aang/BookOne/settings/repo-secret", map[string]string{
 		routes.RepoSecretNameParamName:  "aaa",
 		routes.RepoSecretValueParamName: "value-a",
-	})
-	b.Post("/aang/BookOne/settings/repo-secret", map[string]string{
+	}, http.StatusOK)
+	b.Put("/aang/BookOne/settings/repo-secret", map[string]string{
 		routes.RepoSecretNameParamName:  "bbb",
 		routes.RepoSecretValueParamName: "value-b",
-	})
-	b.Post("/aang/BookOne/settings/repo-secret", map[string]string{
+	}, http.StatusOK)
+	b.Put("/aang/BookOne/settings/repo-secret", map[string]string{
 		routes.RepoSecretNameParamName:  "NOT-ALLOWED-SECRET",
 		routes.RepoSecretValueParamName: "random-value",
-	})
+	}, http.StatusOK)
 
 	// Happy path:
 	twToken, err := twiggtoken.NewTwiggToken(
