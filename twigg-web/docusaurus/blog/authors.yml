@@ -7,3 +7,8 @@ andre:
   socials:
     linkedin: andrebianchessi
     github: andrebianchessi
+marcos:
+  name: Marcos Bianchessi
+  title: Twigg Founder
+  image_url: https://github.com/mark-glue.png
+  page: true

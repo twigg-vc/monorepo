@@ -9,8 +9,8 @@ Twigg Links is a browser extension that turns short links typed in the address b
 
 ## Install
 
-Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/fdbalodlehkpnmaocfhhjfdbhhbeoelg).
-Firefox is also supported: see the [extension's README](https://github.com/twigg-vc/monorepo/tree/master/twigg-chrome) to load it from source.
+- Chrome: install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/fdbalodlehkpnmaocfhhjfdbhhbeoelg).
+- Firefox: install it from [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/twigg-links/).
 
 After installing, click the extension's toolbar icon, enter your repository as `user/repo` (for example `twigg/monorepo`) or paste a link to it, and click **Save**.
 

@@ -13,11 +13,12 @@ Type a short link in the address bar to open it in your Twigg repo:
 To add a new kind of link, add it to `LINK_KINDS` in `golinks.js` and add its
 host to `host_permissions` in `manifest.json`.
 
-## Install from the Chrome Web Store
+## Install from the stores
 
-Install [Twigg Links](https://chromewebstore.google.com/detail/fdbalodlehkpnmaocfhhjfdbhhbeoelg)
-from the Chrome Web Store. The sections below are for running the extension
-from source.
+- Chrome: [Chrome Web Store](https://chromewebstore.google.com/detail/fdbalodlehkpnmaocfhhjfdbhhbeoelg)
+- Firefox: [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/twigg-links/)
+
+The sections below are for running the extension from source.
 
 ## Install in Chrome (unpacked)
 
@@ -38,10 +39,9 @@ After you edit any file, click the reload icon on the extension's card in
 
 After editing files, click **Reload** on the extension in `about:debugging`.
 Temporary add-ons are removed when the browser restarts. For permanent
-installation, submit `twigg-firefox.zip` to
-[Mozilla Add-ons](https://addons.mozilla.org/developers/) for signing and
-distribution. An unlisted signed XPI
-can also be distributed directly.
+installation, use the [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/twigg-links/) listing. New versions are
+published by submitting `twigg-firefox.zip` to
+[Mozilla Add-ons](https://addons.mozilla.org/developers/) for signing.
 
 ## How it works
 

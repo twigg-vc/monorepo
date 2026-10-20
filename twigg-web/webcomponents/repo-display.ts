@@ -148,7 +148,7 @@ export class RepoDisplay extends LitElement {
                     <div
                     class="tab ${this.TabName === "commits" ? "active" : ""}"
                     title="Commits"
-                    @click=${() => (this.TabName = "commits")}
+                    @click=${() => this.selectTab("commits")}
                     >
                         <twigg-icon class="tab-icon" icon="Bars"></twigg-icon>
                         <span class="tab-text">Commits</span>
@@ -156,7 +156,7 @@ export class RepoDisplay extends LitElement {
                         <div
                             class="tab ${this.TabName === "commits graph" ? "active" : ""}"
                             title="Commit graph"
-                            @click=${() => (this.TabName = "commits graph")}
+                            @click=${() => this.selectTab("commits graph")}
                         >
                             <twigg-icon class="tab-icon" icon="Tree"></twigg-icon>
                             <span class="tab-text">Commit graph</span>
@@ -167,7 +167,7 @@ export class RepoDisplay extends LitElement {
                         <div
                             class="tab ${this.TabName === "CD" ? "active" : ""}"
                             title="CD"
-                            @click=${() => (this.TabName = "CD")}
+                            @click=${() => this.selectTab("CD")}
                         >
                             <twigg-icon class="tab-icon" icon="RocketLaunch"></twigg-icon>
                             <span class="tab-text">CD</span>
@@ -195,11 +195,32 @@ export class RepoDisplay extends LitElement {
             cls = "tab"
         }
         return html`
-            <div class=${cls} title="Bugs" @click=${() => (this.TabName = "bugs")}>
+            <div class=${cls} title="Bugs" @click=${() => this.selectTab("bugs")}>
                 <twigg-icon class="tab-icon" icon="Bug"></twigg-icon>
                 <span class="tab-text">Bugs</span>
             </div>
         `
+    }
+
+    private selectTab(tab: TabName) {
+        this.TabName = tab
+        const url = new URL(window.location.href)
+        switch (tab) {
+            case "commits":
+                url.searchParams.delete("tab")
+                break
+            case "commits graph":
+                url.searchParams.set("tab", "commit-graph")
+                break
+            case "CD":
+                url.searchParams.set("tab", "cd")
+                break
+            case "bugs":
+                url.searchParams.set("tab", "bugs")
+                break
+        }
+        // Match commit search: keep the URL shareable without adding history entries.
+        history.replaceState(history.state, "", url)
     }
 
     private renderTabContent() {

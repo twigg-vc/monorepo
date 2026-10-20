@@ -10,6 +10,7 @@
   <a href="https://twigg.vc/docs/v/2/"><img src="https://img.shields.io/badge/Docs-twigg.vc-7c5cff" alt="Documentation"></a>
   <a href="https://twigg.vc/twigg/monorepo"><img src="https://img.shields.io/badge/Source-twigg.vc%2Ftwigg%2Fmonorepo-2ea44f" alt="Source repository"></a>
   <a href="https://chromewebstore.google.com/detail/fdbalodlehkpnmaocfhhjfdbhhbeoelg"><img src="https://img.shields.io/badge/Chrome%20Web%20Store-Twigg%20Links-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Web Store"></a>
+  <a href="https://addons.mozilla.org/firefox/addon/twigg-links/"><img src="https://img.shields.io/badge/Firefox%20Add--ons-Twigg%20Links-FF7139?logo=firefoxbrowser&logoColor=white" alt="Firefox Add-ons"></a>
   <a href="https://discord.gg/ncPE6cDkC4"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
 
@@ -56,7 +57,7 @@ It offers [Git Mirror](https://twigg.vc/docs/v/2/git-mirror/) functionality: all
 
 See a tutorial [here](https://twigg.vc/docs/v/2/category/getting-started).
 
-Twigg also ships a [VS Code extension](https://marketplace.visualstudio.com/items?itemName=Twigg.twigg) and [Twigg Links](https://chromewebstore.google.com/detail/fdbalodlehkpnmaocfhhjfdbhhbeoelg), a browser extension that opens `go/<alias>`, `b/1234` and `c/1234` typed in the address bar in your repository ([docs](https://twigg.vc/docs/v/2/twigg-links/)).
+Twigg also ships a [VS Code extension](https://marketplace.visualstudio.com/items?itemName=Twigg.twigg) and Twigg Links, a browser extension for [Chrome](https://chromewebstore.google.com/detail/fdbalodlehkpnmaocfhhjfdbhhbeoelg) and [Firefox](https://addons.mozilla.org/firefox/addon/twigg-links/) that opens `go/<alias>`, `b/1234` and `c/1234` typed in the address bar in your repository ([docs](https://twigg.vc/docs/v/2/twigg-links/)).
 
 
 # FAQ
