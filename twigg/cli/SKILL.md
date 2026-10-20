@@ -55,3 +55,10 @@ new version.
 Rebase, amend and restore may conflict. Twigg then creates a new commit version
 with conflict markers. `goto` it, fix the files listed by `tw status`, and
 `tw amend`.
+
+## GOLINKS file
+
+A `GOLINKS` file at the repository root defines go link aliases. Each line is
+`<alias> <url>`. Blank lines and lines starting with `#` are skipped. Aliases
+may only contain letters, numbers, `_` and `-` and must be unique; URLs must be
+`http(s)://`. Any bad line makes every go link of the repository fail.
