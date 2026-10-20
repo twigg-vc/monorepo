@@ -9,6 +9,7 @@ import (
 	"monorepo/twigg/commit"
 	"reflect"
 	"testing"
+	"time"
 )
 
 const searchRepoId = 7
@@ -126,6 +127,44 @@ func Test_SearchCommits_FiltersByState(t *testing.T) {
 	f.State = commitsearch.StateSubmitted
 	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{3}) {
 		t.Fatalf("submitted commits are %v, want [3]", got)
+	}
+}
+
+func Test_SearchCommits_ReturnsTheCommitsThatChangedLastFirst(t *testing.T) {
+	db := getNewDb(t)
+	w, closeW, _, err := db.BeginWrite()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(closeW)
+	setUpSearchableUsers(t, db, w)
+	// c1 was submitted last, after c3 last changed
+	commits := []commit.Commit{
+		{L: 1, AuthorUserId: 1, Message: "a", IsSubmitted: true,
+			CreatedOn: time.UnixMilli(3)},
+		{L: 2, AuthorUserId: 1, Message: "b", IsSubmitted: true,
+			CreatedOn: time.UnixMilli(1)},
+		{L: 3, AuthorUserId: 1, Message: "c", CreatedOn: time.UnixMilli(2)},
+	}
+	for _, c := range commits {
+		if err := db.SetCommit(w, "owner", searchRepoId, c); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	f := commitsearch.NewFilter(searchRepoId)
+	got, next := searchLocalIds(t, db, w, f, "", 2)
+	if !reflect.DeepEqual(got, []uint64{1, 3}) {
+		t.Fatalf("found %v, want [1 3]", got)
+	}
+	got, _ = searchLocalIds(t, db, w, f, next, 2)
+	if !reflect.DeepEqual(got, []uint64{2}) {
+		t.Fatalf("found %v on the second page, want [2]", got)
+	}
+
+	f.State = commitsearch.StateSubmitted
+	if got, _ := searchLocalIds(t, db, w, f, "", 100); !reflect.DeepEqual(got, []uint64{1, 2}) {
+		t.Fatalf("submitted commits are %v, want [1 2]", got)
 	}
 }
 

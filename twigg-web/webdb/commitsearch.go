@@ -26,8 +26,10 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 	// A text search is driven by the text index and ordered by its rows.
 	// A commit has one row, rewritten by each newer version, so the commits
 	// that changed last come first.
-	// Any other search is driven by the commits themselves, unless it asks
-	// for a review status.
+	// Any other search is driven by the commits themselves, also with the
+	// commits that changed last first, unless it asks for a review status.
+	// A submit is the last change of a commit, so submitted commits come in
+	// submit order.
 	// This is done because fts5 is efficient for text macthing, but any other
 	// "order by" is O(number of matches), which would make queries like "fix"
 	// be very inneficient (as basically all commits would be read).
@@ -42,7 +44,7 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 	var args []any
 	if match != "" {
 		q.WriteString(`
-			SELECT t.commitId, t.rowid FROM commit_search_text t
+			SELECT t.commitId, 0, t.rowid FROM commit_search_text t
 			JOIN twigg_commit_search s
 				ON s.repoId = t.repoId AND s.commitId = t.commitId
 			WHERE t.repoId = ? AND commit_search_text MATCH ?`)
@@ -53,7 +55,7 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 		}
 	} else if searchesReviews {
 		q.WriteString(`
-			SELECT s.commitId, 0 FROM reviews r
+			SELECT s.commitId, 0, 0 FROM reviews r
 			JOIN twigg_commit_search s
 				ON s.repoId = r.repoId AND s.commitId = r.commitId
 			WHERE r.repoId = ? AND r.reviewStatus = ?`)
@@ -64,12 +66,13 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 		}
 	} else {
 		q.WriteString(`
-			SELECT s.commitId, 0 FROM twigg_commit_search s
+			SELECT s.commitId, s.createdOnUnixMilli, 0 FROM twigg_commit_search s
 			WHERE s.repoId = ?`)
 		args = append(args, f.RepoId)
 		if hasCursor {
-			q.WriteString(` AND s.commitId < ?`)
-			args = append(args, parsedCursor.CommitId)
+			q.WriteString(` AND (s.createdOnUnixMilli, s.commitId) < (?, ?)`)
+			args = append(args, parsedCursor.CreatedOnUnixMilli,
+				parsedCursor.CommitId)
 		}
 	}
 
@@ -118,7 +121,7 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 		// Same as s.commitId, but reading it from the driving index.
 		q.WriteString(` ORDER BY r.commitId DESC LIMIT ?`)
 	} else {
-		q.WriteString(` ORDER BY s.commitId DESC LIMIT ?`)
+		q.WriteString(` ORDER BY s.createdOnUnixMilli DESC, s.commitId DESC LIMIT ?`)
 	}
 	// One commit more than the page is read to know whether there is another
 	// page, so that the last one says it is the last.
@@ -151,14 +154,17 @@ func (db webDb) searchCommits(r context.Context, f commitsearch.Filter, cursor s
 	// Prepare the next cursor
 	last := queryResults[len(queryResults)-1]
 	nextCursor := searchCommitsCursor{
-		CommitId:        last.commitId,
-		TextSearchRowId: last.textSearchRowId,
+		CommitId:           last.commitId,
+		CreatedOnUnixMilli: last.createdOnUnixMilli,
+		TextSearchRowId:    last.textSearchRowId,
 	}
 	return commits, nextCursor.encode(), nil
 }
 
 type searchedCommit struct {
 	commitId commit.LocalId
+	// 0 when the search did not read the commits index
+	createdOnUnixMilli int64
 	// 0 when the search did not read the text index
 	textSearchRowId int64
 }
@@ -172,7 +178,7 @@ func (db webDb) getSearchedCommits(r context.Context, query string, args []any) 
 	defer rows.Close()
 	for rows.Next() {
 		var s searchedCommit
-		err = rows.Scan(&s.commitId, &s.textSearchRowId)
+		err = rows.Scan(&s.commitId, &s.createdOnUnixMilli, &s.textSearchRowId)
 		if err != nil {
 			return nil, err
 		}
@@ -195,8 +201,9 @@ func ftsMatchQuery(text string) string {
 }
 
 type searchCommitsCursor struct {
-	CommitId        commit.LocalId
-	TextSearchRowId int64
+	CommitId           commit.LocalId
+	CreatedOnUnixMilli int64
+	TextSearchRowId    int64
 }
 
 func (c searchCommitsCursor) encode() string {
