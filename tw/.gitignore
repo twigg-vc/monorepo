@@ -1,6 +1,8 @@
 __debug*
 bin/tw_linux_latest
 bin/tw_linux_latest_dev
+bin/tw_linux_arm64_latest
+bin/tw_linux_arm64_latest_dev
 bin/tw_mac_intel_latest
 bin/tw_mac_intel_latest_dev
 bin/tw_mac_silicon_latest
