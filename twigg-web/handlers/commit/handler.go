@@ -1458,7 +1458,7 @@ func (hl handler) linkSubmittedCommitToBugs(w context.Context, repoId uint64, c 
 		if bugNumber <= 0 {
 			continue
 		}
-		err := hl.db.CloseBugIfNotClosed(w, repoId, uint64(bugNumber), c.AuthorUserId)
+		err := hl.db.CloseBugIfNotClosed(w, repoId, uint64(bugNumber), c.AuthorUserId, c.L)
 		if err != nil {
 			return fmt.Errorf("failed closing bug (bug=%d): %w", bugNumber, err)
 		}

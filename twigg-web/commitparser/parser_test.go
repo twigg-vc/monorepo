@@ -69,8 +69,18 @@ func TestParseCommitDescription(t *testing.T) {
 			want: commitparser.Tags{Bugs: []int64{42}},
 		},
 		{
+			name: "BUG=b/<number>",
+			desc: "fix the tea kettle\n\nBUG=b/42\nbug: B/17",
+			want: commitparser.Tags{Bugs: []int64{42, 17}},
+		},
+		{
+			name: "malformed BUG=b/ with no number does not match",
+			desc: "BUG=b/",
+			want: commitparser.Tags{},
+		},
+		{
 			name: "b/ and BUG= tags for the same bug are deduplicated",
-			desc: "fix the tea kettle\n\nb/42\nBUG=42\nBUG=17",
+			desc: "fix the tea kettle\n\nb/42\nBUG=42\nBUG=b/42\nBUG=17",
 			want: commitparser.Tags{Bugs: []int64{42, 17}},
 		},
 		{
@@ -131,6 +141,21 @@ func TestParseCommitDescription(t *testing.T) {
 		{
 			name: "misspelled variant does not match",
 			desc: "fix the tea kettle\n\nFIXD=42\nCLOSING=42",
+			want: commitparser.Tags{},
+		},
+		{
+			name: "FIX=b/<number>",
+			desc: "fix the tea kettle\n\nFIX=b/42\ncloses: B/17",
+			want: commitparser.Tags{Fixes: []int64{42, 17}},
+		},
+		{
+			name: "FIX=<number> and FIX=b/<number> for the same bug are deduplicated",
+			desc: "fix the tea kettle\n\nFIX=42\nFIX=b/42",
+			want: commitparser.Tags{Fixes: []int64{42}},
+		},
+		{
+			name: "malformed FIX=b/ with no number does not match",
+			desc: "FIX=b/",
 			want: commitparser.Tags{},
 		},
 		{

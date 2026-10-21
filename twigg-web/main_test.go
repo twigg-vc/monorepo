@@ -1332,6 +1332,10 @@ func TestSubmitCommitWithFixesTagClosesTheBug(t *testing.T) {
 	if len(list.Bugs) != 1 || list.Bugs[0].Number != 1 {
 		t.Fatalf("expected only b/1 to be closed, got %+v", list)
 	}
+	b.Get("/aang/BookOne/b/1")
+	b.CheckCurrentPageContains("closing-commit", "commitl")
+	tw.Run("bug-get", "1")
+	tw.CheckOutContains("closed the bug with c/1")
 }
 
 func TestSetNextServerId(t *testing.T) {

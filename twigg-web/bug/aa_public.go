@@ -57,6 +57,7 @@ const (
 	EventKind_TitleEdit       EventKind = 4
 	EventKind_Assignment      EventKind = 5
 	EventKind_SubmittedCommit EventKind = 6
+	EventKind_ClosingCommit   EventKind = 7
 )
 
 // Something that happened to a bug, shown in its timeline. Only the details
@@ -72,6 +73,7 @@ type Event struct {
 	TitleEdit       TitleEdit
 	Assignment      Assignment
 	SubmittedCommit SubmittedCommit
+	ClosingCommit   ClosingCommit
 }
 
 func NewEvent(id uint64, kind EventKind, authorUserId int64, createdOn time.Time) Event {
@@ -134,4 +136,13 @@ type SubmittedCommit struct {
 
 func NewSubmittedCommit(commitL uint64) SubmittedCommit {
 	return SubmittedCommit{CommitL: commitL}
+}
+
+// A submitted commit that closed the bug.
+type ClosingCommit struct {
+	CommitL uint64
+}
+
+func NewClosingCommit(commitL uint64) ClosingCommit {
+	return ClosingCommit{CommitL: commitL}
 }

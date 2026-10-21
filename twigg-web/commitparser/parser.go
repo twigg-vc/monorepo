@@ -8,11 +8,21 @@ import (
 
 const maxDescriptionLenToParse = 10_000
 
-// Matches a whole line (after trimming) like "b/1234", "BUG=1234", "bug= 1234" or "BUG: 1234"
-var bugTagRe = regexp.MustCompile(`(?i)^(?:b/|bug[=:]\s*)(\d+)$`)
+// Matches a whole line (after trimming), case-insensitively:
+//   - "b/1234"
+//   - "BUG=1234" or "BUG:1234"
+//   - "BUG=b/1234" or "BUG:b/1234"
+//
+// Whitespace is allowed after "=" or ":".
+var bugTagRe = regexp.MustCompile(`(?i)^(?:b/|bug[=:]\s*(?:b/)?)(\d+)$`)
 
-// Matches a whole line (after trimming) like "FIXES=1234", "fixed: 1234" or "CLOSE=1234"
-var fixesTagRe = regexp.MustCompile(`(?i)^(?:fix(?:es|ed)?|close[sd]?)[=:]\s*(\d+)$`)
+// Matches a whole line (after trimming), case-insensitively:
+//   - "<KEYWORD>=1234" or "<KEYWORD>:1234"
+//   - "<KEYWORD>=b/1234" or "<KEYWORD>:b/1234"
+//
+// where <KEYWORD> is FIX, FIXES, FIXED, CLOSE, CLOSES or CLOSED. Whitespace is
+// allowed after "=" or ":".
+var fixesTagRe = regexp.MustCompile(`(?i)^(?:fix(?:es|ed)?|close[sd]?)[=:]\s*(?:b/)?(\d+)$`)
 
 func parseCommitDescription(desc string) Tags {
 	if len(desc) > maxDescriptionLenToParse {

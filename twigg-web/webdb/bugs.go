@@ -188,31 +188,39 @@ func (db webDb) SetBugStatus(writeCtx context.Context, repoId uint64, number uin
 	if err != nil {
 		return bug.Event{}, false, fmt.Errorf("failed inserting bug status change: %w", err)
 	}
+	err = db.updateBugStatus(writeCtx, repoId, number, status)
+	if err != nil {
+		return bug.Event{}, false, err
+	}
+	e.StatusChange = bug.NewStatusChange(status)
+	return e, false, nil
+}
+
+// Also moves the bug between the repo's open and closed counts. The caller
+// must record the change in the bug's timeline.
+func (db webDb) updateBugStatus(writeCtx context.Context, repoId uint64, number uint64,
+	status bug.Status) error {
 	var oldStatus bug.Status
-	err = db.s.QueryRow(writeCtx, `
+	err := db.s.QueryRow(writeCtx, `
 		SELECT status FROM bugs WHERE repoId = ? AND number = ?
 	`, repoId, number).Scan(&oldStatus)
 	if err != nil {
-		return bug.Event{}, false, fmt.Errorf("failed getting bug status (repoId=%v number=%v): %w", repoId, number, err)
+		return fmt.Errorf("failed getting bug status (repoId=%v number=%v): %w", repoId, number, err)
 	}
 	_, err = db.s.Exec(writeCtx, `
 		UPDATE bugs SET status = ? WHERE repoId = ? AND number = ?
 	`, status, repoId, number)
 	if err != nil {
-		return bug.Event{}, false, fmt.Errorf("failed setting bug status (repoId=%v number=%v): %w", repoId, number, err)
+		return fmt.Errorf("failed setting bug status (repoId=%v number=%v): %w", repoId, number, err)
 	}
-	if oldStatus != status {
-		err = db.addRepoBugCount(writeCtx, repoId, oldStatus, -1)
-		if err != nil {
-			return bug.Event{}, false, err
-		}
-		err = db.addRepoBugCount(writeCtx, repoId, status, 1)
-		if err != nil {
-			return bug.Event{}, false, err
-		}
+	if oldStatus == status {
+		return nil
 	}
-	e.StatusChange = bug.NewStatusChange(status)
-	return e, false, nil
+	err = db.addRepoBugCount(writeCtx, repoId, oldStatus, -1)
+	if err != nil {
+		return err
+	}
+	return db.addRepoBugCount(writeCtx, repoId, status, 1)
 }
 
 func (db webDb) EditBugDescription(writeCtx context.Context, repoId uint64, number uint64,
@@ -313,7 +321,7 @@ func (db webDb) AddBugSubmittedCommit(writeCtx context.Context, repoId uint64, n
 }
 
 func (db webDb) CloseBugIfNotClosed(writeCtx context.Context, repoId uint64, number uint64,
-	authorId int64) error {
+	authorId int64, commitL uint64) error {
 	b, isNotFoundErr, err := db.GetBug(writeCtx, repoId, number)
 	if isNotFoundErr {
 		return nil
@@ -324,8 +332,17 @@ func (db webDb) CloseBugIfNotClosed(writeCtx context.Context, repoId uint64, num
 	if b.Status == bug.Status_Closed {
 		return nil
 	}
-	_, _, err = db.SetBugStatus(writeCtx, repoId, number, authorId, bug.Status_Closed)
-	return err
+	e, _, err := db.insertBugEvent(writeCtx, repoId, number, bug.EventKind_ClosingCommit, authorId)
+	if err != nil {
+		return err
+	}
+	_, err = db.s.Exec(writeCtx, `
+		INSERT INTO bug_closing_commits (eventId, commitL) VALUES (?, ?)
+	`, e.Id, commitL)
+	if err != nil {
+		return fmt.Errorf("failed inserting bug closing commit: %w", err)
+	}
+	return db.updateBugStatus(writeCtx, repoId, number, bug.Status_Closed)
 }
 
 // Also bumps the bug's updatedOn and its count of the kind. The caller must
@@ -385,7 +402,8 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 			COALESCE(d.oldBody, ''),
 			COALESCE(t.oldTitle, ''),
 			COALESCE(a.newAssigneeUserId, 0),
-			COALESCE(sc.commitL, 0)
+			COALESCE(sc.commitL, 0),
+			COALESCE(cc.commitL, 0)
 		FROM bug_events e
 		LEFT JOIN bug_comments c ON c.eventId = e.eventId
 		LEFT JOIN bug_status_changes s ON s.eventId = e.eventId
@@ -393,6 +411,7 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 		LEFT JOIN bug_title_edits t ON t.eventId = e.eventId
 		LEFT JOIN bug_assignments a ON a.eventId = e.eventId
 		LEFT JOIN bug_submitted_commits sc ON sc.eventId = e.eventId
+		LEFT JOIN bug_closing_commits cc ON cc.eventId = e.eventId
 		WHERE e.bugId = (SELECT bugId FROM bugs WHERE repoId = ? AND number = ?)
 			AND e.eventId < ?
 		ORDER BY e.eventId DESC
@@ -410,9 +429,9 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 		var newStatus bug.Status
 		var oldBody, oldTitle string
 		var newAssigneeUserId int64
-		var commitL uint64
+		var commitL, closingCommitL uint64
 		err := rows.Scan(&e.Id, &e.Kind, &e.AuthorUserId, &createdOn, &commentBody,
-			&newStatus, &oldBody, &oldTitle, &newAssigneeUserId, &commitL)
+			&newStatus, &oldBody, &oldTitle, &newAssigneeUserId, &commitL, &closingCommitL)
 		if err != nil {
 			return nil, "", fmt.Errorf("failed scanning bug event: %w", err)
 		}
@@ -430,6 +449,8 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 			e.Assignment = bug.NewAssignment(newAssigneeUserId)
 		case bug.EventKind_SubmittedCommit:
 			e.SubmittedCommit = bug.NewSubmittedCommit(commitL)
+		case bug.EventKind_ClosingCommit:
+			e.ClosingCommit = bug.NewClosingCommit(closingCommitL)
 		default:
 			return nil, "", fmt.Errorf("unknown bug event kind %d (eventId=%d)", e.Kind, e.Id)
 		}

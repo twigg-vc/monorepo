@@ -307,6 +307,8 @@ export class BugPage extends LitElement {
                 return this.renderTitleEdit(e, titleAfterEdit)
             case "submitted-commit":
                 return this.renderSubmittedCommit(e)
+            case "closing-commit":
+                return this.renderClosingCommit(e)
             case "assignment":
                 return this.renderAssignment(e)
         }
@@ -349,6 +351,21 @@ export class BugPage extends LitElement {
                 <username-tag .Username=${e.AuthorUsername}></username-tag>
                 <span title=${FormatDateTime(e.CreatedOn)}>
                     submitted <a href=${commitUrl}>c/${commitL}</a>
+                    ${FormatRelativeTime(e.CreatedOn)}
+                </span>
+            </div>
+        `
+    }
+
+    private renderClosingCommit(e: BugEvent) {
+        const commitL = e.ClosingCommit!.CommitL
+        const commitUrl = UrlToCommit(this.RepoOwnerName, this.RepoName, commitL, "feed")
+        return html`
+            <div class="event">
+                <span class="event-icon closed"><twigg-icon icon="Check"></twigg-icon></span>
+                <username-tag .Username=${e.AuthorUsername}></username-tag>
+                <span title=${FormatDateTime(e.CreatedOn)}>
+                    closed this with <a href=${commitUrl}>c/${commitL}</a>
                     ${FormatRelativeTime(e.CreatedOn)}
                 </span>
             </div>

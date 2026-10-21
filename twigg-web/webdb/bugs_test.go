@@ -767,7 +767,7 @@ func TestCloseBugIfNotClosed(t *testing.T) {
 	const closerId = bugsAuthorId + 1
 	b.SetNower(mockNow{now: time.UnixMilli(200)}, t)
 
-	err = b.CloseBugIfNotClosed(w, bugsRepoId, created.Number, closerId)
+	err = b.CloseBugIfNotClosed(w, bugsRepoId, created.Number, closerId, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -781,17 +781,21 @@ func TestCloseBugIfNotClosed(t *testing.T) {
 	}
 	events[0].CreatedOn = time.Time{}
 	want := bug.Event{
-		Id:           1,
-		Kind:         bug.EventKind_StatusChange,
-		AuthorUserId: closerId,
-		CreatedOn:    time.Time{},
-		StatusChange: bug.StatusChange{NewStatus: bug.Status_Closed},
+		Id:            1,
+		Kind:          bug.EventKind_ClosingCommit,
+		AuthorUserId:  closerId,
+		CreatedOn:     time.Time{},
+		ClosingCommit: bug.ClosingCommit{CommitL: 7},
 	}
 	if !reflect.DeepEqual(events[0], want) {
 		t.Fatalf("GetBugEvents: expected %+v, got %+v", want, events[0])
 	}
+	got, _, err := b.GetBug(w, bugsRepoId, created.Number)
+	if err != nil || got.Status != bug.Status_Closed {
+		t.Fatalf("expected a closed bug, got %+v (err=%v)", got, err)
+	}
 
-	err = b.CloseBugIfNotClosed(w, bugsRepoId, created.Number, closerId)
+	err = b.CloseBugIfNotClosed(w, bugsRepoId, created.Number, closerId, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -807,7 +811,7 @@ func TestCloseBugIfNotClosed(t *testing.T) {
 
 func TestCloseBugIfNotClosedMissingBug(t *testing.T) {
 	b, w := newBugsDb(t)
-	err := b.CloseBugIfNotClosed(w, bugsRepoId, 1, bugsAuthorId)
+	err := b.CloseBugIfNotClosed(w, bugsRepoId, 1, bugsAuthorId, 7)
 	if err != nil {
 		t.Fatalf("expected a missing bug to be ignored, got %v", err)
 	}

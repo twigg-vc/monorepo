@@ -1091,11 +1091,12 @@ func (db WebDb) AddBugSubmittedCommit(writeCtx context.Context, repoId uint64, n
 	return db.db.AddBugSubmittedCommit(writeCtx, repoId, number, authorId, commitL)
 }
 
-// Closes the bug and records it in the bug's timeline. Does nothing if the
-// repo has no bug with the number or the bug is already closed.
+// Closes the bug and records the submitted commit (commitL) that closed it in
+// the bug's timeline. Does nothing if the repo has no bug with the number or
+// the bug is already closed.
 func (db WebDb) CloseBugIfNotClosed(writeCtx context.Context, repoId uint64, number uint64,
-	authorId int64) error {
-	return db.db.CloseBugIfNotClosed(writeCtx, repoId, number, authorId)
+	authorId int64, commitL uint64) error {
+	return db.db.CloseBugIfNotClosed(writeCtx, repoId, number, authorId, commitL)
 }
 
 // Returns up to limit of the newest events of the bug's timeline, ordered

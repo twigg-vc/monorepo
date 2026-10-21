@@ -81,6 +81,7 @@ const (
 	FrontendBugEventKind_DescriptionEdit FrontendBugEventKind = "description-edit"
 	FrontendBugEventKind_TitleEdit       FrontendBugEventKind = "title-edit"
 	FrontendBugEventKind_SubmittedCommit FrontendBugEventKind = "submitted-commit"
+	FrontendBugEventKind_ClosingCommit   FrontendBugEventKind = "closing-commit"
 	FrontendBugEventKind_Assignment      FrontendBugEventKind = "assignment"
 )
 
@@ -95,6 +96,7 @@ type FrontendBugEvent struct {
 	DescriptionEdit *bug.DescriptionEdit `json:",omitempty"`
 	TitleEdit       *bug.TitleEdit       `json:",omitempty"`
 	SubmittedCommit *bug.SubmittedCommit `json:",omitempty"`
+	ClosingCommit   *bug.ClosingCommit   `json:",omitempty"`
 	Assignment      *FrontendAssignment  `json:",omitempty"`
 }
 

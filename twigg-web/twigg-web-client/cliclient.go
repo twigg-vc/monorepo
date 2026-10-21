@@ -132,6 +132,9 @@ func bugEventToFrontend(e bug.Event, authorUsername, newAssigneeUsername string)
 	case bug.EventKind_SubmittedCommit:
 		fe.Kind = FrontendBugEventKind_SubmittedCommit
 		fe.SubmittedCommit = &e.SubmittedCommit
+	case bug.EventKind_ClosingCommit:
+		fe.Kind = FrontendBugEventKind_ClosingCommit
+		fe.ClosingCommit = &e.ClosingCommit
 	case bug.EventKind_Assignment:
 		fe.Kind = FrontendBugEventKind_Assignment
 		fe.Assignment = &FrontendAssignment{NewAssigneeUsername: newAssigneeUsername}

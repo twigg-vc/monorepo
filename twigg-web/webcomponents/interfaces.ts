@@ -282,7 +282,7 @@ export interface Bug {
 // Only the details field matching Kind is set
 export interface BugEvent {
     Id: number
-    Kind: "comment" | "status-change" | "description-edit" | "title-edit" | "submitted-commit" | "assignment"
+    Kind: "comment" | "status-change" | "description-edit" | "title-edit" | "submitted-commit" | "closing-commit" | "assignment"
     AuthorUsername: string
     CreatedOn: string
     Comment?: { Body: string }
@@ -290,6 +290,7 @@ export interface BugEvent {
     DescriptionEdit?: { OldBody: string }
     TitleEdit?: { OldTitle: string }
     SubmittedCommit?: { CommitL: number }
+    ClosingCommit?: { CommitL: number }
     Assignment?: { NewAssigneeUsername: string }
 }
 

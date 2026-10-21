@@ -136,6 +136,11 @@ func bugEventString(e twiggwebclient.FrontendBugEvent) string {
 			return who + fmt.Sprintf(" submitted c/%d", e.SubmittedCommit.CommitL)
 		}
 		return who + " submitted a commit"
+	case twiggwebclient.FrontendBugEventKind_ClosingCommit:
+		if e.ClosingCommit != nil {
+			return who + fmt.Sprintf(" closed the bug with c/%d", e.ClosingCommit.CommitL)
+		}
+		return who + " closed the bug with a commit"
 	case twiggwebclient.FrontendBugEventKind_Assignment:
 		if e.Assignment != nil && e.Assignment.NewAssigneeUsername != "" {
 			return who + " assigned the bug to " + e.Assignment.NewAssigneeUsername
