@@ -758,3 +758,57 @@ func TestAddBugSubmittedCommitFails(t *testing.T) {
 		t.Fatalf("expected no events, got %+v (err=%v)", events, err)
 	}
 }
+func TestCloseBugIfNotClosed(t *testing.T) {
+	b, w := newBugsDb(t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const closerId = bugsAuthorId + 1
+	b.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+
+	err = b.CloseBugIfNotClosed(w, bugsRepoId, created.Number, closerId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	events, _, err := b.GetBugEvents(w, bugsRepoId, created.Number, "", 10)
+	if err != nil || len(events) != 1 {
+		t.Fatalf("expected 1 event, got %+v (err=%v)", events, err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if events[0].CreatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamp: event %+v", events[0])
+	}
+	events[0].CreatedOn = time.Time{}
+	want := bug.Event{
+		Id:           1,
+		Kind:         bug.EventKind_StatusChange,
+		AuthorUserId: closerId,
+		CreatedOn:    time.Time{},
+		StatusChange: bug.StatusChange{NewStatus: bug.Status_Closed},
+	}
+	if !reflect.DeepEqual(events[0], want) {
+		t.Fatalf("GetBugEvents: expected %+v, got %+v", want, events[0])
+	}
+
+	err = b.CloseBugIfNotClosed(w, bugsRepoId, created.Number, closerId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	events, _, err = b.GetBugEvents(w, bugsRepoId, created.Number, "", 10)
+	if err != nil || len(events) != 1 {
+		t.Fatalf("expected closing a closed bug to add no event, got %+v (err=%v)", events, err)
+	}
+	open, closed, err := b.CountRepoBugs(w, bugsRepoId)
+	if err != nil || open != 0 || closed != 1 {
+		t.Fatalf("expected 0 open and 1 closed, got open=%d closed=%d (err=%v)", open, closed, err)
+	}
+}
+
+func TestCloseBugIfNotClosedMissingBug(t *testing.T) {
+	b, w := newBugsDb(t)
+	err := b.CloseBugIfNotClosed(w, bugsRepoId, 1, bugsAuthorId)
+	if err != nil {
+		t.Fatalf("expected a missing bug to be ignored, got %v", err)
+	}
+}

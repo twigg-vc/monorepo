@@ -312,6 +312,22 @@ func (db webDb) AddBugSubmittedCommit(writeCtx context.Context, repoId uint64, n
 	return e, false, nil
 }
 
+func (db webDb) CloseBugIfNotClosed(writeCtx context.Context, repoId uint64, number uint64,
+	authorId int64) error {
+	b, isNotFoundErr, err := db.GetBug(writeCtx, repoId, number)
+	if isNotFoundErr {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if b.Status == bug.Status_Closed {
+		return nil
+	}
+	_, _, err = db.SetBugStatus(writeCtx, repoId, number, authorId, bug.Status_Closed)
+	return err
+}
+
 // Also bumps the bug's updatedOn and its count of the kind. The caller must
 // insert the kind's details.
 func (db webDb) insertBugEvent(writeCtx context.Context, repoId uint64, number uint64,
