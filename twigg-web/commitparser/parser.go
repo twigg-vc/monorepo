@@ -15,19 +15,31 @@ func parseCommitDescription(desc string) Tags {
 	if len(desc) > maxDescriptionLenToParse {
 		return Tags{}
 	}
-	var bugs []int64
-	seen := map[int64]bool{}
+	bugs := newBugNumbers()
 	for _, line := range strings.Split(desc, "\n") {
-		match := bugTagRe.FindStringSubmatch(strings.TrimSpace(line))
-		if match == nil {
-			continue
-		}
-		bugNumber, err := strconv.ParseInt(match[1], 10, 64)
-		if err != nil || seen[bugNumber] {
-			continue
-		}
-		seen[bugNumber] = true
-		bugs = append(bugs, bugNumber)
+		line = strings.TrimSpace(line)
+		bugs.addMatch(bugTagRe.FindStringSubmatch(line))
 	}
-	return Tags{Bugs: bugs}
+	return Tags{Bugs: bugs.numbers}
+}
+
+type bugNumbers struct {
+	numbers []int64
+	seen    map[int64]bool
+}
+
+func newBugNumbers() *bugNumbers {
+	return &bugNumbers{seen: map[int64]bool{}}
+}
+
+func (b *bugNumbers) addMatch(match []string) {
+	if match == nil {
+		return
+	}
+	bugNumber, err := strconv.ParseInt(match[1], 10, 64)
+	if err != nil || b.seen[bugNumber] {
+		return
+	}
+	b.seen[bugNumber] = true
+	b.numbers = append(b.numbers, bugNumber)
 }
