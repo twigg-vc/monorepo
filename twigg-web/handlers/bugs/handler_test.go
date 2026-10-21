@@ -1237,3 +1237,42 @@ func TestPostAssigneeFails(t *testing.T) {
 		t.Fatalf("expected no events, got %+v", events)
 	}
 }
+
+func TestGetBugsMovesCommentedBugFirst(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	db.SetNower(mockNow{now: time.UnixMilli(100)}, t)
+	for range 2 {
+		if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	firstBug := func() uint64 {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		h.handleGetBugs(rec, newReadReq("/zuko/tea/bugs?status=open"), w)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body)
+		}
+		var resp GetBugsResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+			t.Fatal(err)
+		}
+		if len(resp.Bugs) != 2 {
+			t.Fatalf("expected two bugs, got %+v", resp.Bugs)
+		}
+		return resp.Bugs[0].Number
+	}
+	if got := firstBug(); got != 2 {
+		t.Fatalf("before comment: expected bug 2 first, got %d", got)
+	}
+
+	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+	u := user.User{Id: zukoId, Username: "zuko"}
+	rec := httptest.NewRecorder()
+	if !h.handlePostComment(rec, newBugWriteReq(u, u, "tea", "1", `{"Body":"Try jasmine"}`), w) || rec.Code != http.StatusOK {
+		t.Fatalf("expected comment to succeed, got %d: %s", rec.Code, rec.Body)
+	}
+	if got := firstBug(); got != 1 {
+		t.Fatalf("after comment: expected bug 1 first, got %d", got)
+	}
+}

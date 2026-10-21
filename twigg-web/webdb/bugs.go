@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"monorepo/twigg-web/bug"
+	"monorepo/twigg-web/bugsearch"
 	"monorepo/twigg-web/services/gobencoding"
 	"slices"
 	"time"
@@ -116,60 +117,9 @@ func (db webDb) AddBugComment(writeCtx context.Context, repoId uint64, number ui
 
 func (db webDb) GetBugsPage(ctx context.Context, repoId uint64, status bug.Status,
 	cursor string, limit int) (bugs []bug.Bug, nextCursor string, err error) {
-	if limit <= 0 {
-		return nil, "", fmt.Errorf("invalid limit %d", limit)
-	}
-	c, err := decodeCursor[bugsPageCursor](cursor)
-	if err != nil {
-		return nil, "", err
-	}
-	// database/sql rejects uint64 values above MaxInt64.
-	before := uint64(math.MaxInt64)
-	if c.BeforeNumber != 0 {
-		before = c.BeforeNumber
-	}
-	const selectBugsWithoutBody = `
-		SELECT b.number, b.title, '' AS body, b.status, b.authorId, b.assigneeUserId,
-			COALESCE((SELECT count FROM bug_event_counts c WHERE c.bugId = b.bugId AND c.kind = ?), 0),
-			b.createdOnUnixMilli, b.updatedOnUnixMilli
-		FROM bugs b
-	`
-	// Two static queries, so SQLite always picks an index.
-	var rows *sql.Rows
-	if status == "" {
-		rows, err = db.s.Query(ctx, selectBugsWithoutBody+`
-			WHERE b.repoId = ? AND b.number < ?
-			ORDER BY b.number DESC
-			LIMIT ?
-		`, bug.EventKind_Comment, repoId, before, limit+1)
-	} else {
-		rows, err = db.s.Query(ctx, selectBugsWithoutBody+`
-			WHERE b.repoId = ? AND b.status = ? AND b.number < ?
-			ORDER BY b.number DESC
-			LIMIT ?
-		`, bug.EventKind_Comment, repoId, status, before, limit+1)
-	}
-	if err != nil {
-		return nil, "", fmt.Errorf("failed getting bugs page (repoId=%v): %w", repoId, err)
-	}
-	defer rows.Close()
-	bugs = []bug.Bug{}
-	for rows.Next() {
-		b, err := scanBug(rows)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed scanning bug: %w", err)
-		}
-		bugs = append(bugs, b)
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, "", fmt.Errorf("failed iterating bugs: %w", err)
-	}
-	if len(bugs) > limit {
-		bugs = bugs[:limit]
-		nextCursor = encodeCursor(bugsPageCursor{BeforeNumber: bugs[limit-1].Number})
-	}
-	return bugs, nextCursor, nil
+	f := bugsearch.NewFilter(repoId)
+	f.Status = status
+	return db.searchBugs(ctx, f, cursor, limit)
 }
 
 func (db webDb) SetBugStatus(writeCtx context.Context, repoId uint64, number uint64,
@@ -470,10 +420,6 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 
 type bugEventsCursor struct {
 	BeforeEventId uint64
-}
-
-type bugsPageCursor struct {
-	BeforeNumber uint64
 }
 
 func encodeCursor[C any](c C) string {
