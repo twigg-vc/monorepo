@@ -6,7 +6,9 @@ import (
 	"monorepo/twigg-web/bugsearch"
 	"monorepo/twigg-web/user"
 	"monorepo/twigg-web/webdb"
+	"slices"
 	"testing"
+	"time"
 )
 
 const searchBugRepoId = 11
@@ -92,6 +94,7 @@ func searchBugNumbers(t *testing.T, db webdb.WebDb, w context.Context,
 func newBugSearchTestDb(t *testing.T) (webdb.WebDb, context.Context) {
 	t.Helper()
 	db := getNewDb(t)
+	db.SetNower(mockNow{now: time.UnixMilli(0)}, t)
 	w, closeW, _, err := db.BeginWrite()
 	if err != nil {
 		t.Fatal(err)
@@ -147,5 +150,61 @@ func Test_SearchBugs_FiltersByUnassigned(t *testing.T) {
 
 	if len(got) != 1 || got[0] != 2 {
 		t.Fatalf("got %v, want [2]", got)
+	}
+}
+
+// Each case creates one event on bug 1 and checks that it moves from last to first.
+func Test_SearchBugs_OrdersByLastUpdate(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		createEvent func(webdb.WebDb, context.Context, int64) error
+	}{
+		{"title", func(db webdb.WebDb, w context.Context, authorId int64) error {
+			_, _, err := db.EditBugTitle(w, searchBugRepoId, 1, authorId, "Updated title")
+			return err
+		}},
+		{"description", func(db webdb.WebDb, w context.Context, authorId int64) error {
+			_, _, err := db.EditBugDescription(w, searchBugRepoId, 1, authorId, "Updated body")
+			return err
+		}},
+		{"comment", func(db webdb.WebDb, w context.Context, authorId int64) error {
+			_, _, err := db.AddBugComment(w, searchBugRepoId, 1, authorId, "An update")
+			return err
+		}},
+		{"status", func(db webdb.WebDb, w context.Context, authorId int64) error {
+			_, _, err := db.SetBugStatus(w, searchBugRepoId, 1, authorId, bug.Status_Closed)
+			return err
+		}},
+		{"assignment", func(db webdb.WebDb, w context.Context, authorId int64) error {
+			_, _, err := db.SetBugAssignee(w, searchBugRepoId, 1, authorId, 0)
+			return err
+		}},
+		{"submitted commit", func(db webdb.WebDb, w context.Context, authorId int64) error {
+			_, _, err := db.AddBugSubmittedCommit(w, searchBugRepoId, 1, authorId, 42)
+			return err
+		}},
+		{"closing commit", func(db webdb.WebDb, w context.Context, authorId int64) error {
+			return db.CloseBugIfNotClosed(w, searchBugRepoId, 1, authorId, 42)
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			db, w := newBugSearchTestDb(t)
+			authorId, _ := setUpSearchableBugs(t, db, w)
+			f := bugsearch.NewFilter(searchBugRepoId)
+			before, _ := searchBugNumbers(t, db, w, f, "", 10)
+			if position := slices.Index(before, 1); position < 0 || position != len(before)-1 {
+				t.Fatalf("before event: got %v, want bug 1 last", before)
+			}
+
+			db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+			if err := test.createEvent(db, w, authorId); err != nil {
+				t.Fatal(err)
+			}
+
+			after, _ := searchBugNumbers(t, db, w, f, "", 10)
+			if slices.Index(after, 1) != 0 {
+				t.Fatalf("after event: got %v, want bug 1 first", after)
+			}
+		})
 	}
 }
