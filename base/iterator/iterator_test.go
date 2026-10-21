@@ -15,6 +15,13 @@ func TestGetFirst3(t *testing.T) {
 	if !reflect.DeepEqual(nums, []int{0, 1, 2}) {
 		t.Fatalf("got: %v", nums)
 	}
+	remaining, err := GetFirstN(3, it)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(remaining, []int{3, 4, 5}) {
+		t.Fatalf("remaining: got %v, want [3 4 5]", remaining)
+	}
 }
 
 func TestGetFirstZero(t *testing.T) {
@@ -25,6 +32,13 @@ func TestGetFirstZero(t *testing.T) {
 	}
 	if !reflect.DeepEqual(nums, []int{}) {
 		t.Fatalf("got: %v", nums)
+	}
+	remaining, err := GetFirstN(6, it)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(remaining, []int{0, 1, 2, 3, 4, 5}) {
+		t.Fatalf("remaining: got %v, want [0 1 2 3 4 5]", remaining)
 	}
 }
 

@@ -35,10 +35,7 @@ func GetFirstNWithMapper[IterT any, OutputT any](n int, it I[IterT], m Mapper[It
 		panic("used GetFirstN* with n < 0")
 	}
 	entries := make([]OutputT, 0, n)
-	for it.Next() {
-		if len(entries) == n {
-			break
-		}
+	for len(entries) < n && it.Next() {
 		iterEntry, err := it.Get()
 		if err != nil {
 			return nil, err
