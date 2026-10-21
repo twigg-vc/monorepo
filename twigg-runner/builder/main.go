@@ -87,6 +87,10 @@ func buildBase(lxd lxdClient.InstanceServer) (ok bool) {
 	if !ok {
 		return
 	}
+	ok = installTask(lxd, builderVmName)
+	if !ok {
+		return
+	}
 	ok = installNodeAndNpm(lxd, builderVmName)
 	if !ok {
 		return
@@ -240,6 +244,12 @@ func installGo(lxd lxdClient.InstanceServer, vmName string) (ok bool) {
 	const maxTries = 3
 	return Run("Install go", 10*time.Minute, maxTries, func(ctx context.Context) error {
 		return execInInstance(ctx, lxd, vmName, []string{"snap", "install", "go", "--classic"})
+	})
+}
+func installTask(lxd lxdClient.InstanceServer, vmName string) (ok bool) {
+	const maxTries = 3
+	return Run("Install task", 10*time.Minute, maxTries, func(ctx context.Context) error {
+		return execInInstance(ctx, lxd, vmName, []string{"snap", "install", "task", "--classic"})
 	})
 }
 func aptUpdate(lxd lxdClient.InstanceServer, vmName string) (ok bool) {
