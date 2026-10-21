@@ -1,7 +1,8 @@
 package commitparser
 
 type Tags struct {
-	Bugs []int64
+	Bugs  []int64
+	Fixes []int64
 }
 
 // Parses and returns Tags out of a commit description.

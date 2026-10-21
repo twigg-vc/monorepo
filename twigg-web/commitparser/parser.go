@@ -11,16 +11,21 @@ const maxDescriptionLenToParse = 10_000
 // Matches a whole line (after trimming) like "b/1234", "BUG=1234", "bug= 1234" or "BUG: 1234"
 var bugTagRe = regexp.MustCompile(`(?i)^(?:b/|bug[=:]\s*)(\d+)$`)
 
+// Matches a whole line (after trimming) like "FIXES=1234", "fixed: 1234" or "CLOSE=1234"
+var fixesTagRe = regexp.MustCompile(`(?i)^(?:fix(?:es|ed)?|close[sd]?)[=:]\s*(\d+)$`)
+
 func parseCommitDescription(desc string) Tags {
 	if len(desc) > maxDescriptionLenToParse {
 		return Tags{}
 	}
 	bugs := newBugNumbers()
+	fixes := newBugNumbers()
 	for _, line := range strings.Split(desc, "\n") {
 		line = strings.TrimSpace(line)
 		bugs.addMatch(bugTagRe.FindStringSubmatch(line))
+		fixes.addMatch(fixesTagRe.FindStringSubmatch(line))
 	}
-	return Tags{Bugs: bugs.numbers}
+	return Tags{Bugs: bugs.numbers, Fixes: fixes.numbers}
 }
 
 type bugNumbers struct {

@@ -94,6 +94,51 @@ func TestParseCommitDescription(t *testing.T) {
 			want: commitparser.Tags{},
 		},
 		{
+			name: "FIXES=<number>",
+			desc: "fix the tea kettle\n\nFIXES=42",
+			want: commitparser.Tags{Fixes: []int64{42}},
+		},
+		{
+			name: "fixes: <number> lowercase with a space",
+			desc: "fix the tea kettle\n\nfixes: 42",
+			want: commitparser.Tags{Fixes: []int64{42}},
+		},
+		{
+			name: "duplicate FIXES tag is deduplicated",
+			desc: "fix the tea kettle\n\nFIXES=42\nfixes:42\nFIXES=17",
+			want: commitparser.Tags{Fixes: []int64{42, 17}},
+		},
+		{
+			name: "FIXES and BUG tags for the same bug fill both lists",
+			desc: "fix the tea kettle\n\nBUG=42\nFIXES=42",
+			want: commitparser.Tags{Bugs: []int64{42}, Fixes: []int64{42}},
+		},
+		{
+			name: "FIXES= embedded mid-line does not match",
+			desc: "see FIXES=42 for context",
+			want: commitparser.Tags{},
+		},
+		{
+			name: "every fix and close variant",
+			desc: "fix the tea kettle\n\nFIX=1\nfixed: 2\nCLOSE=3\ncloses:4\nClosed= 5",
+			want: commitparser.Tags{Fixes: []int64{1, 2, 3, 4, 5}},
+		},
+		{
+			name: "fix and close variants for the same bug are deduplicated",
+			desc: "fix the tea kettle\n\nFIXED=42\nCLOSES=42",
+			want: commitparser.Tags{Fixes: []int64{42}},
+		},
+		{
+			name: "misspelled variant does not match",
+			desc: "fix the tea kettle\n\nFIXD=42\nCLOSING=42",
+			want: commitparser.Tags{},
+		},
+		{
+			name: "FIXES b/<number> does not match",
+			desc: "FIXES b/42",
+			want: commitparser.Tags{},
+		},
+		{
 			name: "description longer than the max is ignored even with a well-formed tag",
 			desc: strings.Repeat("a", 10_000) + "\nb/42",
 			want: commitparser.Tags{},
