@@ -8,7 +8,13 @@ Chose your OS.
     <TabItem value="linux" label="Linux">
         Run the following command:
         ```
-        curl -fSL -o /tmp/tw https://twigg.vc/bin/tw_linux_latest \
+        URL=$(
+          test "$(uname -m)" = "aarch64" \
+            && echo https://twigg.vc/bin/tw_linux_arm64_latest \
+            || echo https://twigg.vc/bin/tw_linux_latest
+        )
+
+        curl -fSL -o /tmp/tw "$URL" \
           && sudo install -m 0755 /tmp/tw /usr/local/bin/tw \
           && rm /tmp/tw
         ```
