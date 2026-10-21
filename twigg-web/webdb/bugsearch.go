@@ -3,7 +3,6 @@ package webdb
 import (
 	"context"
 	"fmt"
-	"math"
 	"monorepo/twigg-web/bug"
 	"monorepo/twigg-web/bugsearch"
 	"strings"
@@ -16,14 +15,9 @@ func (db webDb) searchBugs(ctx context.Context, f bugsearch.Filter, cursor strin
 	if limit <= 0 {
 		return nil, "", fmt.Errorf("invalid limit %d", limit)
 	}
-	c, err := decodeCursor[bugsPageCursor](cursor)
+	c, err := decodeCursor[bugSearchCursor](cursor)
 	if err != nil {
 		return nil, "", err
-	}
-	// database/sql rejects uint64 values above MaxInt64.
-	before := uint64(math.MaxInt64)
-	if c.BeforeNumber != 0 {
-		before = c.BeforeNumber
 	}
 
 	var q strings.Builder
@@ -32,8 +26,12 @@ func (db webDb) searchBugs(ctx context.Context, f bugsearch.Filter, cursor strin
 			COALESCE((SELECT count FROM bug_event_counts c WHERE c.bugId = b.bugId AND c.kind = ?), 0),
 			b.createdOnUnixMilli, b.updatedOnUnixMilli
 		FROM bugs b
-		WHERE b.repoId = ? AND b.number < ?`)
-	args := []any{bug.EventKind_Comment, f.RepoId, before}
+		WHERE b.repoId = ?`)
+	args := []any{bug.EventKind_Comment, f.RepoId}
+	if cursor != "" {
+		q.WriteString(` AND (b.updatedOnUnixMilli, b.number) < (?, ?)`)
+		args = append(args, c.BeforeUpdatedOnUnixMilli, c.BeforeNumber)
+	}
 
 	if f.Status != "" {
 		q.WriteString(` AND b.status = ?`)
@@ -46,7 +44,7 @@ func (db webDb) searchBugs(ctx context.Context, f bugsearch.Filter, cursor strin
 			SELECT u.id FROM users2 u WHERE u.username = ?)`)
 		args = append(args, f.AssigneeUsername)
 	}
-	q.WriteString(` ORDER BY b.number DESC LIMIT ?`)
+	q.WriteString(` ORDER BY b.updatedOnUnixMilli DESC, b.number DESC LIMIT ?`)
 	args = append(args, limit+1)
 
 	rows, err := db.s.Query(ctx, q.String(), args...)
@@ -68,7 +66,17 @@ func (db webDb) searchBugs(ctx context.Context, f bugsearch.Filter, cursor strin
 	}
 	if len(bugs) > limit {
 		bugs = bugs[:limit]
-		nextCursor = encodeCursor(bugsPageCursor{BeforeNumber: bugs[limit-1].Number})
+		last := bugs[limit-1]
+		nextCursor = encodeCursor(bugSearchCursor{
+			BeforeUpdatedOnUnixMilli: last.UpdatedOn.UnixMilli(),
+			BeforeNumber:             last.Number,
+		})
 	}
 	return bugs, nextCursor, nil
+}
+
+// The bug number breaks ties between bugs updated in the same millisecond.
+type bugSearchCursor struct {
+	BeforeUpdatedOnUnixMilli int64
+	BeforeNumber             uint64
 }
