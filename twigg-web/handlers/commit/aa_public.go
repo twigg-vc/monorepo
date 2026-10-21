@@ -115,6 +115,7 @@ type Db interface {
 	CreateNotification(writeCtx context.Context, userId int64, message string, assetPath string) error
 	AddBugSubmittedCommit(writeCtx context.Context, repoId uint64, number uint64,
 		authorId int64, commitL uint64) (e bug.Event, isNotFoundErr bool, err error)
+	CloseBugIfNotClosed(writeCtx context.Context, repoId uint64, number uint64, authorId int64) error
 }
 
 type TrackClient interface {

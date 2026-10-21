@@ -1301,6 +1301,39 @@ func TestSubmitCommitWithMultipleBugTagsAddsEventToEachBug(t *testing.T) {
 	b.CheckCurrentPageContains("submitted-commit", "commitl")
 }
 
+func TestSubmitCommitWithFixesTagClosesTheBug(t *testing.T) {
+	srv := GetMockServer(t)
+	b := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthSignIn(srv, b, "aang@twigg.vc")
+	b.Post(routes.GenerateCLIKey, nil)
+
+	createBugInBookOne(t, b, "Fix the tea kettle")
+	createBugInBookOne(t, b, "Unrelated bug")
+
+	tw := cli.NewTestHelper(t)
+	tw.SetServerRootUrl(srv.C.PublicUrl)
+	tw.Run("init")
+	tw.Run("server", "aang/BookOne")
+	tw.Run("key", srv.KeysMock.GetLastRandomCliKey())
+	tw.WriteFile("a.txt", "aaa")
+	tw.Run("commit", "fix the kettle")
+	tw.Run("push")
+	tw.CheckOutContains("push succeeded")
+
+	b.Post("/aang/BookOne/c/1", map[string]string{"description": "fix the kettle\n\nFIXES=1"})
+	b.Post("/aang/BookOne/c/1/lgtm", map[string]string{"version": "0"})
+	b.Post("/aang/BookOne/c/1/submit", map[string]string{"version": "0"})
+
+	b.Get("/aang/BookOne/bugs?status=closed")
+	var list bugs.GetBugsResponse
+	if err := json.Unmarshal(b.lastResponse, &list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Bugs) != 1 || list.Bugs[0].Number != 1 {
+		t.Fatalf("expected only b/1 to be closed, got %+v", list)
+	}
+}
+
 func TestSetNextServerId(t *testing.T) {
 	srv := GetMockServer(t)
 	b := NewTestBrowser(srv.C.PublicUrl, t)

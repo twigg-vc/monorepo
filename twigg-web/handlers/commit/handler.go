@@ -1440,16 +1440,27 @@ func (hl handler) handlePostSubmit(w http.ResponseWriter,
 	return
 }
 
-// Adds a "commit submitted" event to every bug referenced by a bug tag (see
-// commitparser) in description. Errors marked as not-found are ignored.
+// Adds a "commit submitted" event to every bug referenced by a bug tag and
+// closes every bug referenced by a fixes tag (see commitparser) in description.
+// Missing bugs are ignored.
 func (hl handler) linkSubmittedCommitToBugs(w context.Context, repoId uint64, c commit.Commit, description string) error {
-	for _, bugNumber := range commitparser.ParseCommitDescription(description).Bugs {
+	tags := commitparser.ParseCommitDescription(description)
+	for _, bugNumber := range tags.Bugs {
 		if bugNumber <= 0 {
 			continue
 		}
 		_, isNotFoundErr, err := hl.db.AddBugSubmittedCommit(w, repoId, uint64(bugNumber), c.AuthorUserId, c.L)
 		if err != nil && !isNotFoundErr {
 			return fmt.Errorf("failed adding submitted commit event (bug=%d): %w", bugNumber, err)
+		}
+	}
+	for _, bugNumber := range tags.Fixes {
+		if bugNumber <= 0 {
+			continue
+		}
+		err := hl.db.CloseBugIfNotClosed(w, repoId, uint64(bugNumber), c.AuthorUserId)
+		if err != nil {
+			return fmt.Errorf("failed closing bug (bug=%d): %w", bugNumber, err)
 		}
 	}
 	return nil
