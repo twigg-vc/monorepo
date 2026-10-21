@@ -464,6 +464,53 @@ func TestHandleCliGetBugAndEvents(t *testing.T) {
 	}
 }
 
+func TestHandleGetBugAndEventsLimit(t *testing.T) {
+	backup := bugEventsPageSize
+	t.Cleanup(func() { bugEventsPageSize = backup })
+	bugEventsPageSize = 20
+
+	h, db, w, zukoId := newTestHandler(t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	for range bugEventsPageSize {
+		if _, _, err := db.AddBugComment(w, testRepoId, 1, zukoId, "Try jasmine"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rec := httptest.NewRecorder()
+	h.handleCliGetBugAndEvents(rec, newCliGetBugAndEventsReq("1"), w)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 at the limit, got %d: %s", rec.Code, rec.Body)
+	}
+	var got twiggwebclient.GetBugAndEventsResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Events) != bugEventsPageSize {
+		t.Fatalf("expected %d events, got %d", bugEventsPageSize, len(got.Events))
+	}
+	rec = httptest.NewRecorder()
+	h.handleGetBug(rec, newBugPageReq("1", nil), w)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected the page to render at the limit, got %d: %s", rec.Code, rec.Body)
+	}
+
+	if _, _, err := db.AddBugComment(w, testRepoId, 1, zukoId, "Try ginseng"); err != nil {
+		t.Fatal(err)
+	}
+	rec = httptest.NewRecorder()
+	h.handleCliGetBugAndEvents(rec, newCliGetBugAndEventsReq("1"), w)
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500 over the limit, got %d", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	h.handleGetBug(rec, newBugPageReq("1", nil), w)
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected the page to fail over the limit, got %d", rec.Code)
+	}
+}
+
 func newBugWriteReq(u user.User, repoOwner user.User, repoDisplayName string, number string, body string) wrappers.UserRepoMuxRequest {
 	req := newWriteReq(
 		u,

@@ -18,7 +18,8 @@ import (
 )
 
 const bugsPageSize = 25
-const bugEventsPageSize = 100
+
+var bugEventsPageSize = 1000
 
 // JSON escapes can make the body take more bytes than its text.
 const maxRequestBytes = 2*bug.MaxBodyLen + 1024
@@ -82,6 +83,29 @@ func (h handler) handleGetBugs(w http.ResponseWriter,
 	}
 }
 
+// Returns up to bugEventsPageSize events of the bug.
+// Writes an error and returns ok=false if it fails or the bug has more than
+// bugEventsPageSize events. We do this bc the current implementation simply
+// loads all events in memory before returning them; but the db itself is
+// setup for proper pagination. We should add proper pagination later.
+func (h handler) getBugEvents(w http.ResponseWriter, dbRead context.Context,
+	repoId uint64, bugNumber uint64) (events []bug.Event, ok bool) {
+	var err error
+	events, _, err = h.db.GetBugEvents(dbRead, repoId, bugNumber, "", bugEventsPageSize+1)
+	if err != nil {
+		log.Printf("failed to get the events of b/%d of repo id=%d: %s", bugNumber, repoId, err)
+		http.Error(w, "failed to get the bug events", http.StatusInternalServerError)
+		return
+	}
+	if len(events) > bugEventsPageSize {
+		log.Printf("failed to get the events of b/%d of repo id=%d: Too many events to return", bugNumber, repoId)
+		http.Error(w, "failed to get the bug events", http.StatusInternalServerError)
+		return
+	}
+	ok = true
+	return
+}
+
 func (h handler) handleGetBug(w http.ResponseWriter,
 	r wrappers.UserWithReadPermissionMuxRequest, dbRead context.Context) {
 	if !r.Flags.ShowBugs {
@@ -102,12 +126,11 @@ func (h handler) handleGetBug(w http.ResponseWriter,
 		http.Error(w, "failed to get the bug", http.StatusInternalServerError)
 		return
 	}
-	events, _, err := h.db.GetBugEvents(dbRead, r.Repo.Id, number, "", bugEventsPageSize)
-	if err != nil {
-		log.Printf("failed to get the events of b/%d of repo id=%d: %s", number, r.Repo.Id, err)
-		http.Error(w, "failed to get the bug events", http.StatusInternalServerError)
+	events, ok := h.getBugEvents(w, dbRead, r.Repo.Id, number)
+	if !ok {
 		return
 	}
+
 	canWrite, err := h.perms.CanWriteBug(dbRead, viewer(r), r.Repo, b)
 	if err != nil {
 		log.Printf("failed to check if b/%d of repo id=%d can be written: %s", number, r.Repo.Id, err)
@@ -151,16 +174,8 @@ func (h handler) handleCliGetBugAndEvents(w http.ResponseWriter,
 		http.Error(w, "failed to get the bug", http.StatusInternalServerError)
 		return
 	}
-	events, _, err := h.db.GetBugEvents(dbRead, r.Repo.Id, number, "", bugEventsPageSize+1)
-	if err != nil {
-		log.Printf("failed to get the events of b/%d of repo id=%d: %s", number, r.Repo.Id, err)
-		http.Error(w, "failed to get the bug events", http.StatusInternalServerError)
-		return
-	}
-	// TODO: if the number of bug events ever increases, implement pagination
-	if len(events) >= bugEventsPageSize {
-		log.Printf("failed to get the events of b/%d of repo id=%d: Too many events to return", number, r.Repo.Id)
-		http.Error(w, "failed to get the bug events", http.StatusInternalServerError)
+	events, ok := h.getBugEvents(w, dbRead, r.Repo.Id, number)
+	if !ok {
 		return
 	}
 	u := newUsernames(h.db, dbRead, w)
