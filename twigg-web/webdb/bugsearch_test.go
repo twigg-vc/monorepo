@@ -208,3 +208,24 @@ func Test_SearchBugs_OrdersByLastUpdate(t *testing.T) {
 		})
 	}
 }
+
+func Test_SearchBugs_PaginatesByLastUpdate(t *testing.T) {
+	db, w := newBugSearchTestDb(t)
+	authorId, _ := setUpSearchableBugs(t, db, w)
+	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+	_, _, err := db.EditBugTitle(w, searchBugRepoId, 1, authorId, "Updated title")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Bug 1 moves first; the cursor must continue through bugs with tied timestamps.
+	f := bugsearch.NewFilter(searchBugRepoId)
+	first, cursor := searchBugNumbers(t, db, w, f, "", 2)
+	if !slices.Equal(first, []uint64{1, 4}) || cursor == "" {
+		t.Fatalf("first page: got %v (cursor %q), want [1 4] and a cursor", first, cursor)
+	}
+	second, next := searchBugNumbers(t, db, w, f, cursor, 2)
+	if !slices.Equal(second, []uint64{3, 2}) || next != "" {
+		t.Fatalf("second page: got %v (next %q), want [3 2] and no next page", second, next)
+	}
+}
