@@ -44,9 +44,11 @@ func (a AuthMux) HandleFunc(pattern string, handler func(w http.ResponseWriter, 
 	a.m.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		headerMatches := subtle.ConstantTimeCompare(
 			[]byte(r.Header.Get(TrackKeyHeaderName)), []byte(a.trackKey)) == 1
-		queryMatches := subtle.ConstantTimeCompare(
-			[]byte(r.URL.Query().Get(TrackKeyHeaderName)), []byte(a.trackKey)) == 1
-		if !headerMatches && !queryMatches {
+		_, password, _ := r.BasicAuth()
+		basicAuthMatches := subtle.ConstantTimeCompare(
+			[]byte(password), []byte(a.trackKey)) == 1
+		if !headerMatches && !basicAuthMatches {
+			w.Header().Set("WWW-Authenticate", `Basic realm="twigg-track"`)
 			http.Error(w, "not authenticated", http.StatusUnauthorized)
 			return
 		}

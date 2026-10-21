@@ -148,11 +148,6 @@
     </div>
 
     <script>
-        function getTrackKey(){
-            // Grab TrackKey from the current browser URL (?TrackKey=...)
-            const params = new URLSearchParams(window.location.search);
-            return params.get('TrackKey') || '';
-        }
         function formatLocalTime(iso) {
             if (!iso) return '';
             return new Date(iso).toLocaleString();
@@ -196,8 +191,7 @@
         }
         async function fetchQueuedItems(){
             try{
-                const trackKey = getTrackKey();
-                const response = await fetch(`/queued?TrackKey=${encodeURIComponent(trackKey)}`);
+                const response = await fetch(`/queued`);
                 if (!response.ok) throw new Error('Server returned ' + response.status);
                 const queuedItems = await response.json();
                 const tbody = document.querySelector('#queued tbody');
@@ -212,8 +206,7 @@
         }
         async function fetchDeadLetterItems() {
             try{
-                const trackKey = getTrackKey();
-                const response = await fetch(`/deadletter?TrackKey=${encodeURIComponent(trackKey)}`);
+                const response = await fetch(`/deadletter`);
                 if (!response.ok) throw new Error('Server returned ' + response.status);
                 const deadletterItems = await response.json();
                 const tbody = document.querySelector('#deadletter tbody');
@@ -228,8 +221,7 @@
         }
         async function fetchLogs() {
             try {
-                const trackKey = getTrackKey();
-                const response = await fetch(`/logs?TrackKey=${encodeURIComponent(trackKey)}&numLines=100`);
+                const response = await fetch(`/logs?numLines=100`);
                 if (!response.ok) throw new Error('Server returned ' + response.status);
                 const data = await response.json();
                 const container = document.getElementById('logs');
@@ -258,8 +250,7 @@
         }
         async function requeueDeadLetter(id) {
             try {
-                const trackKey = getTrackKey();
-                const res = await fetch(`/deadletter/requeue?TrackKey=${encodeURIComponent(trackKey)}`, {
+                const res = await fetch(`/deadletter/requeue`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ Id: id })

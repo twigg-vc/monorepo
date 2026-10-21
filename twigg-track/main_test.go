@@ -45,6 +45,26 @@ func TestNoTrackKey(t *testing.T) {
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("expected unauthorized, got %d", resp.StatusCode)
 	}
+	if got := resp.Header.Get("WWW-Authenticate"); got != `Basic realm="twigg-track"` {
+		t.Fatalf("unexpected WWW-Authenticate: %q", got)
+	}
+}
+
+func TestBasicAuth(t *testing.T) {
+	srv := trackserver.GetNoWebhookTestServer(t)
+	req, err := http.NewRequest("GET", srv.Url()+"/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.SetBasicAuth("admin", srv.TrackKey())
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("get failed: %s", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected ok, got %d", resp.StatusCode)
+	}
 }
 
 func TestRateLimiter(t *testing.T) {
