@@ -36,7 +36,7 @@ new version.
 - `tw pull c/99` downloads the latest version of server commit 99.
 - `tw description-set <optional: commit> <description>` sets the review
   description of a pushed commit. If the commit is omitted, it uses the current
-  commit.
+  commit. The description supports markdown.
 - `tw bug-get b/5` shows bug 5 and its events.
 
 ## Statuses
