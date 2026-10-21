@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"monorepo/twigg-web/bug"
+	"monorepo/twigg-web/bugsearch"
 	"monorepo/twigg-web/routes"
 	twiggwebclient "monorepo/twigg-web/twigg-web-client"
 	"monorepo/twigg-web/user"
@@ -41,7 +42,9 @@ func (h handler) handleGetBugs(w http.ResponseWriter,
 		http.Error(w, "invalid status", http.StatusBadRequest)
 		return
 	}
-	bugs, nextCursor, err := h.db.GetBugsPage(dbRead, r.Repo.Id, status,
+	f := bugsearch.NewFilter(r.Repo.Id)
+	f.Status = status
+	bugs, nextCursor, err := h.db.SearchBugs(dbRead, f,
 		params.Get(routes.BugsCursorQueryParamName), bugsPageSize)
 	if err != nil {
 		log.Printf("failed to get the bugs of repo id=%d: %s", r.Repo.Id, err)

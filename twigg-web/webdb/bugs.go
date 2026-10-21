@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math"
 	"monorepo/twigg-web/bug"
-	"monorepo/twigg-web/bugsearch"
 	"monorepo/twigg-web/services/gobencoding"
 	"slices"
 	"time"
@@ -113,13 +112,6 @@ func (db webDb) AddBugComment(writeCtx context.Context, repoId uint64, number ui
 	}
 	e.Comment = bug.NewComment(body)
 	return e, false, nil
-}
-
-func (db webDb) GetBugsPage(ctx context.Context, repoId uint64, status bug.Status,
-	cursor string, limit int) (bugs []bug.Bug, nextCursor string, err error) {
-	f := bugsearch.NewFilter(repoId)
-	f.Status = status
-	return db.searchBugs(ctx, f, cursor, limit)
 }
 
 func (db webDb) SetBugStatus(writeCtx context.Context, repoId uint64, number uint64,

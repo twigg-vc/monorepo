@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"monorepo/twigg-web/bug"
+	"monorepo/twigg-web/bugsearch"
 	"monorepo/twigg-web/webdb"
 	"reflect"
 	"testing"
@@ -368,7 +369,7 @@ func TestSetBugStatusFails(t *testing.T) {
 	}
 }
 
-func TestGetBugsPage(t *testing.T) {
+func Test_SearchBugs_PagesWithoutBodies(t *testing.T) {
 	b, w := newBugsDb(t)
 	b.SetNower(mockNow{now: time.UnixMilli(199)}, t)
 	for range 5 {
@@ -386,7 +387,7 @@ func TestGetBugsPage(t *testing.T) {
 	}
 	getPage := func(cursor string, limit int) (bugs []bug.Bug, numbers []uint64, nextCursor string) {
 		t.Helper()
-		bugs, nextCursor, err := b.GetBugsPage(w, bugsRepoId, "", cursor, limit)
+		bugs, nextCursor, err := b.SearchBugs(w, bugsearch.NewFilter(bugsRepoId), cursor, limit)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -405,7 +406,7 @@ func TestGetBugsPage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want.Body = "" // Body is stripped when GetBugsPage is used
+	want.Body = "" // Search results omit the body
 	if !reflect.DeepEqual(bugs[0], want) {
 		t.Fatalf("expected pages to have the bug without its body %+v, got %+v", want, bugs[0])
 	}
@@ -424,7 +425,7 @@ func TestGetBugsPage(t *testing.T) {
 	}
 }
 
-func TestGetBugsPageFiltersByStatus(t *testing.T) {
+func Test_SearchBugs_PagesByStatus(t *testing.T) {
 	b, w := newBugsDb(t)
 	for range 5 {
 		if _, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", ""); err != nil {
@@ -438,7 +439,9 @@ func TestGetBugsPageFiltersByStatus(t *testing.T) {
 	}
 	getPage := func(status bug.Status, cursor string, limit int) (numbers []uint64, nextCursor string) {
 		t.Helper()
-		bugs, nextCursor, err := b.GetBugsPage(w, bugsRepoId, status, cursor, limit)
+		f := bugsearch.NewFilter(bugsRepoId)
+		f.Status = status
+		bugs, nextCursor, err := b.SearchBugs(w, f, cursor, limit)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -1043,14 +1043,6 @@ func (db WebDb) AddBugComment(writeCtx context.Context, repoId uint64, number ui
 	return db.db.AddBugComment(writeCtx, repoId, number, authorId, body)
 }
 
-// Returns up to limit of the repo's newest bugs, without their Body, and the
-// cursor of the older bugs after them. status="" returns bugs of any status.
-// An empty cursor reads the newest ones, and the last page returns an empty one.
-func (db WebDb) GetBugsPage(ctx context.Context, repoId uint64, status bug.Status,
-	cursor string, limit int) (bugs []bug.Bug, nextCursor string, err error) {
-	return db.db.GetBugsPage(ctx, repoId, status, cursor, limit)
-}
-
 // Returns how many open and closed bugs the repo has.
 func (db WebDb) CountRepoBugs(ctx context.Context, repoId uint64) (open, closed int64, err error) {
 	return db.db.CountRepoBugs(ctx, repoId)
@@ -1107,9 +1099,9 @@ func (db WebDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 	return db.db.GetBugEvents(ctx, repoId, number, cursor, limit)
 }
 
-// Returns up to limit of the bugs matching the filter, newest first, and the
-// cursor of the bugs after them. An empty cursor reads the first ones, and
-// the last page returns an empty one.
+// Returns up to limit of the bugs matching the filter, ordered by last update,
+// without their Body. An empty cursor reads the first page, and the last page
+// returns an empty cursor.
 func (db WebDb) SearchBugs(ctx context.Context, f bugsearch.Filter, cursor string, limit int) (
 	[]bug.Bug, string, error) {
 	return db.db.searchBugs(ctx, f, cursor, limit)

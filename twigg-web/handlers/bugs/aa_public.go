@@ -31,8 +31,6 @@ func AddHandlers(db Db, perms Permissions,
 type Db interface {
 	GetUsername(ctx context.Context, userId int64) (username string, isNotFoundErr bool, err error)
 	GetUserByUsername(ctx context.Context, username string) (u user.User, isNotFoundErr bool, err error)
-	GetBugsPage(ctx context.Context, repoId uint64, status bug.Status,
-		cursor string, limit int) (bugs []bug.Bug, nextCursor string, err error)
 	SearchBugs(ctx context.Context, f bugsearch.Filter, cursor string,
 		limit int) (bugs []bug.Bug, nextCursor string, err error)
 	CountRepoBugs(ctx context.Context, repoId uint64) (open, closed int64, err error)
