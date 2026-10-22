@@ -178,13 +178,17 @@ export class BugPage extends LitElement {
 
     private renderDescription(b: Bug) {
         if (!this.CanWrite) {
-            return html`<md-display .content=${this.bodyOrPlaceholder(b.Body)}></md-display>`
+            return html`<md-display .content=${this.bodyOrPlaceholder(b.Body)}
+                .RepoOwnerName=${this.RepoOwnerName}
+                .RepoName=${this.RepoName}></md-display>`
         }
         return html`
             <cl-description
                 .description=${b.Body}
                 .postDescriptionUrl=${PathToBugDescription(this.RepoOwnerName, this.RepoName, b.Number)}
                 placeholder="Enter description (markdown supported)"
+                .RepoOwnerName=${this.RepoOwnerName}
+                .RepoName=${this.RepoName}
                 @description-saved=${this.onDescriptionSaved}>
             </cl-description>
         `
@@ -394,7 +398,9 @@ export class BugPage extends LitElement {
     private renderComment(e: BugEvent) {
         return html`
             <div class="post card">
-                <comment-display .Comment=${{ AuthorUsername: e.AuthorUsername, Text: e.Comment!.Body, T: e.CreatedOn }}>
+                <comment-display .Comment=${{ AuthorUsername: e.AuthorUsername, Text: e.Comment!.Body, T: e.CreatedOn }}
+                    .RepoOwnerName=${this.RepoOwnerName}
+                    .RepoName=${this.RepoName}>
                 </comment-display>
             </div>
         `
@@ -428,7 +434,9 @@ export class BugPage extends LitElement {
                     <username-tag .Username=${e.AuthorUsername}></username-tag>
                     <span>edited the description ${FormatRelativeTime(e.CreatedOn)}</span>
                 </summary>
-                <md-display .content=${this.bodyOrPlaceholder(e.DescriptionEdit!.OldBody)}></md-display>
+                <md-display .content=${this.bodyOrPlaceholder(e.DescriptionEdit!.OldBody)}
+                    .RepoOwnerName=${this.RepoOwnerName}
+                    .RepoName=${this.RepoName}></md-display>
             </details>
         `
     }
@@ -444,6 +452,8 @@ export class BugPage extends LitElement {
                     .InputIsOpen=${true}
                     .CloseInputBtnIsHidden=${true}
                     ContentPlaceholder="Leave a comment (markdown supported)"
+                    .RepoOwnerName=${this.RepoOwnerName}
+                    .RepoName=${this.RepoName}
                     SubmitBtnText="Comment"
                     SubmitBtnIcon="ChatBubbleLeft"
                     @md-input-changed=${(e: CustomEvent) => { this.commentDraft = e.detail.NewContent }}

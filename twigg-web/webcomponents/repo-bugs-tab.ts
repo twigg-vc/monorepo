@@ -317,6 +317,8 @@ export class RepoBugsTab extends LitElement {
                     .OpenInputBtnIsHidden=${true}
                     .HasSubmitBtn=${false}
                     ContentPlaceholder="Enter description (markdown supported)"
+                    .RepoOwnerName=${this.RepoOwnerName}
+                    .RepoName=${this.RepoName}
                     @md-input-changed=${(e: CustomEvent) => { this.draftBody = e.detail.NewContent }}>
                 </md-input2>
                 <div class="form-actions">
