@@ -2,7 +2,7 @@
 # -> This dockerfile must be executed in the context of the root
 # -> I.e. run `docker build -f DOCKERFILE ..` from this dir or
 # -> `docker build -f ./twigg-runner/DOCKERFILE .` at the repo root
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 ARG TW_ID
 
