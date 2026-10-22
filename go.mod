@@ -1,6 +1,6 @@
 module monorepo
 
-go 1.26.5
+go 1.26.10
 
 require (
 	github.com/canonical/lxd v0.0.0-20260722152824-01016fe00951
