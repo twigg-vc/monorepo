@@ -39,6 +39,14 @@ new version.
   commit. The description supports markdown.
 - `tw bug-get b/5` shows bug 5 and its events.
 
+## Bug tags
+
+Tags in a commit's review description (`tw description-set`) associate the
+commit with bugs. Put each tag on its own line; add as many as needed.
+
+- `BUG=b/5` associates the commit with bug 5 when it is submitted.
+- `FIX=b/5` does the same and also closes bug 5.
+
 ## Statuses
 
 `tw log` shows a status after each commit id:
