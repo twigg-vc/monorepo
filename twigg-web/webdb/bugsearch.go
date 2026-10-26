@@ -22,7 +22,7 @@ func (db webDb) searchBugs(ctx context.Context, f bugsearch.Filter, cursor strin
 
 	var q strings.Builder
 	q.WriteString(`
-		SELECT b.number, b.title, '' AS body, b.status, b.authorId, b.assigneeUserId,
+		SELECT b.number, b.title, '' AS body, b.status, b.authorId, b.assigneeUserId, b.priority,
 			COALESCE((SELECT count FROM bug_event_counts c WHERE c.bugId = b.bugId AND c.kind = ?), 0),
 			b.createdOnUnixMilli, b.updatedOnUnixMilli
 		FROM bugs b

@@ -64,6 +64,7 @@ func TestCreateAndGetBug(t *testing.T) {
 		Status:         bug.Status_Open,
 		AuthorUserId:   bugsAuthorId,
 		AssigneeUserId: 0,
+		Priority:       bug.Priority_None,
 		CommentCount:   0,
 		CreatedOn:      time.Time{},
 		UpdatedOn:      time.Time{},

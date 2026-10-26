@@ -13,6 +13,19 @@ func (s Status) IsValid() bool {
 	return s == Status_Open || s == Status_Closed
 }
 
+type Priority string
+
+const (
+	Priority_None Priority = ""
+	Priority_P0   Priority = "P0"
+	Priority_P1   Priority = "P1"
+	Priority_P2   Priority = "P2"
+)
+
+func (p Priority) IsValid() bool {
+	return p == Priority_None || p == Priority_P0 || p == Priority_P1 || p == Priority_P2
+}
+
 const (
 	MaxTitleLen = 200 // in characters
 	MaxBodyLen  = 64 * 1024
@@ -27,13 +40,15 @@ type Bug struct {
 	Status         Status
 	AuthorUserId   int64
 	AssigneeUserId int64
+	Priority       Priority
 	CommentCount   int64
 	CreatedOn      time.Time
 	UpdatedOn      time.Time
 }
 
 func NewBug(number uint64, title, body string, status Status,
-	authorUserId, assigneeUserId int64, commentCount int64, createdOn, updatedOn time.Time) Bug {
+	authorUserId, assigneeUserId int64, priority Priority, commentCount int64,
+	createdOn, updatedOn time.Time) Bug {
 	return Bug{
 		Number:         number,
 		Title:          title,
@@ -41,6 +56,7 @@ func NewBug(number uint64, title, body string, status Status,
 		Status:         status,
 		AuthorUserId:   authorUserId,
 		AssigneeUserId: assigneeUserId,
+		Priority:       priority,
 		CommentCount:   commentCount,
 		CreatedOn:      createdOn,
 		UpdatedOn:      updatedOn,

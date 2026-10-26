@@ -17,7 +17,7 @@ func scanBug(s rowScanner) (bug.Bug, error) {
 	var b bug.Bug
 	var createdOn, updatedOn int64
 	err := s.Scan(&b.Number, &b.Title, &b.Body, &b.Status, &b.AuthorUserId,
-		&b.AssigneeUserId, &b.CommentCount, &createdOn, &updatedOn)
+		&b.AssigneeUserId, &b.Priority, &b.CommentCount, &createdOn, &updatedOn)
 	if err != nil {
 		return bug.Bug{}, err
 	}
@@ -78,7 +78,7 @@ func (db webDb) CountRepoBugs(ctx context.Context, repoId uint64) (open, closed 
 func (db webDb) GetBug(ctx context.Context, repoId uint64, number uint64) (
 	b bug.Bug, isNotFoundErr bool, err error) {
 	row := db.s.QueryRow(ctx, `
-		SELECT b.number, b.title, b.body, b.status, b.authorId, b.assigneeUserId,
+		SELECT b.number, b.title, b.body, b.status, b.authorId, b.assigneeUserId, b.priority,
 			COALESCE((SELECT count FROM bug_event_counts c WHERE c.bugId = b.bugId AND c.kind = ?), 0),
 			b.createdOnUnixMilli, b.updatedOnUnixMilli
 		FROM bugs b
