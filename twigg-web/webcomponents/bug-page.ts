@@ -1,7 +1,7 @@
 import { html, css, LitElement, TemplateResult } from 'lit';
 import { TwiggCss } from './css';
-import { Bug, BugEvent, BugStatus, MaxBugTitleLen } from './interfaces';
-import { GetCsrfHeaders, PathToBugAssignee, PathToBugComments, PathToBugDescription, PathToBugStatus, PathToBugTitle, UrlToBug, UrlToCommit, UrlToRepoBugsTab } from './routes';
+import { Bug, BugEvent, BugPriorities, BugPriority, BugStatus, MaxBugTitleLen } from './interfaces';
+import { GetCsrfHeaders, PathToBugAssignee, PathToBugComments, PathToBugDescription, PathToBugPriority, PathToBugStatus, PathToBugTitle, UrlToBug, UrlToCommit, UrlToRepoBugsTab } from './routes';
 import { FormatDateTime, FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
 import { MdInput2, MdInputSubmit } from './md-input2';
@@ -28,6 +28,7 @@ export class BugPage extends LitElement {
         titleDraft: { type: String, state: true },
         isSavingTitle: { type: Boolean, state: true },
         isSavingAssignee: { type: Boolean, state: true },
+        isSavingPriority: { type: Boolean, state: true },
     };
     declare RepoOwnerName: string;
     declare RepoName: string;
@@ -40,6 +41,7 @@ export class BugPage extends LitElement {
     declare private titleDraft: string;
     declare private isSavingTitle: boolean;
     declare private isSavingAssignee: boolean;
+    declare private isSavingPriority: boolean;
 
     constructor() {
         super();
@@ -54,6 +56,7 @@ export class BugPage extends LitElement {
         this.titleDraft = "";
         this.isSavingTitle = false;
         this.isSavingAssignee = false;
+        this.isSavingPriority = false;
     }
 
     render() {
@@ -254,11 +257,53 @@ export class BugPage extends LitElement {
     }
 
     // "-" when not set
-    private renderPriority(b: Bug) {
-        if (b.Priority === "") {
-            return html`<span>-</span>`
+    private priorityText(p: BugPriority): string {
+        if (p === "") {
+            return "-"
         } else {
-            return html`<span>${b.Priority}</span>`
+            return p
+        }
+    }
+
+    private renderPriority(b: Bug) {
+        if (!this.CanWrite) {
+            return html`<span>${this.priorityText(b.Priority)}</span>`
+        }
+        return html`
+            <select class="priority-select" ?disabled=${this.isSavingPriority}
+                @change=${(e: Event) => this.savePriority(e.target as HTMLSelectElement)}>
+                ${BugPriorities.map(p => html`<option value=${p} ?selected=${p === b.Priority}>${this.priorityText(p)}</option>`)}
+            </select>
+        `
+    }
+
+    private async savePriority(select: HTMLSelectElement) {
+        const b = this.Bug!
+        const priority = select.value as BugPriority
+        if (this.isSavingPriority || priority === b.Priority) {
+            return
+        }
+        this.isSavingPriority = true
+        try {
+            const resp = await fetch(PathToBugPriority(this.RepoOwnerName, this.RepoName, b.Number), {
+                method: 'POST',
+                body: JSON.stringify({ Priority: priority }),
+                headers: { ...GetCsrfHeaders(), "Content-Type": "application/json" },
+            })
+            if (!resp.ok) {
+                select.value = b.Priority
+                alert(await resp.text())
+                return
+            }
+            const data = await resp.json() as { Bug: Bug, Event: BugEvent }
+            this.Bug = data.Bug
+            this.Events = [...this.Events, data.Event]
+        } catch (err) {
+            select.value = b.Priority
+            console.log("failed to save priority: ", err)
+            alert("Failed to save the priority :(")
+        } finally {
+            this.isSavingPriority = false
         }
     }
 
@@ -740,6 +785,14 @@ export class BugPage extends LitElement {
         }
         username-input {
             width: 100%;
+        }
+        .priority-select {
+            font: inherit;
+            padding: var(--space1) var(--space2);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius1);
+            background: var(--color-surface-alt);
+            color: var(--color-text);
         }
         .meta-label {
             color: var(--color-text-muted);

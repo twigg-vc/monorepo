@@ -263,6 +263,7 @@ export function UsernameIsValid(username: string): { isValid: boolean; errorMsg 
 
 export type BugStatus = "open" | "closed"
 export type BugPriority = "" | "P0" | "P1" | "P2" // "" when not set
+export const BugPriorities: BugPriority[] = ["", "P0", "P1", "P2"]
 
 // Must match bug.MaxTitleLen
 export const MaxBugTitleLen = 200
