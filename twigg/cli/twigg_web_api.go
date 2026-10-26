@@ -97,8 +97,12 @@ func bugToString(b twiggwebclient.GetBugAndEventsResponse) string {
 	if assignee == "" {
 		assignee = "nobody"
 	}
-	fmt.Fprintf(&sb, "author: %s | assignee: %s | comments: %d\n",
-		b.Bug.AuthorUsername, assignee, b.Bug.CommentCount)
+	priority := string(b.Bug.Priority)
+	if priority == "" {
+		priority = "-"
+	}
+	fmt.Fprintf(&sb, "author: %s | assignee: %s | priority: %s | comments: %d\n",
+		b.Bug.AuthorUsername, assignee, priority, b.Bug.CommentCount)
 	fmt.Fprintf(&sb, "created: %s | updated: %s\n",
 		bugTime(b.Bug.CreatedOn), bugTime(b.Bug.UpdatedOn))
 	if strings.TrimSpace(b.Bug.Body) != "" {
@@ -146,6 +150,11 @@ func bugEventString(e twiggwebclient.FrontendBugEvent) string {
 			return who + " assigned the bug to " + e.Assignment.NewAssigneeUsername
 		}
 		return who + " unassigned the bug"
+	case twiggwebclient.FrontendBugEventKind_PriorityChange:
+		if e.PriorityChange != nil && e.PriorityChange.NewPriority != bug.Priority_None {
+			return who + " set the priority to " + string(e.PriorityChange.NewPriority)
+		}
+		return who + " removed the priority"
 	}
 	return who + " " + string(e.Kind)
 }

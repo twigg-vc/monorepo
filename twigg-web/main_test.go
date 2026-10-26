@@ -3302,6 +3302,8 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 		bugs.PostBugRequest{Title: "Momo ate the moon peach"})
 	bAang.PostJson("/aang/BookOne/b/1/comments",
 		bugs.PostCommentRequest{Body: "Appa did it"})
+	bAang.PostJson("/aang/BookOne/b/1/priority",
+		bugs.PostPriorityRequest{Priority: "P1"})
 	bug, isNotFoundErr, err := client.GetBugAndEvents(1)
 	if err != nil || isNotFoundErr {
 		t.Fatal(err)
@@ -3319,6 +3321,8 @@ func TestTwiggWebCliKeyClient(t *testing.T) {
 	tw.Run("bug-get", "1")
 	tw.CheckOutContains("Momo")
 	tw.CheckOutContains("Appa")
+	tw.CheckOutContains("priority: P1")
+	tw.CheckOutContains("set the priority to P1")
 	tw.Run("bug-get", "9999999")
 	tw.CheckOutContains("not found")
 
