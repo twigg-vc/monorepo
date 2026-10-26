@@ -1,6 +1,6 @@
 import { html, css, LitElement, TemplateResult } from 'lit';
 import { TwiggCss } from './css';
-import { Bug, BugStatus, GetBugsResponse, MaxBugTitleLen } from './interfaces';
+import { Bug, BugPriorities, BugPriority, BugStatus, GetBugsResponse, MaxBugTitleLen } from './interfaces';
 import { GetFeatureFlags } from './feature-flags';
 import { GetCsrfHeaders, PathToBugs, PathToBugSearch, PathToNewBug, UrlToBug } from './routes';
 import { MinDurationTimer } from './min-duration-timer';
@@ -31,6 +31,7 @@ export class RepoBugsTab extends LitElement {
         loadFailed: { type: Boolean, state: true },
         draftTitle: { type: String, state: true },
         draftBody: { type: String, state: true },
+        draftPriority: { type: String, state: true },
         isCreating: { type: Boolean, state: true },
     };
     declare RepoOwnerName: string;
@@ -45,6 +46,7 @@ export class RepoBugsTab extends LitElement {
     declare private loadFailed: boolean;
     declare private draftTitle: string;
     declare private draftBody: string;
+    declare private draftPriority: BugPriority;
     declare private isCreating: boolean;
 
     constructor() {
@@ -60,6 +62,7 @@ export class RepoBugsTab extends LitElement {
         this.loadFailed = false;
         this.draftTitle = "";
         this.draftBody = "";
+        this.draftPriority = "";
         this.isCreating = false;
     }
 
@@ -322,11 +325,24 @@ export class RepoBugsTab extends LitElement {
                     @md-input-changed=${(e: CustomEvent) => { this.draftBody = e.detail.NewContent }}>
                 </md-input2>
                 <div class="form-actions">
+                    <select class="priority-select"
+                        @change=${(e: Event) => { this.draftPriority = (e.target as HTMLSelectElement).value as BugPriority }}>
+                        ${BugPriorities.map(p => html`<option value=${p} ?selected=${p === this.draftPriority}>${this.priorityText(p)}</option>`)}
+                    </select>
                     <button class="secondary-btn" @click=${this.showList}>Cancel</button>
                     ${submitBtn}
                 </div>
             </div>
         `
+    }
+
+    // "-" when not set
+    private priorityText(p: BugPriority): string {
+        if (p === "") {
+            return "-"
+        } else {
+            return p
+        }
     }
 
     private async createBug() {
@@ -337,7 +353,7 @@ export class RepoBugsTab extends LitElement {
         try {
             const resp = await fetch(PathToNewBug(this.RepoOwnerName, this.RepoName), {
                 method: 'POST',
-                body: JSON.stringify({ Title: this.draftTitle, Body: this.draftBody }),
+                body: JSON.stringify({ Title: this.draftTitle, Body: this.draftBody, Priority: this.draftPriority }),
                 headers: { ...GetCsrfHeaders(), "Content-Type": "application/json" },
             })
             if (!resp.ok) {
@@ -347,6 +363,7 @@ export class RepoBugsTab extends LitElement {
             const b = await resp.json() as Bug
             this.draftTitle = ""
             this.draftBody = ""
+            this.draftPriority = ""
             window.location.href = UrlToBug(this.RepoOwnerName, this.RepoName, b.Number)
         } catch (err) {
             console.log("failed to create bug: ", err)
@@ -691,6 +708,15 @@ export class RepoBugsTab extends LitElement {
             display: flex;
             justify-content: flex-end;
             gap: var(--space2);
+        }
+        .priority-select {
+            margin-right: auto;
+            font: inherit;
+            padding: var(--space1) var(--space2);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius1);
+            background: var(--color-surface-alt);
+            color: var(--color-text);
         }
         .bug-comments {
             display: inline-flex;
