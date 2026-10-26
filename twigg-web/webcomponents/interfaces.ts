@@ -262,6 +262,7 @@ export function UsernameIsValid(username: string): { isValid: boolean; errorMsg 
 }
 
 export type BugStatus = "open" | "closed"
+export type BugPriority = "" | "P0" | "P1" | "P2" // "" when not set
 
 // Must match bug.MaxTitleLen
 export const MaxBugTitleLen = 200
@@ -274,6 +275,7 @@ export interface Bug {
     Status: BugStatus
     AuthorUsername: string
     AssigneeUsername: string // empty when unassigned
+    Priority: BugPriority
     CommentCount: number
     CreatedOn: string
     UpdatedOn: string
@@ -282,7 +284,7 @@ export interface Bug {
 // Only the details field matching Kind is set
 export interface BugEvent {
     Id: number
-    Kind: "comment" | "status-change" | "description-edit" | "title-edit" | "submitted-commit" | "closing-commit" | "assignment"
+    Kind: "comment" | "status-change" | "description-edit" | "title-edit" | "submitted-commit" | "closing-commit" | "assignment" | "priority-change"
     AuthorUsername: string
     CreatedOn: string
     Comment?: { Body: string }
@@ -292,6 +294,7 @@ export interface BugEvent {
     SubmittedCommit?: { CommitL: number }
     ClosingCommit?: { CommitL: number }
     Assignment?: { NewAssigneeUsername: string }
+    PriorityChange?: { NewPriority: BugPriority }
 }
 
 // Copy of go-code bugs.GetBugsResponse

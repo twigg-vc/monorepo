@@ -284,6 +284,10 @@ func TestGetBug(t *testing.T) {
 	if _, _, err := db.AddBugComment(w, testRepoId, 1, zukoId, "Try jasmine"); err != nil {
 		t.Fatal(err)
 	}
+	db.SetNower(mockNow{now: time.UnixMilli(202)}, t)
+	if _, _, err := db.SetBugPriority(w, testRepoId, 1, zukoId, bug.Priority_P0); err != nil {
+		t.Fatal(err)
+	}
 
 	rec := httptest.NewRecorder()
 	h.handleGetBug(rec, newBugPageReq("1", nil), w)
@@ -295,7 +299,7 @@ func TestGetBug(t *testing.T) {
 		t.Fatal(err)
 	}
 	// reflect.DeepEqual doesn't work well with dates
-	if b.CreatedOn.UnixMilli() != 200 || b.UpdatedOn.UnixMilli() != 201 {
+	if b.CreatedOn.UnixMilli() != 200 || b.UpdatedOn.UnixMilli() != 202 {
 		t.Fatalf("unexpected timestamps: %+v", b)
 	}
 	b.CreatedOn, b.UpdatedOn = time.Time{}, time.Time{}
@@ -306,6 +310,7 @@ func TestGetBug(t *testing.T) {
 		Status:           bug.Status_Open,
 		AuthorUsername:   "zuko",
 		AssigneeUsername: "",
+		Priority:         bug.Priority_P0,
 		CommentCount:     1,
 		CreatedOn:        time.Time{},
 		UpdatedOn:        time.Time{},
@@ -319,16 +324,22 @@ func TestGetBug(t *testing.T) {
 		t.Fatal(err)
 	}
 	// reflect.DeepEqual doesn't work well with dates
-	if len(events) != 1 || events[0].CreatedOn.UnixMilli() != 201 {
+	if len(events) != 2 || events[0].CreatedOn.UnixMilli() != 201 || events[1].CreatedOn.UnixMilli() != 202 {
 		t.Fatalf("unexpected events %+v", events)
 	}
-	events[0].CreatedOn = time.Time{}
+	events[0].CreatedOn, events[1].CreatedOn = time.Time{}, time.Time{}
 	wantEvents := []twiggwebclient.FrontendBugEvent{{
 		Id:             1,
 		Kind:           twiggwebclient.FrontendBugEventKind_Comment,
 		AuthorUsername: "zuko",
 		CreatedOn:      time.Time{},
 		Comment:        &bug.Comment{Body: "Try jasmine"},
+	}, {
+		Id:             2,
+		Kind:           twiggwebclient.FrontendBugEventKind_PriorityChange,
+		AuthorUsername: "zuko",
+		CreatedOn:      time.Time{},
+		PriorityChange: &bug.PriorityChange{NewPriority: bug.Priority_P0},
 	}}
 	if !reflect.DeepEqual(events, wantEvents) {
 		t.Fatalf("expected %+v, got %+v", wantEvents, events)

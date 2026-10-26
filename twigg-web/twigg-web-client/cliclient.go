@@ -104,6 +104,7 @@ func bugToFrontend(b bug.Bug, authorUsername, assigneeUsername string) FrontendB
 		Status:           b.Status,
 		AuthorUsername:   authorUsername,
 		AssigneeUsername: assigneeUsername,
+		Priority:         b.Priority,
 		CommentCount:     b.CommentCount,
 		CreatedOn:        b.CreatedOn,
 		UpdatedOn:        b.UpdatedOn,
@@ -138,6 +139,9 @@ func bugEventToFrontend(e bug.Event, authorUsername, newAssigneeUsername string)
 	case bug.EventKind_Assignment:
 		fe.Kind = FrontendBugEventKind_Assignment
 		fe.Assignment = &FrontendAssignment{NewAssigneeUsername: newAssigneeUsername}
+	case bug.EventKind_PriorityChange:
+		fe.Kind = FrontendBugEventKind_PriorityChange
+		fe.PriorityChange = &e.PriorityChange
 	default:
 		panic(fmt.Sprintf("unknown bug event kind %d", e.Kind))
 	}

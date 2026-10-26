@@ -68,6 +68,7 @@ type FrontendBug struct {
 	Status           bug.Status
 	AuthorUsername   string
 	AssigneeUsername string
+	Priority         bug.Priority
 	CommentCount     int64
 	CreatedOn        time.Time
 	UpdatedOn        time.Time
@@ -83,6 +84,7 @@ const (
 	FrontendBugEventKind_SubmittedCommit FrontendBugEventKind = "submitted-commit"
 	FrontendBugEventKind_ClosingCommit   FrontendBugEventKind = "closing-commit"
 	FrontendBugEventKind_Assignment      FrontendBugEventKind = "assignment"
+	FrontendBugEventKind_PriorityChange  FrontendBugEventKind = "priority-change"
 )
 
 // Only the details field matching Kind is set
@@ -98,6 +100,7 @@ type FrontendBugEvent struct {
 	SubmittedCommit *bug.SubmittedCommit `json:",omitempty"`
 	ClosingCommit   *bug.ClosingCommit   `json:",omitempty"`
 	Assignment      *FrontendAssignment  `json:",omitempty"`
+	PriorityChange  *bug.PriorityChange  `json:",omitempty"`
 }
 
 // NewAssigneeUsername is empty when the bug was unassigned
