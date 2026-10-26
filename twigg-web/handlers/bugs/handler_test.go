@@ -1035,6 +1035,50 @@ func TestPostPriority(t *testing.T) {
 	}
 }
 
+func TestPostPriorityFails(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	zuko, stranger := user.User{Id: zukoId, Username: "zuko"}, user.User{Id: zukoId + 1}
+	post := func(u user.User, number string, flag bool, body string) int {
+		t.Helper()
+		req := newBugWriteReq(
+			u,
+			/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+			/*repoDisplayName*/ "tea",
+			/*number*/ number,
+			body,
+		)
+		req.Flags.ShowBugs = flag
+		rec := httptest.NewRecorder()
+		if h.handlePostPriority(rec, req, w) {
+			t.Fatalf("expected no commit, got %d: %s", rec.Code, rec.Body)
+		}
+		return rec.Code
+	}
+	const newPriority = `{"Priority": "P0"}`
+
+	if code := post(stranger, "1", true, newPriority); code != http.StatusForbidden {
+		t.Fatalf("stranger: expected 403, got %d", code)
+	}
+	if b, _, _ := db.GetBug(w, testRepoId, 1); b.Priority != bug.Priority_None {
+		t.Fatalf("expected no priority, got %+v", b)
+	}
+	if code := post(zuko, "1", false, newPriority); code != http.StatusNotFound {
+		t.Fatalf("flag off: expected 404, got %d", code)
+	}
+	if code := post(zuko, "2", true, newPriority); code != http.StatusNotFound {
+		t.Fatalf("missing bug: expected 404, got %d", code)
+	}
+	if code := post(zuko, "1", true, `{"Priority": "P3"}`); code != http.StatusBadRequest {
+		t.Fatalf("invalid priority: expected 400, got %d", code)
+	}
+	if code := post(zuko, "1", true, `{"Priority": ""}`); code != http.StatusConflict {
+		t.Fatalf("unchanged priority: expected 409, got %d", code)
+	}
+}
+
 func TestPostAssignee(t *testing.T) {
 	h, db, w, zukoId := newTestHandler(t)
 	irohId, err := db.CreateUser(w, "iroh@twigg.vc", user.UserState_NoSubscription,
