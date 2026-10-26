@@ -234,11 +234,24 @@ func (h handler) handlePostBug(w http.ResponseWriter,
 		http.Error(w, "the body is too long", http.StatusBadRequest)
 		return false
 	}
+	if !req.Priority.IsValid() {
+		http.Error(w, "invalid priority", http.StatusBadRequest)
+		return false
+	}
 	b, err := h.db.CreateBug(dbWrite, r.Repo.Id, r.UserWithWritePermission.Id, title, req.Body)
 	if err != nil {
 		log.Printf("failed to create a bug in repo id=%d: %s", r.Repo.Id, err)
 		http.Error(w, "failed to create the bug", http.StatusInternalServerError)
 		return false
+	}
+	if req.Priority != bug.Priority_None {
+		e, _, err := h.db.SetBugPriority(dbWrite, r.Repo.Id, b.Number, r.UserWithWritePermission.Id, req.Priority)
+		if err != nil {
+			log.Printf("failed to set the priority of b/%d of repo id=%d: %s", b.Number, r.Repo.Id, err)
+			http.Error(w, "failed to set the priority", http.StatusInternalServerError)
+			return false
+		}
+		b.Priority, b.UpdatedOn = req.Priority, e.CreatedOn
 	}
 	frontendBug, ok := newUsernames(h.db, dbWrite, w).getFrontendBug(b)
 	if !ok {

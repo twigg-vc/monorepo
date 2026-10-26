@@ -72,9 +72,11 @@ type GetBugsResponse struct {
 	CanCreate      bool
 }
 
+// Priority is optional. When set, it's recorded in the new bug's timeline.
 type PostBugRequest struct {
-	Title string
-	Body  string
+	Title    string
+	Body     string
+	Priority bug.Priority
 }
 
 type PostCommentRequest struct {

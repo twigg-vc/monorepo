@@ -79,7 +79,7 @@ func TestPostBug(t *testing.T) {
 		user.User{Id: zukoId},
 		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
 		/*repoDisplayName*/ "tea",
-		`{"Title": "  Fix Iroh's tea  ", "Body": "The tea is cold"}`,
+		`{"Title": "  Fix Iroh's tea  ", "Body": "The tea is cold", "Priority": "P1"}`,
 	), w)
 	if rec.Code != http.StatusOK || !shouldCommit {
 		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
@@ -100,6 +100,7 @@ func TestPostBug(t *testing.T) {
 		Status:           bug.Status_Open,
 		AuthorUsername:   "zuko",
 		AssigneeUsername: "",
+		Priority:         bug.Priority_P1,
 		CommentCount:     0,
 		CreatedOn:        time.Time{},
 		UpdatedOn:        time.Time{},
@@ -107,8 +108,12 @@ func TestPostBug(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("expected %+v, got %+v", want, got)
 	}
-	if _, isNotFoundErr, err := db.GetBug(w, testRepoId, 1); err != nil || isNotFoundErr {
-		t.Fatalf("expected b/1 to be created, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	if b, _, err := db.GetBug(w, testRepoId, 1); err != nil || b.Priority != bug.Priority_P1 {
+		t.Fatalf("expected b/1 to be created with P1, got %+v (err=%v)", b, err)
+	}
+	events, _, err := db.GetBugEvents(w, testRepoId, 1, "", 10)
+	if err != nil || len(events) != 1 || events[0].PriorityChange.NewPriority != bug.Priority_P1 {
+		t.Fatalf("expected the priority in the timeline, got %+v (err=%v)", events, err)
 	}
 }
 
@@ -222,6 +227,12 @@ func TestPostBugFails(t *testing.T) {
 	}
 	if code := post(user.User{Id: zukoId}, true, `not json`); code != http.StatusBadRequest {
 		t.Fatalf("invalid json: expected 400, got %d", code)
+	}
+	if code := post(user.User{Id: zukoId}, true, `{"Title": "Fix Iroh's tea", "Priority": "P3"}`); code != http.StatusBadRequest {
+		t.Fatalf("invalid priority: expected 400, got %d", code)
+	}
+	if _, isNotFoundErr, _ := db.GetBug(w, testRepoId, 1); !isNotFoundErr {
+		t.Fatal("expected no bug to be created")
 	}
 }
 
