@@ -986,6 +986,55 @@ func TestPostTitleFails(t *testing.T) {
 		t.Fatalf("unchanged title: expected 409, got %d", code)
 	}
 }
+func TestPostPriority(t *testing.T) {
+	h, db, w, zukoId := newTestHandler(t)
+	db.SetNower(mockNow{now: time.UnixMilli(199)}, t)
+	if _, err := db.CreateBug(w, testRepoId, zukoId, "Fix Iroh's tea", ""); err != nil {
+		t.Fatal(err)
+	}
+	db.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+
+	rec := httptest.NewRecorder()
+	shouldCommit := h.handlePostPriority(rec, newBugWriteReq(
+		user.User{Id: zukoId, Username: "zuko"},
+		/*repoOwner*/ user.User{Id: zukoId, Username: "zuko"},
+		/*repoDisplayName*/ "tea",
+		/*number*/ "1",
+		`{"Priority": "P1"}`,
+	), w)
+	if rec.Code != http.StatusOK || !shouldCommit {
+		t.Fatalf("expected 200 and a commit, got %d shouldCommit=%v: %s", rec.Code, shouldCommit, rec.Body)
+	}
+	var got PostEditResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if got.Bug.CreatedOn.UnixMilli() != 199 || got.Bug.UpdatedOn.UnixMilli() != 200 ||
+		got.Event.CreatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamps: %+v", got)
+	}
+	got.Bug.CreatedOn, got.Bug.UpdatedOn, got.Event.CreatedOn = time.Time{}, time.Time{}, time.Time{}
+	want := PostEditResponse{
+		Bug: twiggwebclient.FrontendBug{
+			Number:         1,
+			Title:          "Fix Iroh's tea",
+			Status:         bug.Status_Open,
+			AuthorUsername: "zuko",
+			Priority:       bug.Priority_P1,
+		},
+		Event: twiggwebclient.FrontendBugEvent{
+			Id:             1,
+			Kind:           twiggwebclient.FrontendBugEventKind_PriorityChange,
+			AuthorUsername: "zuko",
+			PriorityChange: &bug.PriorityChange{NewPriority: bug.Priority_P1},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("expected %+v, got %+v", want, got)
+	}
+}
+
 func TestPostAssignee(t *testing.T) {
 	h, db, w, zukoId := newTestHandler(t)
 	irohId, err := db.CreateUser(w, "iroh@twigg.vc", user.UserState_NoSubscription,
