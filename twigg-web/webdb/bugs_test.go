@@ -700,6 +700,61 @@ func TestSetBugAssigneeFails(t *testing.T) {
 	}
 }
 
+func TestSetBugPriority(t *testing.T) {
+	b, w := newBugsDb(t)
+	b.SetNower(mockNow{now: time.UnixMilli(199)}, t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b.SetNower(mockNow{now: time.UnixMilli(200)}, t)
+	e, isNotFoundErr, err := b.SetBugPriority(w, bugsRepoId, created.Number, bugsAuthorId, bug.Priority_P1)
+	if err != nil || isNotFoundErr {
+		t.Fatalf("SetBugPriority: isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	// reflect.DeepEqual doesn't work well with dates
+	if e.CreatedOn.UnixMilli() != 200 {
+		t.Fatalf("unexpected timestamp: event %+v", e)
+	}
+	e.CreatedOn = time.Time{}
+	want := bug.Event{
+		Id:             1,
+		Kind:           bug.EventKind_PriorityChange,
+		AuthorUserId:   bugsAuthorId,
+		CreatedOn:      time.Time{},
+		PriorityChange: bug.PriorityChange{NewPriority: bug.Priority_P1},
+	}
+	if !reflect.DeepEqual(e, want) {
+		t.Fatalf("SetBugPriority: expected %+v, got %+v", want, e)
+	}
+	got, _, err := b.GetBug(w, bugsRepoId, created.Number)
+	if err != nil || got.Priority != bug.Priority_P1 || got.UpdatedOn.UnixMilli() != 200 {
+		t.Fatalf("expected the priority updated at 200, got %+v (err=%v)", got, err)
+	}
+}
+
+func TestSetBugPriorityFails(t *testing.T) {
+	b, w := newBugsDb(t)
+	created, err := b.CreateBug(w, bugsRepoId, bugsAuthorId, "Fix Iroh's tea", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, isNotFoundErr, err := b.SetBugPriority(w, bugsRepoId, created.Number+1, bugsAuthorId, bug.Priority_P0)
+	if !isNotFoundErr || !errors.Is(err, webdb.ErrNotFound) {
+		t.Fatalf("expected not found, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	_, isNotFoundErr, err = b.SetBugPriority(w, bugsRepoId, created.Number, bugsAuthorId, "P3")
+	if err == nil || isNotFoundErr {
+		t.Fatalf("expected an error for an invalid priority, got isNotFoundErr=%v err=%v", isNotFoundErr, err)
+	}
+	got, _, err := b.GetBug(w, bugsRepoId, created.Number)
+	if err != nil || got.Priority != bug.Priority_None {
+		t.Fatalf("expected no priority, got %+v (err=%v)", got, err)
+	}
+}
+
 func TestAddBugSubmittedCommit(t *testing.T) {
 	b, w := newBugsDb(t)
 	b.SetNower(mockNow{now: time.UnixMilli(199)}, t)
