@@ -25,6 +25,7 @@ func AddHandlers(db Db, perms Permissions,
 	userRepoMux.HandleFuncW("POST "+routes.BugDescriptionPattern, h.handlePostDescription)
 	userRepoMux.HandleFuncW("POST "+routes.BugTitlePattern, h.handlePostTitle)
 	userRepoMux.HandleFuncW("POST "+routes.BugAssigneePattern, h.handlePostAssignee)
+	userRepoMux.HandleFuncW("POST "+routes.BugPriorityPattern, h.handlePostPriority)
 	cliMux.HandleFuncR("GET "+routes.CliBugPattern, h.handleCliGetBugAndEvents)
 }
 
@@ -48,6 +49,8 @@ type Db interface {
 		authorId int64, newTitle string) (e bug.Event, isNotFoundErr bool, err error)
 	SetBugAssignee(writeCtx context.Context, repoId uint64, number uint64,
 		authorId int64, assigneeUserId int64) (e bug.Event, isNotFoundErr bool, err error)
+	SetBugPriority(writeCtx context.Context, repoId uint64, number uint64,
+		authorId int64, priority bug.Priority) (e bug.Event, isNotFoundErr bool, err error)
 	CreateNotification(writeCtx context.Context, userId int64, message string, assetPath string) error
 }
 
@@ -102,4 +105,9 @@ type PostTitleRequest struct {
 // An empty Username unassigns the bug.
 type PostAssigneeRequest struct {
 	Username string
+}
+
+// An empty Priority unsets it.
+type PostPriorityRequest struct {
+	Priority bug.Priority
 }

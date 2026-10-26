@@ -531,6 +531,39 @@ func (h handler) handlePostAssignee(w http.ResponseWriter,
 	return h.writeEditResponse(w, r, dbWrite, b.Number, e)
 }
 
+func (h handler) handlePostPriority(w http.ResponseWriter,
+	r wrappers.UserRepoMuxRequest, dbWrite context.Context) (shouldCommit bool) {
+	if !r.Flags.ShowBugs {
+		http.NotFound(w, r.Request)
+		return false
+	}
+	b, ok := h.getWritableBug(w, r, dbWrite)
+	if !ok {
+		return false
+	}
+	var req PostPriorityRequest
+	err := json.NewDecoder(http.MaxBytesReader(w, r.Request.Body, maxRequestBytes)).Decode(&req)
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return false
+	}
+	if !req.Priority.IsValid() {
+		http.Error(w, "invalid priority", http.StatusBadRequest)
+		return false
+	}
+	if req.Priority == b.Priority {
+		http.Error(w, "the priority is unchanged", http.StatusConflict)
+		return false
+	}
+	e, _, err := h.db.SetBugPriority(dbWrite, r.Repo.Id, b.Number, r.UserWithWritePermission.Id, req.Priority)
+	if err != nil {
+		log.Printf("failed to set the priority of b/%d of repo id=%d: %s", b.Number, r.Repo.Id, err)
+		http.Error(w, "failed to set the priority", http.StatusInternalServerError)
+		return false
+	}
+	return h.writeEditResponse(w, r, dbWrite, b.Number, e)
+}
+
 // Writes the edited bug and its new event. Returns whether it succeeded.
 func (h handler) writeEditResponse(w http.ResponseWriter, r wrappers.UserRepoMuxRequest,
 	dbWrite context.Context, number uint64, e bug.Event) (ok bool) {
