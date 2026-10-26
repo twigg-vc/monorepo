@@ -371,7 +371,8 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 			COALESCE(t.oldTitle, ''),
 			COALESCE(a.newAssigneeUserId, 0),
 			COALESCE(sc.commitL, 0),
-			COALESCE(cc.commitL, 0)
+			COALESCE(cc.commitL, 0),
+			COALESCE(p.newPriority, '')
 		FROM bug_events e
 		LEFT JOIN bug_comments c ON c.eventId = e.eventId
 		LEFT JOIN bug_status_changes s ON s.eventId = e.eventId
@@ -380,6 +381,7 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 		LEFT JOIN bug_assignments a ON a.eventId = e.eventId
 		LEFT JOIN bug_submitted_commits sc ON sc.eventId = e.eventId
 		LEFT JOIN bug_closing_commits cc ON cc.eventId = e.eventId
+		LEFT JOIN bug_priority_changes p ON p.eventId = e.eventId
 		WHERE e.bugId = (SELECT bugId FROM bugs WHERE repoId = ? AND number = ?)
 			AND e.eventId < ?
 		ORDER BY e.eventId DESC
@@ -398,8 +400,9 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 		var oldBody, oldTitle string
 		var newAssigneeUserId int64
 		var commitL, closingCommitL uint64
+		var newPriority bug.Priority
 		err := rows.Scan(&e.Id, &e.Kind, &e.AuthorUserId, &createdOn, &commentBody,
-			&newStatus, &oldBody, &oldTitle, &newAssigneeUserId, &commitL, &closingCommitL)
+			&newStatus, &oldBody, &oldTitle, &newAssigneeUserId, &commitL, &closingCommitL, &newPriority)
 		if err != nil {
 			return nil, "", fmt.Errorf("failed scanning bug event: %w", err)
 		}
@@ -419,6 +422,8 @@ func (db webDb) GetBugEvents(ctx context.Context, repoId uint64, number uint64,
 			e.SubmittedCommit = bug.NewSubmittedCommit(commitL)
 		case bug.EventKind_ClosingCommit:
 			e.ClosingCommit = bug.NewClosingCommit(closingCommitL)
+		case bug.EventKind_PriorityChange:
+			e.PriorityChange = bug.NewPriorityChange(newPriority)
 		default:
 			return nil, "", fmt.Errorf("unknown bug event kind %d (eventId=%d)", e.Kind, e.Id)
 		}

@@ -732,6 +732,16 @@ func TestSetBugPriority(t *testing.T) {
 	if err != nil || got.Priority != bug.Priority_P1 || got.UpdatedOn.UnixMilli() != 200 {
 		t.Fatalf("expected the priority updated at 200, got %+v (err=%v)", got, err)
 	}
+
+	if _, _, err := b.SetBugPriority(w, bugsRepoId, created.Number, bugsAuthorId, bug.Priority_None); err != nil {
+		t.Fatal(err)
+	}
+	events, _, err := b.GetBugEvents(w, bugsRepoId, created.Number, "", 10)
+	if err != nil || len(events) != 2 ||
+		events[0].PriorityChange.NewPriority != bug.Priority_P1 ||
+		events[1].PriorityChange.NewPriority != bug.Priority_None {
+		t.Fatalf("expected the priority changes in order, got %+v (err=%v)", events, err)
+	}
 }
 
 func TestSetBugPriorityFails(t *testing.T) {
