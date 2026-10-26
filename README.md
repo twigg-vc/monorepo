@@ -16,24 +16,37 @@
 
 # What is it?
 
-Twigg is the **open source alternative to [Critique](#whats-critique)**.
-
-Critique is the tool Google's engineers use every day to collaborate on software. Twigg is that workflow, built in the open, for everyone. It is **not** a Git wrapper: everything was written from scratch.
+Twigg is a **Free & Open Source Centralized Version Control and Development Platform**.
 
 <p align="center">
   <img src="twigg-media/demo.gif" alt="Twigg demo" width="720">
 </p>
 
-Compared to other version control systems, Twigg is more opinionated and built for one specific scenario: **collaboration in closed teams**. It implements the battle-tested workflow used across big tech for high-velocity, safe collaboration:
+## Why Twigg
 
-- **Trunk-based development**: a single main development branch, no long-lived feature branches.
-- **Small incremental changes**: changes are independently reviewed and submitted in small commits that build on top of each other (stacked commits).
+Twigg was born out of a belief that the version control most of the industry uses is inefficient. Git was made for distributed development: no authoritative server, patches sent over email, every clone carrying the full history. Most teams work in **one centralized codebase** instead, and pay for that flexibility in complexity.
 
-This workflow is possible without Twigg, but painful and only works if everyone remembers to follow it. In Twigg it's the default, and everything else is built around it:
+Big tech's internal tooling is centralized, **far more efficient and much simpler to use**. Twigg brings that to everyone, built on how we believe software should be developed:
 
-- **Hierarchical Code Ownership**: OWNERS files, with ownership cascading down directories
-- **Efficient Code Review**: designed for reviewing stacked changes that evolve based on feedback, version by version
-- **Integrated CI/CD**: built to run on the trunk and to only trigger based on modified paths
+- **Trunk-based development**, not long-lived branches
+- **Small increments**, each one reviewed and tested on its own
+- A **monorepo**, with clear ownership of every directory
+
+It's written from scratch, combining the best ideas from other version control systems:
+
+- Mercurial: delta compression and commit obsolescence
+- Git: Merkle trees
+- Fossil: a single binary with integrated tools
+- Google's Critique and Meta's Phabricator: stacked code review and stable commit ids like `c/123`
+
+## Features
+
+- **Version control**: stacked commits with versions. Amend any commit and everything on top of it is rebased. No branches, no staging area.
+- **Git mirror**: Twigg works on top of your existing Git repository: every submitted commit is pushed to it, so deploys, CI and anything else that reads from Git keep working. Adopt Twigg gradually, or leave anytime.
+- **Code review**: every commit is reviewed on its own, version by version, with OWNERS files declaring who owns each directory.
+- **CI/CD**: `CI.json` and `CD.json` jobs live in the repo next to the code they test and only run when their folder changes. Unlimited minutes.
+- **Issue tracker**: bugs and feature requests live next to the code, linked to the commits that fix them.
+- **API for agents**: the CLI is backed by the server's API, so agents can do what you do: read bugs (`tw bug-get`), set review descriptions, etc. `tw skill` teaches them how, and more of the API is on the way.
 
 Full documentation: [twigg.vc/docs](https://twigg.vc/docs/v/2/)
 
@@ -69,13 +82,6 @@ A twig is a short branch - which is what Twigg wants your branches to be.
 Yes. Twigg has been used in production for more than a year not only for Twigg's own development but also by 3 partner companies.
 
 That said, when compared to projects such as Git, Twigg is relatively new; so backups (which you can easily enable with the [Git Mirror](https://twigg.vc/docs/v/2/git-mirror/) functionality) are recommended.
-
-
-## What's Critique?
-Google's *awesome* internal code collaboration platform. Don't take our word for it:
-
-- [Critique: Google's Code Review Tool](https://abseil.io/resources/swe-book/html/ch19.html) — how Critique works, from Google's own *Software Engineering at Google*.
-- [How Google takes the pain out of code reviews](https://read.engineerscodex.com/p/how-google-takes-the-pain-out-of) — *"The number of useful comments decreases and review latency increases as the size of the change increases."*
 
 # Running and building locally
 

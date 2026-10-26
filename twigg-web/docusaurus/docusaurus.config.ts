@@ -6,13 +6,13 @@ const SITE_URL = process.env.DOCUSAURUS_SITE_URL ?? 'http://localhost:9001';
 
 // Kept in sync with handlers/landing/files/index.html.
 const SITE_DESCRIPTION =
-  "Twigg is the open source alternative to Critique, Google's internal code " +
-  'collaboration platform. Stacked commits, code review, OWNERS, and CI/CD.';
+  'Twigg is a Free & Open Source Centralized Version Control and ' +
+  'Development Platform.';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 const config: Config = {
   title: 'Twigg',
-  tagline: 'Open Source Critique',
+  tagline: 'Free & Open Source Centralized Version Control and Development Platform',
   favicon: 'img/twigg-circle-icon.png',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -104,7 +104,7 @@ const config: Config = {
     navbar: {
       title: "Twigg",
       logo: {
-        alt: 'Twigg — Open Source Critique',
+        alt: 'Twigg — Free & Open Source Centralized Version Control and Development Platform',
         src: 'img/twigg-circle-icon.png',
         href: 'https://twigg.vc/home',
       },

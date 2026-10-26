@@ -1,10 +1,10 @@
 ---
 slug: /
-description: "Twigg is the open source alternative to Critique, Google's internal code collaboration platform. Stacked commits, code review, OWNERS, and CI/CD."
+description: "Twigg is a Free & Open Source Centralized Version Control and Development Platform."
 ---
 
 # Welcome to Twigg!
 
-Twigg is the **open source alternative to [Critique](https://abseil.io/resources/swe-book/html/ch19.html)**.
+Twigg is a Free & Open Source Centralized Version Control and Development Platform.
 
-Critique is the tool Google's engineers use every day to collaborate on software. Twigg is that workflow, built in the open, for everyone. It is **not** a Git wrapper: everything was written from scratch.
+New here? Start with the [getting started guide](./tutorial/1-Installation.mdx). Already on Git? [Import your repository](./import-from-github.md) and keep it in sync with a [Git mirror](./git-mirror/git-mirror.md).
