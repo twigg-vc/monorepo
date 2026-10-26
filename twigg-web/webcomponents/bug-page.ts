@@ -202,6 +202,10 @@ export class BugPage extends LitElement {
                     ${this.renderAssignee(b)}
                 </div>
                 <div class="meta-item">
+                    <span class="meta-label">Priority</span>
+                    ${this.renderPriority(b)}
+                </div>
+                <div class="meta-item">
                     <span class="meta-label">Author</span>
                     <username-tag .Username=${b.AuthorUsername}></username-tag>
                 </div>
@@ -247,6 +251,15 @@ export class BugPage extends LitElement {
                 ${controls}
             </div>
         `
+    }
+
+    // "-" when not set
+    private renderPriority(b: Bug) {
+        if (b.Priority === "") {
+            return html`<span>-</span>`
+        } else {
+            return html`<span>${b.Priority}</span>`
+        }
     }
 
     // "No assignee" or the assignee's username
