@@ -74,6 +74,7 @@ const (
 	EventKind_Assignment      EventKind = 5
 	EventKind_SubmittedCommit EventKind = 6
 	EventKind_ClosingCommit   EventKind = 7
+	EventKind_PriorityChange  EventKind = 8
 )
 
 // Something that happened to a bug, shown in its timeline. Only the details
@@ -90,6 +91,7 @@ type Event struct {
 	Assignment      Assignment
 	SubmittedCommit SubmittedCommit
 	ClosingCommit   ClosingCommit
+	PriorityChange  PriorityChange
 }
 
 func NewEvent(id uint64, kind EventKind, authorUserId int64, createdOn time.Time) Event {
@@ -161,4 +163,12 @@ type ClosingCommit struct {
 
 func NewClosingCommit(commitL uint64) ClosingCommit {
 	return ClosingCommit{CommitL: commitL}
+}
+
+type PriorityChange struct {
+	NewPriority Priority
+}
+
+func NewPriorityChange(newPriority Priority) PriorityChange {
+	return PriorityChange{NewPriority: newPriority}
 }

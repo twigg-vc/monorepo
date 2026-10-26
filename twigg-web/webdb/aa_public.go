@@ -1076,6 +1076,13 @@ func (db WebDb) SetBugAssignee(writeCtx context.Context, repoId uint64, number u
 	return db.db.SetBugAssignee(writeCtx, repoId, number, authorId, assigneeUserId)
 }
 
+// Sets the priority (Priority_None unsets it) and records it in the bug's
+// timeline. Returns ErrNotFound if the repo has no bug with the number.
+func (db WebDb) SetBugPriority(writeCtx context.Context, repoId uint64, number uint64,
+	authorId int64, priority bug.Priority) (e bug.Event, isNotFoundErr bool, err error) {
+	return db.db.SetBugPriority(writeCtx, repoId, number, authorId, priority)
+}
+
 // Records that a submitted commit referenced this bug and adds a "commit
 // submitted" event. Returns ErrNotFound if the repo has no bug with the number.
 func (db WebDb) AddBugSubmittedCommit(writeCtx context.Context, repoId uint64, number uint64,

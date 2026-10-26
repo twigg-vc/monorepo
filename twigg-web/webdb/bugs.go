@@ -243,6 +243,32 @@ func (db webDb) SetBugAssignee(writeCtx context.Context, repoId uint64, number u
 	return e, false, nil
 }
 
+func (db webDb) SetBugPriority(writeCtx context.Context, repoId uint64, number uint64,
+	authorId int64, priority bug.Priority) (e bug.Event, isNotFoundErr bool, err error) {
+	if !priority.IsValid() {
+		return bug.Event{}, false, fmt.Errorf("invalid priority %q", priority)
+	}
+	e, isNotFoundErr, err = db.insertBugEvent(writeCtx, repoId, number,
+		bug.EventKind_PriorityChange, authorId)
+	if err != nil {
+		return bug.Event{}, isNotFoundErr, err
+	}
+	_, err = db.s.Exec(writeCtx, `
+		INSERT INTO bug_priority_changes (eventId, newPriority) VALUES (?, ?)
+	`, e.Id, priority)
+	if err != nil {
+		return bug.Event{}, false, fmt.Errorf("failed inserting bug priority change: %w", err)
+	}
+	_, err = db.s.Exec(writeCtx, `
+		UPDATE bugs SET priority = ? WHERE repoId = ? AND number = ?
+	`, priority, repoId, number)
+	if err != nil {
+		return bug.Event{}, false, fmt.Errorf("failed setting bug priority (repoId=%v number=%v): %w", repoId, number, err)
+	}
+	e.PriorityChange = bug.NewPriorityChange(priority)
+	return e, false, nil
+}
+
 // Records that a submitted commit (commitL) referenced this bug.
 // Returns ErrNotFound if the repo has no bug with the number.
 func (db webDb) AddBugSubmittedCommit(writeCtx context.Context, repoId uint64, number uint64,
