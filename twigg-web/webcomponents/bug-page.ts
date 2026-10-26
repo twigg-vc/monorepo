@@ -328,6 +328,8 @@ export class BugPage extends LitElement {
                 return this.renderClosingCommit(e)
             case "assignment":
                 return this.renderAssignment(e)
+            case "priority-change":
+                return this.renderPriorityChange(e)
         }
     }
 
@@ -402,6 +404,23 @@ export class BugPage extends LitElement {
         return html`
             <div class="event">
                 <span class="event-icon"><twigg-icon icon="User"></twigg-icon></span>
+                <username-tag .Username=${e.AuthorUsername}></username-tag>
+                <span class="event-text" title=${FormatDateTime(e.CreatedOn)}>${text} ${FormatRelativeTime(e.CreatedOn)}</span>
+            </div>
+        `
+    }
+
+    private renderPriorityChange(e: BugEvent) {
+        const newPriority = e.PriorityChange!.NewPriority
+        var text: TemplateResult = html``
+        if (newPriority === "") {
+            text = html`removed the priority`
+        } else {
+            text = html`set the priority to ${newPriority}`
+        }
+        return html`
+            <div class="event">
+                <span class="event-icon"><twigg-icon icon="None"></twigg-icon></span>
                 <username-tag .Username=${e.AuthorUsername}></username-tag>
                 <span class="event-text" title=${FormatDateTime(e.CreatedOn)}>${text} ${FormatRelativeTime(e.CreatedOn)}</span>
             </div>
