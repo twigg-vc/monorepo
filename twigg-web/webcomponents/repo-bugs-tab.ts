@@ -604,11 +604,14 @@ export class RepoBugsTab extends LitElement {
             font-weight: var(--weight-semi-bold);
         }
         .username-filter {
-            width: var(--size0);
+            width: calc(2 * var(--space7));
             max-width: 100%;
             flex-shrink: 0;
             min-width: 0;
             border-left: var(--border-width) solid var(--color-border);
+        }
+        .username-filter:focus-within {
+            width: calc(4 * var(--space7));
         }
         .filters:has(.username-filter:focus-within) {
             border-color: var(--color-primary-pop);
