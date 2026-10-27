@@ -102,10 +102,13 @@ export class RepoBugsTab extends LitElement {
         }
         return html`
             <div class="toolbar">
-                <div class="filters">
-                    ${this.renderFilterBtn("open", "Bug", "Open", openCount)}
-                    ${this.renderFilterBtn("closed", "Check", "Closed", closedCount)}
-                    ${this.renderFilterBtn("", "Bars", "All", undefined)}
+                <div class="filter-group" role="group" aria-labelledby="status-label">
+                    <span class="filter-label" id="status-label">Status</span>
+                    <div class="filters">
+                        ${this.renderFilterBtn("open", "Bug", "Open", openCount)}
+                        ${this.renderFilterBtn("closed", "Check", "Closed", closedCount)}
+                        ${this.renderFilterBtn("", "Bars", "All", undefined)}
+                    </div>
                 </div>
                 ${this.renderNewBugBtn()}
             </div>
@@ -120,16 +123,24 @@ export class RepoBugsTab extends LitElement {
         }
         return html`
             <div class="search-filters">
-                <div class="filters">
-                    ${this.renderAssigneeFilterBtn("unassigned", "Question", "Unassigned")}
-                    ${this.renderAssigneeFilterBtn("me", "User", "Assigned to me")}
+                <div class="filter-group" role="group" aria-labelledby="assignee-label">
+                    <span class="filter-label" id="assignee-label">Assignee</span>
+                    <div class="filters">
+                        ${this.renderAssigneeFilterBtn("", "Anyone")}
+                        ${this.renderAssigneeFilterBtn("unassigned", "Unassigned")}
+                        ${this.renderAssigneeFilterBtn("me", "Me")}
+                        ${this.renderAssigneeUsernameFilter()}
+                    </div>
                 </div>
-                ${this.renderAssigneeUsernameFilter()}
-                <div class="filters">
-                    ${this.renderPriorityFilterBtn("P0", "P0")}
-                    ${this.renderPriorityFilterBtn("P1", "P1")}
-                    ${this.renderPriorityFilterBtn("P2", "P2")}
-                    ${this.renderPriorityFilterBtn("none", "No priority")}
+                <div class="filter-group" role="group" aria-labelledby="priority-label">
+                    <span class="filter-label" id="priority-label">Priority</span>
+                    <div class="filters">
+                        ${this.renderPriorityFilterBtn("", "Any")}
+                        ${this.renderPriorityFilterBtn("P0", "P0")}
+                        ${this.renderPriorityFilterBtn("P1", "P1")}
+                        ${this.renderPriorityFilterBtn("P2", "P2")}
+                        ${this.renderPriorityFilterBtn("none", "None")}
+                    </div>
                 </div>
             </div>
         `
@@ -149,7 +160,7 @@ export class RepoBugsTab extends LitElement {
             countTemplate = html``
         }
         return html`
-            <button class=${cls} @click=${() => this.setFilter(f)}>
+            <button class=${cls} aria-pressed=${String(this.filter === f)} @click=${() => this.setFilter(f)}>
                 <twigg-icon .icon=${icon}></twigg-icon>
                 <span>${label}</span>
                 ${countTemplate}
@@ -157,89 +168,70 @@ export class RepoBugsTab extends LitElement {
         `
     }
 
-    private renderAssigneeFilterBtn(value: string, icon: IconName, label: string) {
-        var cls: string
-        var removeIcon: TemplateResult
-        if (this.assigneeFilter === value) {
-            cls = "filter active"
-            removeIcon = html`<twigg-icon icon="XMark"></twigg-icon>`
-        } else {
-            cls = "filter"
-            removeIcon = html``
-        }
+    private renderAssigneeFilterBtn(value: string, label: string) {
         return html`
-            <button class=${cls} @click=${() => this.setAssigneeFilter(value)}>
-                <twigg-icon .icon=${icon}></twigg-icon>
-                <span>${label}</span>
-                ${removeIcon}
+            <button
+                class=${this.searchFilterCls(this.assigneeFilter === value)}
+                aria-pressed=${String(this.assigneeFilter === value)}
+                @click=${() => this.setAssigneeFilter(value)}>
+                ${label}
             </button>
         `
     }
 
     private setAssigneeFilter(value: string) {
         if (this.assigneeFilter === value) {
-            this.assigneeFilter = ""
-        } else {
-            this.assigneeFilter = value
+            return
         }
+        this.assigneeFilter = value
         this.fetchPage()
     }
 
     private renderPriorityFilterBtn(value: string, label: string) {
-        var cls: string
-        var removeIcon: TemplateResult
-        if (this.priorityFilter === value) {
-            cls = "filter active"
-            removeIcon = html`<twigg-icon icon="XMark"></twigg-icon>`
-        } else {
-            cls = "filter"
-            removeIcon = html``
-        }
         return html`
-            <button class=${cls} @click=${() => this.setPriorityFilter(value)}>
-                <span>${label}</span>
-                ${removeIcon}
+            <button
+                class=${this.searchFilterCls(this.priorityFilter === value)}
+                aria-pressed=${String(this.priorityFilter === value)}
+                @click=${() => this.setPriorityFilter(value)}>
+                ${label}
             </button>
         `
     }
 
     private setPriorityFilter(value: string) {
         if (this.priorityFilter === value) {
-            this.priorityFilter = ""
-        } else {
-            this.priorityFilter = value
+            return
         }
+        this.priorityFilter = value
         this.fetchPage()
+    }
+
+    private searchFilterCls(active: boolean): string {
+        if (active) {
+            return "filter active"
+        } else {
+            return "filter"
+        }
     }
 
     private renderAssigneeUsernameFilter() {
         if (this.assigneeFilter === "" || this.assigneeFilter === "unassigned" || this.assigneeFilter === "me") {
             return html`
                 <username-input
-                    Placeholder="Assignee username"
+                    class="username-filter"
+                    Embedded
+                    Placeholder="Username"
                     ButtonText="Filter"
-                    @user-selected=${(e: CustomEvent<UserSelected>) => this.onAssigneeUsernameSelected(e)}>
+                    @user-selected=${(e: CustomEvent<UserSelected>) => this.setAssigneeFilter(e.detail.Username)}>
                 </username-input>
             `
         }
         return html`
-            <span class="assignee-chip">
-                Assigned to <username-tag .Username=${this.assigneeFilter}></username-tag>
-                <button class="remove-assignee-filter-btn" title="Clear" @click=${this.clearAssigneeFilter}>
-                    <twigg-icon icon="XMark"></twigg-icon>
-                </button>
-            </span>
+            <button class="filter active" aria-pressed="true" title="Clear" @click=${() => this.setAssigneeFilter("")}>
+                @${this.assigneeFilter}
+                <twigg-icon icon="XMark"></twigg-icon>
+            </button>
         `
-    }
-
-    private clearAssigneeFilter() {
-        this.assigneeFilter = ""
-        this.fetchPage()
-    }
-
-    private onAssigneeUsernameSelected(e: CustomEvent<UserSelected>) {
-        this.assigneeFilter = e.detail.Username
-        this.fetchPage()
     }
 
     private renderNewBugBtn() {
@@ -593,32 +585,29 @@ export class RepoBugsTab extends LitElement {
             display: flex;
             align-items: center;
             flex-wrap: wrap;
-            gap: var(--space2);
+            gap: var(--space2) var(--space5p);
             margin-bottom: var(--space3);
         }
-        .assignee-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: var(--space1);
-            padding: var(--space0) var(--space1) var(--space0) var(--space3);
-            border: var(--border-width) solid var(--color-border);
-            border-radius: 999px;
-            background: var(--color-surface);
-            color: var(--color-text-muted);
-        }
-        .remove-assignee-filter-btn {
+        .filter-group {
             display: flex;
-            padding: var(--space1);
-            border: none;
-            background: none;
-            color: inherit;
-            cursor: pointer;
+            align-items: center;
+            max-width: 100%;
+            flex-wrap: wrap;
+            gap: var(--space2);
         }
-        .remove-assignee-filter-btn:hover {
-            color: var(--color-text);
+        .filter-label {
+            min-width: calc(var(--space7) + var(--space4));
+            color: var(--color-text-muted);
+            font-size: var(--space3p);
+            font-weight: var(--weight-semi-bold);
+        }
+        .username-filter {
+            min-width: 0;
+            border-left: var(--border-width) solid var(--color-border);
         }
         .filters {
             display: inline-flex;
+            max-width: 100%;
             border: var(--border-width) solid var(--color-border);
             border-radius: 999px;
             overflow: hidden;
@@ -782,6 +771,22 @@ export class RepoBugsTab extends LitElement {
             gap: var(--space1);
             color: var(--color-text-muted);
             font-size: var(--space3p);
+        }
+        @media (max-width: 600px) {
+            .filter-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--space1);
+            }
+            .filters {
+                flex-wrap: wrap;
+                border-radius: var(--radius2);
+            }
+            .username-filter {
+                flex-basis: 100%;
+                border-left: none;
+                border-top: var(--border-width) solid var(--color-border);
+            }
         }
         `,
     ];

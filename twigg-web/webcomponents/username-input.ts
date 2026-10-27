@@ -23,12 +23,19 @@ export class UsernameInput extends LitElement {
         Placeholder: { type: String },
         ButtonText: { type: String },
         Disabled: { type: Boolean },
+        // Embedded mode, for an input that sits inside another bordered
+        // control (e.g. a segmented button group) which draws the outer border:
+        // - the input has no border or background of its own,
+        // - the button is split from the input by a divider and only shows
+        //   once a username is typed.
+        Embedded: { type: Boolean, reflect: true },
 
         value: { type: String, state: true },
     };
     declare Placeholder: string;
     declare ButtonText: string;
     declare Disabled: boolean;
+    declare Embedded: boolean;
     declare private value: string;
 
     constructor() {
@@ -36,6 +43,7 @@ export class UsernameInput extends LitElement {
         this.Placeholder = "Username";
         this.ButtonText = "Select";
         this.Disabled = false;
+        this.Embedded = false;
         this.value = "";
     }
 
@@ -48,6 +56,15 @@ export class UsernameInput extends LitElement {
                 @input=${(e: Event) => { this.value = (e.target as HTMLInputElement).value }}
                 @keydown=${this.onKeyDown}
             />
+            ${this.renderButton()}
+        `
+    }
+
+    private renderButton() {
+        if (this.Embedded && this.value.trim() === "") {
+            return html``
+        }
+        return html`
             <button ?disabled=${this.Disabled || this.value.trim() === ""} @click=${this.select}>
                 ${this.ButtonText}
             </button>
@@ -102,6 +119,37 @@ export class UsernameInput extends LitElement {
         button[disabled] {
             opacity: var(--disable-opacity-value);
             cursor: not-allowed;
+        }
+        :host([embedded]) {
+            gap: 0;
+        }
+        :host([embedded]) input {
+            flex: 1 1 auto;
+            width: calc(2 * var(--space7));
+            border: none;
+            border-radius: 0;
+            background: none;
+            padding: var(--space1) var(--space3);
+        }
+        :host([embedded]) input:focus {
+            background: var(--color-surface-alt);
+            box-shadow: inset 0 0 0 var(--border-width) var(--color-primary-pop);
+        }
+        :host([embedded]) input:disabled {
+            opacity: var(--disable-opacity-value);
+            cursor: not-allowed;
+        }
+        :host([embedded]) button {
+            border: none;
+            border-left: var(--border-width) solid var(--color-border);
+            border-radius: 0;
+            background: none;
+            color: var(--color-primary-pop);
+            padding: var(--space1) var(--space3);
+        }
+        :host([embedded]) button:hover {
+            transform: none;
+            background: var(--color-surface-alt);
         }
         `
     ];
