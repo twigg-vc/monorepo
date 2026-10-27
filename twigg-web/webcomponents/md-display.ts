@@ -28,6 +28,7 @@ class MarkdownDisplay extends LitElement {
             font-size: var(--space4m);
             overflow-wrap: break-word;
             resize: vertical;
+            contain: paint;
         }
         ul, ol {
             padding-left: var(--space5p);
@@ -63,7 +64,8 @@ class MarkdownDisplay extends LitElement {
             content = LinkifyCommitsAndBugs(content, this.RepoOwnerName, this.RepoName);
         }
         return html`<div
-        class="main" .innerHTML=${DOMPurify.sanitize(marked.parse(content, { async: false }))}></div>`;
+        class="main" .innerHTML=${DOMPurify.sanitize(marked.parse(content, { async: false }),
+            { FORBID_TAGS: ['style', 'form'] })}></div>`;
     }
 }
 
