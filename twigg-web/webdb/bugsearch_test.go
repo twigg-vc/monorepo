@@ -153,6 +153,31 @@ func Test_SearchBugs_FiltersByUnassigned(t *testing.T) {
 	}
 }
 
+func Test_SearchBugs_FiltersByPriority(t *testing.T) {
+	db, w := newBugSearchTestDb(t)
+	aangId, _ := setUpSearchableBugs(t, db, w)
+	for number, p := range map[uint64]bug.Priority{1: bug.Priority_P0, 2: bug.Priority_P1, 4: bug.Priority_P0} {
+		_, _, err := db.SetBugPriority(w, searchBugRepoId, number, aangId, p)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	f := bugsearch.NewFilter(searchBugRepoId)
+	f.HasPriority = true
+	f.Priority = bug.Priority_P0
+	got, _ := searchBugNumbers(t, db, w, f, "", 10)
+	if !slices.Equal(got, []uint64{4, 1}) {
+		t.Fatalf("got %v, want [4 1]", got)
+	}
+
+	f.Priority = bug.Priority_None
+	got, _ = searchBugNumbers(t, db, w, f, "", 10)
+	if !slices.Equal(got, []uint64{3}) {
+		t.Fatalf("got %v, want [3]", got)
+	}
+}
+
 // Each case creates one event on bug 1 and checks that it moves from last to first.
 func Test_SearchBugs_OrdersByLastUpdate(t *testing.T) {
 	for _, test := range []struct {

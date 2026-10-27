@@ -15,6 +15,12 @@ type Filter struct {
 	AssigneeUsername string
 	// When true, only unassigned bugs match, and AssigneeUsername is ignored.
 	AssigneeUnassigned bool
+	// When false, a bug of any priority (or none) matches, and Priority is
+	// ignored.
+	HasPriority bool
+	// Only bugs with this priority match. Priority_None matches the bugs
+	// without one.
+	Priority bug.Priority
 }
 
 // Returns a filter that matches every bug of a repo.

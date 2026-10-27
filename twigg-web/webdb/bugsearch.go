@@ -44,6 +44,10 @@ func (db webDb) searchBugs(ctx context.Context, f bugsearch.Filter, cursor strin
 			SELECT u.id FROM users2 u WHERE u.username = ?)`)
 		args = append(args, f.AssigneeUsername)
 	}
+	if f.HasPriority {
+		q.WriteString(` AND b.priority = ?`)
+		args = append(args, f.Priority)
+	}
 	q.WriteString(` ORDER BY b.updatedOnUnixMilli DESC, b.number DESC LIMIT ?`)
 	args = append(args, limit+1)
 
