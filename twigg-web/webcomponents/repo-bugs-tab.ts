@@ -219,7 +219,9 @@ export class RepoBugsTab extends LitElement {
             return html`
                 <username-input
                     class="username-filter"
-                    Embedded
+                    Appearance="embedded"
+                    HideButtonWhenEmpty
+                    Label="Assignee username"
                     Placeholder="Username"
                     ButtonText="Filter"
                     @user-selected=${(e: CustomEvent<UserSelected>) => this.setAssigneeFilter(e.detail.Username)}>
@@ -602,6 +604,7 @@ export class RepoBugsTab extends LitElement {
             font-weight: var(--weight-semi-bold);
         }
         .username-filter {
+            width: calc(2 * var(--space7));
             min-width: 0;
             border-left: var(--border-width) solid var(--color-border);
         }

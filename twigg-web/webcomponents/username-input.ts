@@ -11,50 +11,58 @@ export interface UserSelected {
 }
 
 /**
- * Input for picking a user by username. For now it's a plain text input, so
- * every place that asks for a username can later get a dropdown from here.
- *
- * @fires user-selected CustomEvent<UserSelected>
- * @description Emitted with the trimmed username when the user presses Enter
- * or clicks the button. Not emitted for an empty username.
+ * Username picker. Read or set Value; input events report edits.
+ * Enter or a button click emits user-selected with a trimmed, nonempty username.
+ * Embedded appearance relies on the container for its border and focus highlight.
  */
 export class UsernameInput extends LitElement {
     static properties = {
         Placeholder: { type: String },
         ButtonText: { type: String },
         Disabled: { type: Boolean },
-        // Embedded mode, for an input that sits inside another bordered
-        // control (e.g. a segmented button group) which draws the outer border
-        // and the focus highlight (e.g. with :focus-within):
-        // - the input has no border or background of its own,
-        // - the button is split from the input by a divider and only shows
-        //   once a username is typed.
-        Embedded: { type: Boolean, reflect: true },
-
-        value: { type: String, state: true },
+        Value: { type: String },
+        Label: { type: String },
+        HideButtonWhenEmpty: { type: Boolean },
+        Appearance: { type: String, reflect: true },
     };
     declare Placeholder: string;
     declare ButtonText: string;
     declare Disabled: boolean;
-    declare Embedded: boolean;
-    declare private value: string;
+    declare Value: string;
+    declare Label: string;
+    declare HideButtonWhenEmpty: boolean;
+    declare Appearance: "standalone" | "embedded";
 
     constructor() {
         super();
         this.Placeholder = "Username";
         this.ButtonText = "Select";
         this.Disabled = false;
-        this.Embedded = false;
-        this.value = "";
+        this.Value = "";
+        this.Label = "Username";
+        this.HideButtonWhenEmpty = false;
+        this.Appearance = "standalone";
+    }
+
+    override focus(options?: FocusOptions) {
+        const input = this.renderRoot?.querySelector('input')
+        if (input) {
+            input.focus(options)
+        } else {
+            this.updateComplete.then(() => {
+                this.renderRoot.querySelector('input')?.focus(options)
+            })
+        }
     }
 
     render() {
         return html`
             <input
-                .value=${this.value}
+                aria-label=${this.Label}
+                .value=${this.Value}
                 placeholder=${this.Placeholder}
                 ?disabled=${this.Disabled}
-                @input=${(e: Event) => { this.value = (e.target as HTMLInputElement).value }}
+                @input=${(e: Event) => { this.Value = (e.target as HTMLInputElement).value }}
                 @keydown=${this.onKeyDown}
             />
             ${this.renderButton()}
@@ -62,24 +70,25 @@ export class UsernameInput extends LitElement {
     }
 
     private renderButton() {
-        if (this.Embedded && this.value.trim() === "") {
+        if (this.HideButtonWhenEmpty && this.Value.trim() === "") {
             return html``
         }
         return html`
-            <button ?disabled=${this.Disabled || this.value.trim() === ""} @click=${this.select}>
+            <button type="button" ?disabled=${this.Disabled || this.Value.trim() === ""} @click=${this.select}>
                 ${this.ButtonText}
             </button>
         `
     }
 
     private onKeyDown(e: KeyboardEvent) {
-        if (e.key === "Enter") {
+        if (e.key === "Enter" && !e.isComposing) {
+            e.preventDefault()
             this.select()
         }
     }
 
     private select() {
-        const username = this.value.trim()
+        const username = this.Value.trim()
         if (this.Disabled || username === "") {
             return
         }
@@ -100,6 +109,7 @@ export class UsernameInput extends LitElement {
         input {
             flex: 1;
             min-width: 0;
+            width: 0;
             font: inherit;
             padding: var(--space1) var(--space2);
             border: 1px solid var(--color-border);
@@ -117,29 +127,19 @@ export class UsernameInput extends LitElement {
             font: inherit;
             padding: var(--space1) var(--space4);
         }
-        button[disabled] {
-            opacity: var(--disable-opacity-value);
-            cursor: not-allowed;
-        }
-        :host([embedded]) {
+        :host([appearance="embedded"]) {
             gap: 0;
         }
-        :host([embedded]) input {
-            flex: 1 1 auto;
-            width: calc(2 * var(--space7));
+        :host([appearance="embedded"]) input {
             border: none;
             border-radius: 0;
             background: none;
             padding: var(--space1) var(--space3);
         }
-        :host([embedded]) input:focus {
+        :host([appearance="embedded"]) input:focus {
             background: var(--color-surface-alt);
         }
-        :host([embedded]) input:disabled {
-            opacity: var(--disable-opacity-value);
-            cursor: not-allowed;
-        }
-        :host([embedded]) button {
+        :host([appearance="embedded"]) button {
             border: none;
             border-left: var(--border-width) solid var(--color-border);
             border-radius: 0;
@@ -147,9 +147,14 @@ export class UsernameInput extends LitElement {
             color: var(--color-primary-pop);
             padding: var(--space1) var(--space3);
         }
-        :host([embedded]) button:hover {
+        :host([appearance="embedded"]) button:hover {
             transform: none;
             background: var(--color-surface-alt);
+        }
+        input:disabled,
+        button:disabled {
+            opacity: var(--disable-opacity-value);
+            cursor: not-allowed;
         }
         `
     ];
