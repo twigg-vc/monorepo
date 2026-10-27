@@ -8,6 +8,7 @@ import { MdInput2, MdInputSubmit } from './md-input2';
 import { DescriptionSaved } from './cl-description';
 import { UserSelected } from './username-input';
 import './bug-status-badge';
+import './bug-tag';
 import './comments';
 import './username-input';
 
@@ -267,7 +268,11 @@ export class BugPage extends LitElement {
 
     private renderPriority(b: Bug) {
         if (!this.CanWrite) {
-            return html`<span>${this.priorityText(b.Priority)}</span>`
+            if (b.Priority === "") {
+                return html`<span>-</span>`
+            } else {
+                return html`<bug-tag .Priority=${b.Priority}></bug-tag>`
+            }
         }
         return html`
             <select class="priority-select" ?disabled=${this.isSavingPriority}
@@ -461,7 +466,7 @@ export class BugPage extends LitElement {
         if (newPriority === "") {
             text = html`removed the priority`
         } else {
-            text = html`set the priority to ${newPriority}`
+            text = html`set the priority to <bug-tag .Priority=${newPriority}></bug-tag>`
         }
         return html`
             <div class="event">
