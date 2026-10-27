@@ -604,7 +604,9 @@ export class RepoBugsTab extends LitElement {
             font-weight: var(--weight-semi-bold);
         }
         .username-filter {
-            width: calc(2 * var(--space7));
+            width: var(--size0);
+            max-width: 100%;
+            flex-shrink: 0;
             min-width: 0;
             border-left: var(--border-width) solid var(--color-border);
         }
@@ -613,6 +615,7 @@ export class RepoBugsTab extends LitElement {
         }
         .filters {
             display: inline-flex;
+            flex-wrap: wrap;
             max-width: 100%;
             border: var(--border-width) solid var(--color-border);
             border-radius: 999px;
