@@ -9,6 +9,7 @@ import { FormatRelativeTime } from './helpers';
 import { IconName } from './icons';
 import { UserSelected } from './username-input';
 import './bug-status-badge';
+import './bug-tag';
 import './username-input';
 
 type View = "list" | "new"
@@ -393,7 +394,7 @@ export class RepoBugsTab extends LitElement {
             <a class="bug-row" href=${UrlToBug(this.RepoOwnerName, this.RepoName, b.Number)}>
                 <bug-status-badge class="row-status" .Status=${b.Status} IconOnly></bug-status-badge>
                 <div class="bug-main">
-                    <span class="bug-title">${b.Title}</span>
+                    <span class="bug-title">${this.renderPriorityTag(b)}${b.Title}</span>
                     <span class="bug-meta">
                         b/${b.Number} ${this.renderAssignee(b)} opened ${FormatRelativeTime(b.CreatedOn)} by @${b.AuthorUsername}
                     </span>
@@ -401,6 +402,14 @@ export class RepoBugsTab extends LitElement {
                 ${comments}
             </a>
         `
+    }
+
+    private renderPriorityTag(b: Bug) {
+        if (b.Priority === "") {
+            return html``
+        } else {
+            return html`<bug-tag .Priority=${b.Priority}></bug-tag>`
+        }
     }
 
     private renderAssignee(b: Bug) {
@@ -651,6 +660,9 @@ export class RepoBugsTab extends LitElement {
         .bug-title {
             font-weight: var(--weight-semi-bold);
             overflow-wrap: anywhere;
+        }
+        bug-tag {
+            margin-right: var(--space2);
         }
         .load-more-btn {
             margin: var(--space3) auto;
