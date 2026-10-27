@@ -26,6 +26,7 @@ export class RepoBugsTab extends LitElement {
         view: { type: String, state: true },
         filter: { type: String, state: true },
         assigneeFilter: { type: String, state: true },
+        priorityFilter: { type: String, state: true },
         page: { type: Object, state: true },
         isLoadingPage: { type: Boolean, state: true },
         isLoadingMore: { type: Boolean, state: true },
@@ -41,6 +42,8 @@ export class RepoBugsTab extends LitElement {
     declare private filter: Filter;
     // "" (no assignee filter), "unassigned", "me", or a specific username.
     declare private assigneeFilter: string;
+    // "" (no priority filter), "none", or a priority.
+    declare private priorityFilter: string;
     declare private page: GetBugsResponse | undefined;
     declare private isLoadingPage: boolean;
     declare private isLoadingMore: boolean;
@@ -57,6 +60,7 @@ export class RepoBugsTab extends LitElement {
         this.view = "list";
         this.filter = "open";
         this.assigneeFilter = "";
+        this.priorityFilter = "";
         this.page = undefined;
         this.isLoadingPage = false;
         this.isLoadingMore = false;
@@ -121,6 +125,12 @@ export class RepoBugsTab extends LitElement {
                     ${this.renderAssigneeFilterBtn("me", "User", "Assigned to me")}
                 </div>
                 ${this.renderAssigneeUsernameFilter()}
+                <div class="filters">
+                    ${this.renderPriorityFilterBtn("P0", "P0")}
+                    ${this.renderPriorityFilterBtn("P1", "P1")}
+                    ${this.renderPriorityFilterBtn("P2", "P2")}
+                    ${this.renderPriorityFilterBtn("none", "No priority")}
+                </div>
             </div>
         `
     }
@@ -171,6 +181,33 @@ export class RepoBugsTab extends LitElement {
             this.assigneeFilter = ""
         } else {
             this.assigneeFilter = value
+        }
+        this.fetchPage()
+    }
+
+    private renderPriorityFilterBtn(value: string, label: string) {
+        var cls: string
+        var removeIcon: TemplateResult
+        if (this.priorityFilter === value) {
+            cls = "filter active"
+            removeIcon = html`<twigg-icon icon="XMark"></twigg-icon>`
+        } else {
+            cls = "filter"
+            removeIcon = html``
+        }
+        return html`
+            <button class=${cls} @click=${() => this.setPriorityFilter(value)}>
+                <span>${label}</span>
+                ${removeIcon}
+            </button>
+        `
+    }
+
+    private setPriorityFilter(value: string) {
+        if (this.priorityFilter === value) {
+            this.priorityFilter = ""
+        } else {
+            this.priorityFilter = value
         }
         this.fetchPage()
     }
@@ -423,7 +460,7 @@ export class RepoBugsTab extends LitElement {
     private pageRequestId = 0
 
     private isSearching(): boolean {
-        return this.assigneeFilter !== ""
+        return this.assigneeFilter !== "" || this.priorityFilter !== ""
     }
 
     // Plain status filter stays on the simple /bugs endpoint (counts + can
@@ -437,7 +474,12 @@ export class RepoBugsTab extends LitElement {
         if (this.filter !== "") {
             terms.push(`is:${this.filter}`)
         }
-        terms.push(`assignee:${this.assigneeFilter}`)
+        if (this.assigneeFilter !== "") {
+            terms.push(`assignee:${this.assigneeFilter}`)
+        }
+        if (this.priorityFilter !== "") {
+            terms.push(`priority:${this.priorityFilter}`)
+        }
         return PathToBugSearch(this.RepoOwnerName, this.RepoName, terms.join(" "), cursor)
     }
 
