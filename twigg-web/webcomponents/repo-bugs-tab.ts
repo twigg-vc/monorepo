@@ -105,17 +105,17 @@ export class RepoBugsTab extends LitElement {
                 </div>
                 ${this.renderNewBugBtn()}
             </div>
-            ${this.renderAssigneeFilters()}
+            ${this.renderSearchFilters()}
             ${this.renderListBody()}
         `
     }
 
-    private renderAssigneeFilters() {
+    private renderSearchFilters() {
         if (!GetFeatureFlags().SearchBugsUi) {
             return html``
         }
         return html`
-            <div class="assignee-filters">
+            <div class="search-filters">
                 <div class="filters">
                     ${this.renderAssigneeFilterBtn("unassigned", "Question", "Unassigned")}
                     ${this.renderAssigneeFilterBtn("me", "User", "Assigned to me")}
@@ -236,7 +236,7 @@ export class RepoBugsTab extends LitElement {
     }
 
     private renderEmptyMsg() {
-        if (this.assigneeFilter !== "") {
+        if (this.isSearching()) {
             return html`
                 <twigg-icon class="empty-icon" icon="Bug"></twigg-icon>
                 <h3>No bugs match this filter</h3>
@@ -422,11 +422,15 @@ export class RepoBugsTab extends LitElement {
 
     private pageRequestId = 0
 
+    private isSearching(): boolean {
+        return this.assigneeFilter !== ""
+    }
+
     // Plain status filter stays on the simple /bugs endpoint (counts + can
-    // create). Any assignee filter switches to /bug-search instead, which
+    // create). Any search filter switches to /bug-search instead, which
     // only returns the matching bugs.
     private pathToPage(cursor: string): string {
-        if (this.assigneeFilter === "") {
+        if (!this.isSearching()) {
             return PathToBugs(this.RepoOwnerName, this.RepoName, this.filter, cursor)
         }
         var terms: string[] = []
@@ -543,7 +547,7 @@ export class RepoBugsTab extends LitElement {
             gap: var(--space2);
             margin-bottom: var(--space3);
         }
-        .assignee-filters {
+        .search-filters {
             display: flex;
             align-items: center;
             flex-wrap: wrap;
