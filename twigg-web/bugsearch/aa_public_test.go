@@ -76,6 +76,36 @@ func Test_ParseQuery_ReadsTheUnassignedTerm(t *testing.T) {
 	}
 }
 
+func Test_ParseQuery_ReadsThePriority(t *testing.T) {
+	cases := map[string]bug.Priority{
+		"priority:P0": bug.Priority_P0,
+		"priority:p1": bug.Priority_P1,
+		"priority:P2": bug.Priority_P2,
+	}
+	for query, want := range cases {
+		f, err := bugsearch.ParseQuery(parsedBugRepoId, query)
+		if err != nil {
+			t.Fatalf("parsing %q failed: %s", query, err)
+		}
+		if !f.HasPriority || f.Priority != want {
+			t.Fatalf("parsing %q read the priority %q (has=%v), want %q (true)",
+				query, f.Priority, f.HasPriority, want)
+		}
+	}
+}
+
+func Test_ParseQuery_ReadsTheNonePriorityTerm(t *testing.T) {
+	f, err := bugsearch.ParseQuery(parsedBugRepoId, "priority:P0 priority:NONE")
+
+	if err != nil {
+		t.Fatalf("parsing failed: %s", err)
+	}
+	if !f.HasPriority || f.Priority != bug.Priority_None {
+		t.Fatalf("read the priority %q (has=%v), want empty (true)",
+			f.Priority, f.HasPriority)
+	}
+}
+
 func Test_ParseQuery_CombinesStatusAndAssignee(t *testing.T) {
 	f, err := bugsearch.ParseQuery(parsedBugRepoId, "is:open assignee:aang")
 	if err != nil {
@@ -110,11 +140,14 @@ func Test_ParseQuery_FailsOnASearchItCanNotRun(t *testing.T) {
 		// there is no free text search yet
 		`queue`,
 		`"a b"`,
-		// negation isn't supported for either key
+		// negation isn't supported for any key
 		`-is:open`,
 		`-assignee:aang`,
-		// a status/key the parser doesn't know
+		`-priority:P0`,
+		// a status/priority/key the parser doesn't know
 		`is:nope`,
+		`priority:P3`,
+		`priority:`,
 		`nope:1`,
 		// the tokenizer refuses this before the words are read
 		`an "unclosed quote`,

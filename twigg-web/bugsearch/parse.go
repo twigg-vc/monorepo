@@ -12,10 +12,11 @@ const maxQueryLength = 500
 const (
 	keyIs       = "is"
 	keyAssignee = "assignee"
+	keyPriority = "priority"
 )
 
 var queryTokenizer = commitsearch.NewTokenizer(
-	[]string{keyIs, keyAssignee},
+	[]string{keyIs, keyAssignee, keyPriority},
 	maxQueryLength)
 
 func parseQuery(repoId uint64, q string) (f Filter, err error) {
@@ -28,7 +29,7 @@ func parseQuery(repoId uint64, q string) (f Filter, err error) {
 		// There is no free-text search yet, so a bare word has nothing to do.
 		if t.Key == "" {
 			return f, fmt.Errorf(
-				`%q is free text, which can not be searched yet: use "is:" or "assignee:"`,
+				`%q is free text, which can not be searched yet: use "is:", "assignee:" or "priority:"`,
 				t.Value)
 		}
 		err = applyFilter(&f, t)
@@ -50,6 +51,8 @@ func applyFilter(f *Filter, t commitsearch.Token) error {
 		return applyIsFilter(f, t.Value)
 	case keyAssignee:
 		applyAssigneeFilter(f, t.Value)
+	case keyPriority:
+		return applyPriorityFilter(f, t.Value)
 	default:
 		panic(fmt.Sprintf("the tokenizer read the unknown key %q", t.Key))
 	}
@@ -77,6 +80,18 @@ func applyAssigneeFilter(f *Filter, value string) {
 		f.AssigneeUnassigned = false
 		f.AssigneeUsername = value
 	}
+}
+
+func applyPriorityFilter(f *Filter, value string) error {
+	p := bug.Priority(strings.ToUpper(value))
+	if strings.EqualFold(value, "none") {
+		p = bug.Priority_None
+	} else if p == bug.Priority_None || !p.IsValid() {
+		return fmt.Errorf("%q is not a priority", value)
+	}
+	f.HasPriority = true
+	f.Priority = p
+	return nil
 }
 
 func notExcludableErr(what string) error {
