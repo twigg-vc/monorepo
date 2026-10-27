@@ -24,7 +24,8 @@ export class UsernameInput extends LitElement {
         ButtonText: { type: String },
         Disabled: { type: Boolean },
         // Embedded mode, for an input that sits inside another bordered
-        // control (e.g. a segmented button group) which draws the outer border:
+        // control (e.g. a segmented button group) which draws the outer border
+        // and the focus highlight (e.g. with :focus-within):
         // - the input has no border or background of its own,
         // - the button is split from the input by a divider and only shows
         //   once a username is typed.
@@ -133,7 +134,6 @@ export class UsernameInput extends LitElement {
         }
         :host([embedded]) input:focus {
             background: var(--color-surface-alt);
-            box-shadow: inset 0 0 0 var(--border-width) var(--color-primary-pop);
         }
         :host([embedded]) input:disabled {
             opacity: var(--disable-opacity-value);

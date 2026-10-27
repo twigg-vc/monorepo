@@ -605,6 +605,9 @@ export class RepoBugsTab extends LitElement {
             min-width: 0;
             border-left: var(--border-width) solid var(--color-border);
         }
+        .filters:has(.username-filter:focus-within) {
+            border-color: var(--color-primary-pop);
+        }
         .filters {
             display: inline-flex;
             max-width: 100%;
