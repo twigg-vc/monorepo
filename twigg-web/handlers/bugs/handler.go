@@ -574,6 +574,20 @@ func (h handler) handlePostPriority(w http.ResponseWriter,
 		http.Error(w, "failed to set the priority", http.StatusInternalServerError)
 		return false
 	}
+	// Notify the assignee (no self-notify)
+	if b.AssigneeUserId != 0 && b.AssigneeUserId != r.UserWithWritePermission.Id {
+		msg := fmt.Sprintf("%s set the priority of b/%d to %s", r.UserWithWritePermission.Username, b.Number, req.Priority)
+		if req.Priority == bug.Priority_None {
+			msg = fmt.Sprintf("%s removed the priority of b/%d", r.UserWithWritePermission.Username, b.Number)
+		}
+		assetPath := routes.PathToBug(r.RepoOwnerUsr.Username, r.Repo.DisplayName, b.Number)
+		err = h.db.CreateNotification(dbWrite, b.AssigneeUserId, msg, assetPath)
+		if err != nil {
+			log.Printf("failed to notify the assignee of b/%d of repo id=%d: %s", b.Number, r.Repo.Id, err)
+			http.Error(w, "failed to notify the assignee", http.StatusInternalServerError)
+			return false
+		}
+	}
 	return h.writeEditResponse(w, r, dbWrite, b.Number, e)
 }
 
