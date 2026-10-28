@@ -13,6 +13,7 @@ import (
 	"monorepo/twigg-web/commitparser"
 	"monorepo/twigg-web/handlers/reposettings"
 	"monorepo/twigg-web/job"
+	"monorepo/twigg-web/permissions"
 	webrepo "monorepo/twigg-web/repo"
 	"monorepo/twigg-web/review"
 	"monorepo/twigg-web/routes"
@@ -1825,6 +1826,19 @@ func (hl handler) handlePostAddReviewers(w http.ResponseWriter,
 		if isNotFound || err != nil {
 			http.Error(w, fmt.Sprintf("invalid username: %s", username), http.StatusBadRequest)
 			return
+		}
+		if addedUser.Id != r.RepoOwnerUsr.Id {
+			hasPerm, err := hl.db.HasPermission(dbWrite, addedUser.Id,
+				permissions.Permission_WriteRepo, permissions.RepoAssetId(r.Repo.Id))
+			if err != nil {
+				log.Printf("failed to check reviewer permission: %s", err)
+				http.Error(w, "failed to check reviewer permission", http.StatusInternalServerError)
+				return
+			}
+			if !hasPerm {
+				http.Error(w, fmt.Sprintf("user does not have write permission in the repo: %s", username), http.StatusBadRequest)
+				return
+			}
 		}
 		newThread, err := hl.revSrv.AddReviewer(dbWrite, quotaOwner(r.Repo.OwnerId), r.Repo.Id, cI, addedUser.Id, r.UserWithWritePermission.Id)
 		if err != nil {

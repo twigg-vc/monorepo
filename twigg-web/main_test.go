@@ -2973,6 +2973,17 @@ func TestAddReviewers(t *testing.T) {
 		t.Fatal("expected error for invalid username")
 	}
 
+	// User without write permission in the repo can't be a reviewer
+	bZuko := NewTestBrowser(srv.C.PublicUrl, t)
+	MockUserOAuthRegistration(srv, bZuko, "zuko@twigg.vc", "zuko")
+	status = bAang.PostJson("/aang/BookOne/c/1/reviewers", addReviewersBody{Usernames: []string{"zuko"}})
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected 400 for reviewer without write permission, got %d body=%s", status, bAang.lastResponse)
+	}
+	if !strings.Contains(string(bAang.lastResponse), "does not have write permission") {
+		t.Fatalf("unexpected body: %s", bAang.lastResponse)
+	}
+
 	// Empty list
 	status = bAang.PostJson("/aang/BookOne/c/1/reviewers", addReviewersBody{Usernames: []string{}})
 	if status == http.StatusOK {
