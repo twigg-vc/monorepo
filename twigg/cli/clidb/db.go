@@ -1,9 +1,11 @@
 package clidb
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"embed"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
@@ -202,6 +204,16 @@ func (db cliDb) SetBlobVersion(writeCtx context.Context, quotaOwner string, idPr
 		db.s.PreventCommit(writeCtx)
 	}
 	return
+}
+func (db cliDb) setStructBlob(writeCtx context.Context, quotaOwner string, idPrefix, id string, v blobdb.Version, x any) error {
+	var buf bytes.Buffer
+	err := gob.NewEncoder(&buf).Encode(x)
+	if err != nil {
+		db.s.PreventCommit(writeCtx)
+		return err
+	}
+	return db.SetBlobVersion(writeCtx, quotaOwner, idPrefix, id, v,
+		bytes.NewReader(buf.Bytes()))
 }
 func (db cliDb) GetBlob(readCtx context.Context, idPrefix, id string) (
 	m blobdb.BlobData, r io.Reader, closeReader func(), err error) {

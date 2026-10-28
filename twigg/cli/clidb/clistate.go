@@ -31,6 +31,6 @@ func (db cliDb) SetCliState(ctx context.Context, st clistate.State) error {
 	if err != nil {
 		return err
 	}
-	err = db.SetBlobVersion(ctx, quotaOwner, cliStateBlobIdPrefix, "", v, structWriterTo(st))
+	err = db.setStructBlob(ctx, quotaOwner, cliStateBlobIdPrefix, "", v, st)
 	return err
 }

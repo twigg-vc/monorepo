@@ -57,8 +57,8 @@ func (db cliDb) GrabRootTreeVersion(ctx context.Context, repoId uint64) (uint64,
 }
 
 func (db cliDb) SetTreeData(ctx context.Context, quotaOwner string, repoId uint64, treePath string, v uint64, td treev.TreeDataV) error {
-	return db.SetBlobVersion(ctx, quotaOwner, treeDataBlobsIdPrefix,
-		treeDataBlobId(repoId, treePath), v, structWriterTo(td))
+	return db.setStructBlob(ctx, quotaOwner, treeDataBlobsIdPrefix,
+		treeDataBlobId(repoId, treePath), v, td)
 }
 
 func (db cliDb) SetTreeBlob(ctx context.Context, quotaOwner string, repoId uint64, treePath string, v uint64, wt io.WriterTo) error {
