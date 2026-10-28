@@ -46,6 +46,9 @@ func (r repo) SaveFile(rootTreeVersion TreeVersion, treePath string,
 	if err != nil {
 		return err
 	}
+	if data.IsSymlink {
+		return nil
+	}
 	return l.SetTreeBlob(r.quotaOwner, r.id, treePath, rootTreeVersion, wt)
 }
 func (r repo) SaveDir(rootTreeVersion TreeVersion, treePath string,

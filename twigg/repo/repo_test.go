@@ -83,6 +83,30 @@ func TestSaveFileAndSaveDir_SingleFile(t *testing.T) {
 	}
 }
 
+func TestSaveFile_SymlinkSkipsBlob(t *testing.T) {
+	v0, wd, l, r := setup(t)
+
+	err := wd.WriteSymlink("sl", "a.txt")
+	check(err, t)
+	v1, _, err := r.SaveRoot(wd, v0, l)
+	check(err, t)
+
+	_, _, isNotFoundErr, err := l.GetTreeBlob(testRepoId, "sl", v1)
+	if !isNotFoundErr {
+		t.Fatalf("got err=%v, expected the symlink blob not to be saved", err)
+	}
+	sl, err := r.Root(v1, l).Tree("sl")
+	check(err, t)
+	wt, err := sl.GetFile()
+	check(err, t)
+	var buf bytes.Buffer
+	_, err = wt.WriteTo(&buf)
+	check(err, t)
+	if buf.String() != tree.SymlinkString("a.txt") {
+		t.Fatalf("got %q, expected the symlink string", buf.String())
+	}
+}
+
 func TestSaveSingleFile(t *testing.T) {
 	v0, wd, l, r := setup(t)
 
