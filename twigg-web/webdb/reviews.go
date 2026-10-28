@@ -48,8 +48,8 @@ func (db webDb) SetReviewData(writeCtx context.Context, quotaOwner string, repoI
 	if err != nil {
 		return err
 	}
-	err = db.SetBlobVersion(writeCtx, quotaOwner, reviewDataBlobIdPrefix, blobId,
-		v, gobencoding.StructWriterTo(d))
+	err = db.setStructBlob(writeCtx, quotaOwner, reviewDataBlobIdPrefix, blobId,
+		v, d)
 	if err != nil {
 		return err
 	}
@@ -72,8 +72,8 @@ func (db webDb) SetReviewThread(writeCtx context.Context, quotaOwner string, thr
 	if err != nil {
 		return err
 	}
-	return db.SetBlobVersion(writeCtx, quotaOwner, reviewThreadsBlobIdPrefix,
-		blobId, v, gobencoding.StructWriterTo(th))
+	return db.setStructBlob(writeCtx, quotaOwner, reviewThreadsBlobIdPrefix,
+		blobId, v, th)
 }
 
 func (db webDb) GetReviewComment(ctx context.Context, commentId int64) (review.Comment, error) {
@@ -92,8 +92,8 @@ func (db webDb) SetReviewComment(writeCtx context.Context, quotaOwner string, co
 	if err != nil {
 		return err
 	}
-	return db.SetBlobVersion(writeCtx, quotaOwner, reviewCommentsBlobIdPrefix,
-		blobId, v, gobencoding.StructWriterTo(cm))
+	return db.setStructBlob(writeCtx, quotaOwner, reviewCommentsBlobIdPrefix,
+		blobId, v, cm)
 }
 
 func (db webDb) CreateReviewIfNotExists(writeCtx context.Context, repoId uint64, cId commit.LocalId) error {

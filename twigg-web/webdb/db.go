@@ -1,9 +1,11 @@
 package webdb
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"embed"
+	"encoding/gob"
 	"errors"
 	"io"
 	"monorepo/data/appendlog"
@@ -189,6 +191,16 @@ func (db webDb) SetBlobVersion(writeCtx context.Context, quotaOwner string, idPr
 		db.s.PreventCommit(writeCtx)
 	}
 	return
+}
+func (db webDb) setStructBlob(writeCtx context.Context, quotaOwner string, idPrefix, id string, v blobdb.Version, x any) error {
+	var buf bytes.Buffer
+	err := gob.NewEncoder(&buf).Encode(x)
+	if err != nil {
+		db.s.PreventCommit(writeCtx)
+		return err
+	}
+	return db.SetBlobVersion(writeCtx, quotaOwner, idPrefix, id, v,
+		bytes.NewReader(buf.Bytes()))
 }
 func (db webDb) GetBlob(readCtx context.Context, idPrefix, id string) (
 	m blobdb.BlobData, r io.Reader, closeReader func(), err error) {

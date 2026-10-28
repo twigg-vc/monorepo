@@ -23,8 +23,7 @@ func (db webDb) SetCommit(ctx context.Context, quotaOwner string, repoId uint64,
 	if err != nil {
 		return
 	}
-	err = db.SetBlobVersion(ctx, quotaOwner, commitBlobIdPrefix, blobId, v,
-		gobencoding.StructWriterTo(c))
+	err = db.setStructBlob(ctx, quotaOwner, commitBlobIdPrefix, blobId, v, c)
 	if err != nil {
 		return
 	}
