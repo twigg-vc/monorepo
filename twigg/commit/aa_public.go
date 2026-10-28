@@ -183,15 +183,6 @@ func NewRebase(isOnServer bool, isAutoRebaseOfChildren bool,
 		diffCounts)
 }
 
-// Returns true if the incoming commit is "the same" (same...ish) as the
-// local one.
-// I.e. they are different only due to "non-content-altering" operations.
-// Content-altering operations are: creating a new commit, amending it,
-// rebasing it or submitting it.
-func IsSameish(incoming, local Commit) bool {
-	return isSameish(incoming, local)
-}
-
 // Create a new local commit from one that was pushed by a client or is pulled
 // from the server.
 // Automatically marks the local one as obsolete and attaches the

@@ -475,25 +475,6 @@ func newRestoreCommit(isOnServer bool, latest *Commit, old Commit, oldParent *Co
 	return restore
 }
 
-func isSameish(incoming, local Commit) bool {
-	if incoming.RootDirHash != local.RootDirHash {
-		return false
-	}
-	if incoming.Message != local.Message {
-		return false
-	}
-	if incoming.IsSubmitted != local.IsSubmitted {
-		return false
-	}
-	if incoming.ParentServerL != local.ParentServerL {
-		return false
-	}
-	if incoming.ParentServerV != local.ParentServerV {
-		return false
-	}
-	return true
-}
-
 func newLocal(isOnServer bool,
 	incoming Commit, treeVersion uint64, treeHash [32]byte,
 	hasLocalVersion bool, latestLocalVersion *Commit, localParent *Commit,
