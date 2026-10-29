@@ -6,6 +6,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"monorepo/data/blobdb"
 	"monorepo/data/sqlitehelper"
 )
 
@@ -199,6 +200,31 @@ const increaseSuccessfullBytesQuery = `
 	VALUES (?, ?, 0)
 	ON CONFLICT(QuotaOwner) DO UPDATE SET
 		SuccessfullBytes = usage.SuccessfullBytes + excluded.SuccessfullBytes`
+
+// Charges n bytes to quotaOwner if it has that much quota left. Otherwise,
+// returns blobdb.ErrNotEnoughQuota.
+func (q quotaDb) Reserve(quotaOwner string, n int64) error {
+	if n < 0 {
+		return fmt.Errorf("can't reserve %d bytes", n)
+	}
+	w, closeW, commitW, err := q.s.BeginWrite()
+	defer closeW()
+	if err != nil {
+		return err
+	}
+	left, err := q.getQuotaLeft(w, quotaOwner)
+	if err != nil {
+		return err
+	}
+	if n > left {
+		return blobdb.ErrNotEnoughQuota
+	}
+	_, err = q.s.Exec(w, increaseSuccessfullBytesQuery, quotaOwner, n)
+	if err != nil {
+		return err
+	}
+	return commitW()
+}
 
 // IncreaseQuotaLimittedBytes implements blobdb.QuotaDb.
 func (q quotaDb) IncreaseQuotaLimittedBytes(quotaOwner string, n int64) error {
