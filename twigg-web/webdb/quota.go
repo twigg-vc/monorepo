@@ -1,6 +1,7 @@
 package webdb
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"errors"
@@ -117,8 +118,12 @@ func (q quotaDb) GetQuotaLeft(quotaOwner string) (int64, error) {
 		return 0, err
 	}
 	defer closeR()
+	return q.getQuotaLeft(r, quotaOwner)
+}
+
+func (q quotaDb) getQuotaLeft(ctx context.Context, quotaOwner string) (int64, error) {
 	var n int64
-	err = q.s.QueryRow(r, `
+	err := q.s.QueryRow(ctx, `
 		SELECT
 			q.Bytes - IFNULL(u.SuccessfullBytes, 0)
 		FROM
@@ -183,24 +188,26 @@ func (q quotaDb) ClearQuotaLimitted(quotaOwner string) error {
 	`, quotaOwner)
 }
 
+const increaseQuotaLimittedBytesQuery = `
+	INSERT INTO usage (QuotaOwner, SuccessfullBytes, QuotaLimittedBytes)
+	VALUES (?, 0, ?)
+	ON CONFLICT(QuotaOwner) DO UPDATE SET
+		QuotaLimittedBytes = usage.QuotaLimittedBytes + excluded.QuotaLimittedBytes`
+
+const increaseSuccessfullBytesQuery = `
+	INSERT INTO usage (QuotaOwner, SuccessfullBytes, QuotaLimittedBytes)
+	VALUES (?, ?, 0)
+	ON CONFLICT(QuotaOwner) DO UPDATE SET
+		SuccessfullBytes = usage.SuccessfullBytes + excluded.SuccessfullBytes`
+
 // IncreaseQuotaLimittedBytes implements blobdb.QuotaDb.
 func (q quotaDb) IncreaseQuotaLimittedBytes(quotaOwner string, n int64) error {
-	return q.exec(`
-		INSERT INTO usage (QuotaOwner, SuccessfullBytes, QuotaLimittedBytes)
-		VALUES (?, 0, ?)
-		ON CONFLICT(QuotaOwner) DO UPDATE SET
-			QuotaLimittedBytes = usage.QuotaLimittedBytes + excluded.QuotaLimittedBytes`,
-		quotaOwner, n)
+	return q.exec(increaseQuotaLimittedBytesQuery, quotaOwner, n)
 }
 
 // IncreaseSuccessfullBytes implements blobdb.QuotaDb.
 func (q quotaDb) IncreaseSuccessfullBytes(quotaOwner string, n int64) error {
-	return q.exec(`
-		INSERT INTO usage (QuotaOwner, SuccessfullBytes, QuotaLimittedBytes)
-		VALUES (?, ?, 0)
-		ON CONFLICT(QuotaOwner) DO UPDATE SET
-			SuccessfullBytes = usage.SuccessfullBytes + excluded.SuccessfullBytes`,
-		quotaOwner, n)
+	return q.exec(increaseSuccessfullBytesQuery, quotaOwner, n)
 }
 
 // Runs query in its own write transaction, committed immediately, so it
