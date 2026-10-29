@@ -96,6 +96,12 @@ func (noopQuotaDb) IncreaseQuotaLimittedBytes(quotaOwner string, n int64) error 
 func (noopQuotaDb) IncreaseSuccessfullBytes(quotaOwner string, n int64) error {
 	return nil
 }
+func (noopQuotaDb) Reserve(quotaOwner string, n int64) error {
+	return nil
+}
+func (noopQuotaDb) FinalizeReservation(quotaOwner string, reserved, used int64) error {
+	return nil
+}
 
 // In-memory blobdb.AppendLog used by NewMem
 type memAppendLog struct {

@@ -31,6 +31,10 @@ type QuotaDb interface {
 	GetQuotaLeft(quotaOwner string) (int64, error)
 	IncreaseQuotaLimittedBytes(quotaOwner string, n int64) error
 	IncreaseSuccessfullBytes(quotaOwner string, n int64) error
+	// Charges n bytes, or returns ErrNotEnoughQuota without charging
+	Reserve(quotaOwner string, n int64) error
+	// Corrects the charge of a Reserve of `reserved` bytes to `used` bytes
+	FinalizeReservation(quotaOwner string, reserved, used int64) error
 }
 
 // Stores the metadata of every blob version

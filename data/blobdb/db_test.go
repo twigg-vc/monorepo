@@ -50,6 +50,21 @@ func (q *memQuota) IncreaseSuccessfullBytes(quotaOwner string, n int64) error {
 	q.left -= n
 	return nil
 }
+func (q *memQuota) Reserve(quotaOwner string, n int64) error {
+	if n < 0 {
+		return fmt.Errorf("can't reserve %d bytes", n)
+	}
+	if n > q.left {
+		return blobdb.ErrNotEnoughQuota
+	}
+	return q.IncreaseSuccessfullBytes(quotaOwner, n)
+}
+func (q *memQuota) FinalizeReservation(quotaOwner string, reserved, used int64) error {
+	if reserved < 0 || used < 0 {
+		return fmt.Errorf("can't finalize reserved=%d used=%d", reserved, used)
+	}
+	return q.IncreaseSuccessfullBytes(quotaOwner, used-reserved)
+}
 
 type memMetadata struct {
 	rows        []blobdb.BlobData
