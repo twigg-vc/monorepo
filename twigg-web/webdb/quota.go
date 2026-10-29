@@ -226,6 +226,14 @@ func (q quotaDb) Reserve(quotaOwner string, n int64) error {
 	return commitW()
 }
 
+// Corrects the charge of a Reserve of `reserved` bytes to the `used` bytes.
+func (q quotaDb) FinalizeReservation(quotaOwner string, reserved, used int64) error {
+	if reserved < 0 || used < 0 {
+		return fmt.Errorf("can't finalize reserved=%d used=%d", reserved, used)
+	}
+	return q.exec(increaseSuccessfullBytesQuery, quotaOwner, used-reserved)
+}
+
 // IncreaseQuotaLimittedBytes implements blobdb.QuotaDb.
 func (q quotaDb) IncreaseQuotaLimittedBytes(quotaOwner string, n int64) error {
 	return q.exec(increaseQuotaLimittedBytesQuery, quotaOwner, n)
