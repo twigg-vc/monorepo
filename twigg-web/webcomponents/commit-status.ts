@@ -67,12 +67,9 @@ export class CommitStatus extends LitElement {
 
     private renderWillConflictTag(){
         return html`
-            <div class="submit-conflict-container">
+            <twigg-tooltip Side=${this.TooltipSide}>
                 <span class="pill pill--conflict">Conflict</span>
-                <div class=${`submit-conflict-tooltip ${this.TooltipSide === "left"
-                    ? "submit-conflict-tooltip--left"
-                    : "submit-conflict-tooltip--right"
-                }`}>
+                <div slot="content" class="conflict-help">
                     <p>The commit can't be submitted because it would cause conflicts.</p>
                     <p>To solve this problem:</p>
                     <ul>
@@ -82,17 +79,14 @@ export class CommitStatus extends LitElement {
                         <li>Push the new version of the commit</li>
                     </ul>
                 </div>
-            </div>
+            </twigg-tooltip>
             `
     }
     private renderHasConflictTag() {
         return html`
-            <div class="submit-conflict-container">
+            <twigg-tooltip Side=${this.TooltipSide}>
                 <span class="pill pill--conflict">Conflict</span>
-                <div class=${`submit-conflict-tooltip ${this.TooltipSide === "left"
-                    ? "submit-conflict-tooltip--left"
-                    : "submit-conflict-tooltip--right"
-                }`}>
+                <div slot="content" class="conflict-help">
                     <p>The commit can't be submitted because it has rebase conflicts.</p>
                     <p>To solve this problem:</p>
                     <ul>
@@ -100,7 +94,7 @@ export class CommitStatus extends LitElement {
                         <li>Push the new version of the commit</li>
                     </ul>
                 </div>
-            </div>
+            </twigg-tooltip>
             `
     }
     private renderMissingLgtmTag() {
@@ -135,45 +129,15 @@ export class CommitStatus extends LitElement {
     static styles = [
         TwiggCss,
         css`
-        .submit-conflict-container {
-            display: inline;
-            position: relative;
-            cursor: help;
+        twigg-tooltip {
+            --twigg-tooltip-border: #f5bcbc;
         }
-        .submit-conflict-tooltip {
-            visibility: hidden;
-            background-color: var(--color-surface-alt);
-            box-shadow: var(--shadow-surface-alt);
-            border: 1px solid #f5bcbc;
-            color: var(--color-text);
-            text-align: left;
-            padding: 1ch 3ch;
-            border-radius: 1ch;
-            position: absolute;
-            z-index: 9999;
-            top: 100%;
-            margin-top: var(--fixedSpace1);
-        }
-
-        .submit-conflict-tooltip--right {
-            left: 0;
-        }
-
-        .submit-conflict-tooltip--left {
-            right: 0;
-        }
-
-        .submit-conflict-container:hover .submit-conflict-tooltip,
-        .submit-conflict-container:focus-within .submit-conflict-tooltip {
-            visibility: visible;
-            opacity: 1;
-        }
-             /* Prevent line breaks inside tooltip paragraphs */
-        .submit-conflict-tooltip p {
+        /* Prevent line breaks inside tooltip paragraphs */
+        .conflict-help p {
             white-space: nowrap;
         }
-        /* Remove extra marging from ul */
-        .submit-conflict-tooltip ul {
+        /* Remove extra margin from ul */
+        .conflict-help ul {
             margin-top: 0;
         }
         .pill {
