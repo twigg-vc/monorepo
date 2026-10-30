@@ -1612,48 +1612,6 @@ private renderRenameToWipBtn(message: string): TemplateResult {
             font-size: var(--space4);
             font-weight: var(--weight-bold);
         }
-        .submit-conflict-span{
-            background: var(--color-danger);
-            color: var(--color-status-text);
-            padding: 0px;
-            margin: 0px;
-            font-weight: var(--weight-semi-bold);
-        }
-        .submit-conflict-container {
-            position: relative;
-            cursor: help;
-            border-radius: var(--radius2);
-            padding: var(--space1) var(--space3);
-            background: var(--color-danger);
-        }
-        .submit-conflict-tooltip {
-            visibility: hidden;
-            background-color: var(--color-surface-alt);
-            box-shadow: var(--shadow-surface-alt);
-            border: 1px solid var(--color-primary-pop);
-            color: var(--color-text);
-            text-align: left;
-            padding: 1ch 3ch;
-            border-radius: 1ch;
-            position: absolute;
-            z-index: 9999;
-            top: 100%;
-            right: 0;
-
-        }
-        .submit-conflict-container:hover .submit-conflict-tooltip,
-        .submit-conflict-container:focus-within .submit-conflict-tooltip {
-            visibility: visible;
-            opacity: 1;
-        }
-        /* Prevent line breaks inside tooltip paragraphs */
-        .submit-conflict-tooltip p {
-            white-space: nowrap;
-        }
-        /* Remove extra marging from ul */
-        .submit-conflict-tooltip ul {
-            margin-top: 0;
-        }
         .submit-parent-must-be-first-span{
             padding: var(--space2);
             border-radius: var(--space4);
