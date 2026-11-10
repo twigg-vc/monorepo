@@ -475,9 +475,9 @@ type MergeResult struct {
 	Result    io.Reader // returns a reader that contains the merge result
 }
 
-const ConflictStart = "<<<<<<<<< "
-const ConflictMid = "========="
-const ConflictEnd = ">>>>>>>>> "
+const ConflictStart = "<<<<<<< "
+const ConflictMid = "======="
+const ConflictEnd = ">>>>>>> "
 
 var IsTesting = false
 

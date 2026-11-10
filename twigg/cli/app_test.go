@@ -3517,11 +3517,11 @@ func TestConflictMarkers(t *testing.T) {
 		Version:      1,
 		HasConflicts: true,
 	})
-	h1.CheckFileLine("a.txt", 0, "<<<<<<<<< #2v0")
+	h1.CheckFileLine("a.txt", 0, "<<<<<<< #2v0")
 	h1.CheckFileLine("a.txt", 1, "AAA")
-	h1.CheckFileLine("a.txt", 2, "=========")
+	h1.CheckFileLine("a.txt", 2, "=======")
 	h1.CheckFileLine("a.txt", 3, "BBB")
-	h1.CheckFileLine("a.txt", 4, ">>>>>>>>> #1v1")
+	h1.CheckFileLine("a.txt", 4, ">>>>>>> #1v1")
 }
 
 func TestAmendChildOfObsoleteAndComplexRebase(t *testing.T) {

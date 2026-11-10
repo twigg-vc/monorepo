@@ -7,14 +7,14 @@ y desatino en esto,
 que vendió muchas hanegas de tierra de sembradura para
 comprar libros de caballerías en que leer, y así, llevó a su casa todos
 
-<<<<<<<<< A
+<<<<<<< A
 Es, pues, de saber que este sobredicho hidalgo, los ratos que estaba
 ocioso, que eran los más del año, se daba a leer libros de caballerías, con
 tanta afición y gusto, que olvidó casi de todo punto el ejercicio de la
 caza, y aun la administración de su hacienda. Y llegó a tanto su curiosidad
 y desatino en esto, que vendió muchas hanegas de tierra de sembradura para
 comprar libros de caballerías en que leer, y así, llevó a su casa todos
-=========
+=======
 Con estas razones perdía el pobre caballero el juicio, y desvelábase por
 entenderlas y desentrañarles el sentido, que no se lo sacara ni las
 entendiera el mesmo Aristóteles, si resucitara para sólo ello. No estaba
@@ -34,7 +34,7 @@ porque tenía muy acomodada condición para todo; que no era caballero
 melindroso, ni tan llorón como su hermano, y que en lo de la valentía no le
 iba en zaga.
 
->>>>>>>>> B
+>>>>>>> B
 cuantos pudo haber dellos; y de todos, ningunos le parecían tan bien como
 los que compuso el famoso Feliciano de Silva, porque la claridad de su
 prosa y aquellas entricadas razones suyas le parecían de perlas, y más

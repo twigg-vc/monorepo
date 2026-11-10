@@ -45,7 +45,7 @@ func TestConflict(t *testing.T) {
 	if !conflict {
 		t.Error("expected conflict")
 	}
-	expected := "<<<<<<<<< v1\nABCDE\n=========\nLine 1\n>>>>>>>>> v2\nLine 2"
+	expected := "<<<<<<< v1\nABCDE\n=======\nLine 1\n>>>>>>> v2\nLine 2"
 	if string(merged) != expected {
 		t.Errorf("wrong merge result. Expected %s got %s", expected, string(merged))
 	}

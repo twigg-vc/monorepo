@@ -517,6 +517,16 @@ func TestConflicts(t *testing.T) {
 	if !has {
 		t.Fatal("expected conflicts")
 	}
+
+	// Conflicts written before the markers shrank from 9 to 7 chars
+	wd.WriteFile("a.txt", "<<<<<<<<< #2v0\na\n=========\nb\n>>>>>>>>> #1v1\n")
+	has, err = wd.FileHasConflict("a.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !has {
+		t.Fatal("expected conflicts for legacy 9 char markers")
+	}
 }
 
 func TestCacheSpeedsUpTree(t *testing.T) {
