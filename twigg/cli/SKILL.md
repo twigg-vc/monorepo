@@ -32,6 +32,8 @@ new version.
 - `tw diff [<c1> [<c2>]]` lists changed files. Add `--all` for a unified diff.
   It compares commits, not the workdir: run `tw status` for unsaved changes.
 - `tw clean` discards workdir changes after confirmation (`-f` skips it).
+- `tw server <owner>/<repo-name>` sets which server-side repository (on
+  https://twigg.vc) this local project belongs to.
 - `tw push` pushes the current commit and its non-pushed ancestors.
 - `tw pull c/99` downloads the latest version of server commit 99.
 - `tw description-set <optional: commit> <description>` sets the review
