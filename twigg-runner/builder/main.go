@@ -103,6 +103,10 @@ func buildBase(lxd lxdClient.InstanceServer) (ok bool) {
 	if !ok {
 		return
 	}
+	ok = installAzureCli(lxd, builderVmName)
+	if !ok {
+		return
+	}
 	ok = stopVmAndPublishImage(lxd, builderVmName, baseImageAlias)
 	if !ok {
 		return
@@ -298,6 +302,12 @@ apt-get update
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 		`
 		return execBashInInstance(ctx, lxd, vmName, script)
+	})
+}
+func installAzureCli(lxd lxdClient.InstanceServer, vmName string) (ok bool) {
+	const maxTries = 3
+	return Run("Install azure CLI", 10*time.Minute, maxTries, func(ctx context.Context) error {
+		return execBashInInstance(ctx, lxd, vmName, "curl -fsSL 'https://azurecliprod.blob.core.windows.net/$root/deb_install.sh' | bash")
 	})
 }
 func resetAndShrinkVmImage(srv lxdClient.InstanceServer, vmName string) (ok bool) {
