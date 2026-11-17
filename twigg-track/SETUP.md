@@ -111,6 +111,7 @@ Open `sudo visudo`
   /bin/mv /tmp/twigg-track /bin/twigg-track
 
 %twiggers ALL=(track) NOPASSWD: /usr/bin/docker load -i /tmp/twigg-runners.tar
+%twiggers ALL=(track) NOPASSWD: /usr/bin/docker image prune -f
 %twiggers ALL=(track) NOPASSWD: /snap/bin/lxc image delete twigg-vm-runner
 %twiggers ALL=(track) NOPASSWD: /snap/bin/lxc image import /tmp/twigg-vm-runner.tar.gz --alias twigg-vm-runner
 
